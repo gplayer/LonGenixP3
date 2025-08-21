@@ -463,4 +463,443 @@ export class DiseaseRiskCalculator {
       reference: 'KDIGO 2012 Clinical Practice Guidelines'
     }
   }
+
+  /**
+   * Cancer Risk Assessment
+   * Based on established risk factors and biomarkers
+   * Reference: American Cancer Society Guidelines & NCCN Risk Assessment Tools
+   */
+  static calculateCancerRisk(patientData: PatientData, lifestyle: any = {}): RiskAssessment {
+    const { age, gender, height_cm, weight_kg, biomarkers } = patientData
+    const bmi = weight_kg / Math.pow(height_cm / 100, 2)
+    
+    let riskScore = 0
+    
+    // Age-related risk (cancer incidence increases with age)
+    if (age >= 40 && age < 50) riskScore += 2
+    else if (age >= 50 && age < 60) riskScore += 4
+    else if (age >= 60 && age < 70) riskScore += 6
+    else if (age >= 70) riskScore += 8
+
+    // BMI-related risk (obesity increases cancer risk)
+    if (bmi >= 25 && bmi < 30) riskScore += 1
+    else if (bmi >= 30 && bmi < 35) riskScore += 2
+    else if (bmi >= 35) riskScore += 3
+
+    // Smoking history (major cancer risk factor)
+    const smokingStatus = biomarkers.smoking === 1 || lifestyle.smoking_history
+    if (smokingStatus) riskScore += 6
+
+    // Inflammatory markers (chronic inflammation linked to cancer)
+    const crp = biomarkers.c_reactive_protein
+    if (crp && crp > 3.0) riskScore += 2
+    else if (crp && crp > 1.0) riskScore += 1
+
+    // Hormone-related factors
+    if (gender === 'female') {
+      // Estrogen exposure factors
+      if (biomarkers.estradiol && biomarkers.estradiol > 50) riskScore += 1
+      if (lifestyle.age_first_pregnancy && lifestyle.age_first_pregnancy > 30) riskScore += 1
+      if (lifestyle.hormone_replacement_therapy) riskScore += 1
+    }
+    
+    if (gender === 'male') {
+      // Prostate-specific factors
+      if (biomarkers.psa && biomarkers.psa > 4.0) riskScore += 2
+      else if (biomarkers.psa && biomarkers.psa > 2.5) riskScore += 1
+    }
+
+    // Metabolic factors
+    if (biomarkers.glucose && biomarkers.glucose > 126) riskScore += 1 // Diabetes increases cancer risk
+    if (biomarkers.insulin && biomarkers.insulin > 20) riskScore += 1 // Insulin resistance
+
+    // Immune function markers
+    if (biomarkers.white_blood_cells && biomarkers.white_blood_cells < 4.0) riskScore += 1
+    if (biomarkers.lymphocyte_percent && biomarkers.lymphocyte_percent < 20) riskScore += 1
+
+    // Family history (if available)
+    if (lifestyle.family_cancer_history) riskScore += 3
+
+    // Alcohol consumption
+    if (lifestyle.alcohol_consumption && lifestyle.alcohol_consumption > 2) riskScore += 2
+
+    // Environmental exposures
+    if (lifestyle.environmental_toxins) riskScore += 1
+
+    // Calculate 10-year risk percentage based on age and risk factors
+    let tenYearRisk: number
+    if (riskScore <= 5) tenYearRisk = 2
+    else if (riskScore <= 10) tenYearRisk = 8
+    else if (riskScore <= 15) tenYearRisk = 15
+    else if (riskScore <= 20) tenYearRisk = 25
+    else tenYearRisk = 35
+
+    // Risk level classification
+    let riskLevel: 'low' | 'moderate' | 'high' | 'very_high'
+    if (riskScore <= 5) riskLevel = 'low'
+    else if (riskScore <= 10) riskLevel = 'moderate'
+    else if (riskScore <= 15) riskLevel = 'high'
+    else riskLevel = 'very_high'
+
+    return {
+      risk_category: 'cancer_risk',
+      risk_score: riskScore,
+      risk_level: riskLevel,
+      ten_year_risk: tenYearRisk,
+      algorithm_used: 'Comprehensive Cancer Risk Assessment',
+      reference: 'American Cancer Society & NCCN Guidelines 2023'
+    }
+  }
+
+  /**
+   * Cognitive Decline Risk Assessment
+   * Based on neurodegeneration biomarkers and risk factors
+   * Reference: Alzheimer's Association & NIH-NIA Research Framework
+   */
+  static calculateCognitiveDeclineRisk(patientData: PatientData, lifestyle: any = {}): RiskAssessment {
+    const { age, gender, height_cm, weight_kg, biomarkers } = patientData
+    const bmi = weight_kg / Math.pow(height_cm / 100, 2)
+    
+    let riskScore = 0
+    
+    // Age-related risk (strongest predictor)
+    if (age >= 55 && age < 65) riskScore += 2
+    else if (age >= 65 && age < 75) riskScore += 4
+    else if (age >= 75 && age < 85) riskScore += 7
+    else if (age >= 85) riskScore += 10
+
+    // Gender factor (women have higher risk after menopause)
+    if (gender === 'female' && age > 50) riskScore += 1
+
+    // Cardiovascular risk factors (vascular dementia pathway)
+    if (biomarkers.total_cholesterol && biomarkers.total_cholesterol > 240) riskScore += 2
+    if (patientData.systolic_bp > 140) riskScore += 2
+    if (biomarkers.diabetes === 1 || (biomarkers.glucose && biomarkers.glucose > 126)) riskScore += 3
+
+    // Inflammatory markers (neuroinflammation)
+    const crp = biomarkers.c_reactive_protein
+    if (crp && crp > 3.0) riskScore += 2
+    else if (crp && crp > 1.0) riskScore += 1
+
+    // Metabolic factors
+    if (bmi > 30) riskScore += 2 // Obesity in midlife increases risk
+    if (biomarkers.hba1c && biomarkers.hba1c > 6.5) riskScore += 2
+
+    // Neurodegeneration biomarkers (if available)
+    if (biomarkers.amyloid_beta_42 && biomarkers.amyloid_beta_42 < 500) riskScore += 4
+    if (biomarkers.tau_protein && biomarkers.tau_protein > 300) riskScore += 3
+    if (biomarkers.neurofilament_light && biomarkers.neurofilament_light > 50) riskScore += 2
+
+    // Vitamin deficiencies
+    if (biomarkers.vitamin_b12 && biomarkers.vitamin_b12 < 300) riskScore += 2
+    if (biomarkers.vitamin_d && biomarkers.vitamin_d < 30) riskScore += 1
+    if (biomarkers.folate && biomarkers.folate < 3.0) riskScore += 1
+
+    // Homocysteine (elevated levels linked to cognitive decline)
+    if (biomarkers.homocysteine && biomarkers.homocysteine > 15) riskScore += 2
+
+    // Lifestyle factors
+    if (lifestyle.education_years && lifestyle.education_years < 12) riskScore += 2
+    if (lifestyle.physical_activity && lifestyle.physical_activity < 2) riskScore += 2
+    if (lifestyle.social_engagement && lifestyle.social_engagement < 2) riskScore += 1
+    if (lifestyle.cognitive_stimulation && lifestyle.cognitive_stimulation < 2) riskScore += 1
+
+    // Sleep quality
+    if (lifestyle.sleep_quality && lifestyle.sleep_quality < 3) riskScore += 1
+
+    // Depression (significant risk factor)
+    if (lifestyle.depression_history || (biomarkers.cortisol && biomarkers.cortisol > 20)) riskScore += 2
+
+    // Family history of dementia
+    if (lifestyle.family_dementia_history) riskScore += 3
+
+    // APOE genotype (if available)
+    if (biomarkers.apoe_e4_carrier) riskScore += 4
+
+    // Calculate 10-year risk percentage
+    let tenYearRisk: number
+    if (age < 65) {
+      if (riskScore <= 5) tenYearRisk = 1
+      else if (riskScore <= 10) tenYearRisk = 3
+      else if (riskScore <= 15) tenYearRisk = 7
+      else tenYearRisk = 12
+    } else {
+      if (riskScore <= 8) tenYearRisk = 5
+      else if (riskScore <= 15) tenYearRisk = 15
+      else if (riskScore <= 20) tenYearRisk = 30
+      else tenYearRisk = 45
+    }
+
+    // Risk level classification
+    let riskLevel: 'low' | 'moderate' | 'high' | 'very_high'
+    if (riskScore <= 6) riskLevel = 'low'
+    else if (riskScore <= 12) riskLevel = 'moderate'
+    else if (riskScore <= 18) riskLevel = 'high'
+    else riskLevel = 'very_high'
+
+    return {
+      risk_category: 'cognitive_decline',
+      risk_score: riskScore,
+      risk_level: riskLevel,
+      ten_year_risk: tenYearRisk,
+      algorithm_used: 'Comprehensive Cognitive Risk Assessment',
+      reference: 'Alzheimer\'s Association & NIH-NIA Research Framework 2023'
+    }
+  }
+
+  /**
+   * Metabolic Syndrome Risk Assessment
+   * Based on ATP III & IDF Criteria
+   * Reference: American Heart Association/NHLBI Scientific Statement 2005
+   */
+  static calculateMetabolicSyndromeRisk(patientData: PatientData): RiskAssessment {
+    const { age, gender, height_cm, weight_kg, systolic_bp, diastolic_bp, biomarkers } = patientData
+    const bmi = weight_kg / Math.pow(height_cm / 100, 2)
+    
+    let criteriaCount = 0
+    let riskScore = 0
+    
+    // ATP III Criteria for Metabolic Syndrome (need 3 of 5)
+    
+    // 1. Abdominal obesity (waist circumference or BMI as proxy)
+    const waist = biomarkers.waist_circumference
+    let abdominalObesity = false
+    if (waist) {
+      abdominalObesity = (gender === 'male' && waist > 102) || (gender === 'female' && waist > 88)
+    } else {
+      // Use BMI as proxy
+      abdominalObesity = bmi > 30
+    }
+    if (abdominalObesity) {
+      criteriaCount++
+      riskScore += 3
+    }
+
+    // 2. Triglycerides ≥ 150 mg/dL
+    const triglycerides = biomarkers.triglycerides
+    if (triglycerides && triglycerides >= 150) {
+      criteriaCount++
+      riskScore += 3
+    }
+
+    // 3. HDL Cholesterol (low)
+    const hdl = biomarkers.hdl_cholesterol
+    if (hdl && ((gender === 'male' && hdl < 40) || (gender === 'female' && hdl < 50))) {
+      criteriaCount++
+      riskScore += 3
+    }
+
+    // 4. Blood Pressure ≥ 130/85 mmHg or on medication
+    const hypertension = systolic_bp >= 130 || diastolic_bp >= 85 || biomarkers.bp_medication === 1
+    if (hypertension) {
+      criteriaCount++
+      riskScore += 3
+    }
+
+    // 5. Fasting glucose ≥ 100 mg/dL or diabetes
+    const glucose = biomarkers.glucose || biomarkers.fasting_glucose
+    const hyperglycemia = (glucose && glucose >= 100) || biomarkers.diabetes === 1
+    if (hyperglycemia) {
+      criteriaCount++
+      riskScore += 3
+    }
+
+    // Additional risk factors
+    
+    // Insulin resistance
+    if (biomarkers.insulin && biomarkers.insulin > 15) riskScore += 2
+    if (biomarkers.homa_ir && biomarkers.homa_ir > 2.5) riskScore += 2
+
+    // Inflammatory markers
+    if (biomarkers.c_reactive_protein && biomarkers.c_reactive_protein > 3.0) riskScore += 1
+
+    // Age factor
+    if (age > 40) riskScore += 1
+    if (age > 60) riskScore += 2
+
+    // Adiponectin (if available - low levels indicate risk)
+    if (biomarkers.adiponectin && biomarkers.adiponectin < 4.0) riskScore += 2
+
+    // Uric acid
+    if (biomarkers.uric_acid && biomarkers.uric_acid > 7.0) riskScore += 1
+
+    // Calculate current syndrome status and future risk
+    const hasMetabolicSyndrome = criteriaCount >= 3
+    
+    let tenYearRisk: number
+    if (hasMetabolicSyndrome) {
+      // Already has metabolic syndrome - assess progression risk
+      tenYearRisk = 60 + Math.min(30, riskScore * 2)
+    } else {
+      // Risk of developing metabolic syndrome
+      if (criteriaCount === 0) tenYearRisk = 5
+      else if (criteriaCount === 1) tenYearRisk = 15
+      else if (criteriaCount === 2) tenYearRisk = 35
+      else tenYearRisk = 50
+    }
+
+    // Risk level classification
+    let riskLevel: 'low' | 'moderate' | 'high' | 'very_high'
+    if (criteriaCount === 0) riskLevel = 'low'
+    else if (criteriaCount <= 1) riskLevel = 'moderate'
+    else if (criteriaCount === 2) riskLevel = 'high'
+    else riskLevel = 'very_high' // Has metabolic syndrome
+
+    return {
+      risk_category: 'metabolic_syndrome',
+      risk_score: riskScore,
+      risk_level: riskLevel,
+      ten_year_risk: tenYearRisk,
+      algorithm_used: `ATP III Criteria (${criteriaCount}/5 criteria met)`,
+      reference: 'American Heart Association/NHLBI Scientific Statement 2005'
+    }
+  }
+
+  /**
+   * Stroke Risk Assessment
+   * Based on CHA2DS2-VASc and Framingham Stroke Risk Profile
+   * Reference: AHA/ASA Stroke Prevention Guidelines 2019
+   */
+  static calculateStrokeRisk(patientData: PatientData, lifestyle: any = {}): RiskAssessment {
+    const { age, gender, biomarkers, systolic_bp } = patientData
+    
+    let riskScore = 0
+    let framinghamPoints = 0
+    
+    // Age scoring (major risk factor)
+    if (age >= 55 && age < 65) {
+      riskScore += 2
+      framinghamPoints += 3
+    } else if (age >= 65 && age < 75) {
+      riskScore += 4
+      framinghamPoints += 5
+    } else if (age >= 75) {
+      riskScore += 6
+      framinghamPoints += 8
+    }
+
+    // Gender (men have higher risk until age 75)
+    if (gender === 'male' && age < 75) {
+      riskScore += 1
+      framinghamPoints += 2
+    }
+
+    // Hypertension (most important modifiable risk factor)
+    if (systolic_bp >= 140 || biomarkers.bp_medication === 1) {
+      if (systolic_bp >= 160) {
+        riskScore += 4
+        framinghamPoints += 4
+      } else {
+        riskScore += 2
+        framinghamPoints += 2
+      }
+    }
+
+    // Diabetes mellitus
+    if (biomarkers.diabetes === 1 || (biomarkers.glucose && biomarkers.glucose > 126)) {
+      riskScore += 3
+      framinghamPoints += 3
+    }
+
+    // Cardiovascular disease
+    const cvdHistory = lifestyle.cardiovascular_disease_history || biomarkers.previous_mi === 1
+    if (cvdHistory) {
+      riskScore += 3
+      framinghamPoints += 4
+    }
+
+    // Atrial fibrillation (major risk factor)
+    if (lifestyle.atrial_fibrillation || biomarkers.atrial_fibrillation === 1) {
+      riskScore += 5
+      framinghamPoints += 6
+    }
+
+    // Left ventricular hypertrophy
+    if (biomarkers.lvh === 1) {
+      riskScore += 2
+      framinghamPoints += 3
+    }
+
+    // Smoking
+    if (biomarkers.smoking === 1 || lifestyle.smoking_history) {
+      riskScore += 2
+      framinghamPoints += 2
+    }
+
+    // Cholesterol levels
+    if (biomarkers.total_cholesterol && biomarkers.total_cholesterol > 240) {
+      riskScore += 1
+      framinghamPoints += 1
+    }
+
+    // HDL cholesterol (protective factor)
+    if (biomarkers.hdl_cholesterol && biomarkers.hdl_cholesterol < 40) {
+      riskScore += 1
+    } else if (biomarkers.hdl_cholesterol && biomarkers.hdl_cholesterol > 60) {
+      riskScore -= 1
+      framinghamPoints -= 1
+    }
+
+    // Carotid stenosis (if available)
+    if (biomarkers.carotid_stenosis && biomarkers.carotid_stenosis > 50) {
+      riskScore += 3
+    }
+
+    // Additional biomarkers
+    
+    // Homocysteine (elevated levels increase stroke risk)
+    if (biomarkers.homocysteine && biomarkers.homocysteine > 15) riskScore += 2
+
+    // C-reactive protein (inflammation)
+    if (biomarkers.c_reactive_protein && biomarkers.c_reactive_protein > 3.0) riskScore += 1
+
+    // Fibrinogen (coagulation factor)
+    if (biomarkers.fibrinogen && biomarkers.fibrinogen > 400) riskScore += 1
+
+    // D-dimer (thrombosis marker)
+    if (biomarkers.d_dimer && biomarkers.d_dimer > 0.5) riskScore += 1
+
+    // Lifestyle factors
+    if (lifestyle.physical_activity && lifestyle.physical_activity < 2) riskScore += 1
+    if (lifestyle.alcohol_consumption && lifestyle.alcohol_consumption > 3) riskScore += 1
+
+    // Sleep apnea
+    if (lifestyle.sleep_apnea) riskScore += 2
+
+    // Family history
+    if (lifestyle.family_stroke_history) riskScore += 2
+
+    // Calculate 10-year stroke risk using modified Framingham equation
+    let tenYearRisk: number
+    
+    if (framinghamPoints <= 0) tenYearRisk = 1
+    else if (framinghamPoints <= 3) tenYearRisk = 2
+    else if (framinghamPoints <= 6) tenYearRisk = 4
+    else if (framinghamPoints <= 9) tenYearRisk = 7
+    else if (framinghamPoints <= 12) tenYearRisk = 11
+    else if (framinghamPoints <= 15) tenYearRisk = 16
+    else if (framinghamPoints <= 18) tenYearRisk = 23
+    else if (framinghamPoints <= 21) tenYearRisk = 32
+    else tenYearRisk = 42
+
+    // Adjust for additional risk factors
+    tenYearRisk += Math.min(20, (riskScore - framinghamPoints) * 2)
+    tenYearRisk = Math.max(0, Math.min(60, tenYearRisk))
+
+    // Risk level classification
+    let riskLevel: 'low' | 'moderate' | 'high' | 'very_high'
+    if (tenYearRisk < 5) riskLevel = 'low'
+    else if (tenYearRisk < 10) riskLevel = 'moderate'
+    else if (tenYearRisk < 20) riskLevel = 'high'
+    else riskLevel = 'very_high'
+
+    return {
+      risk_category: 'stroke_risk',
+      risk_score: riskScore,
+      risk_level: riskLevel,
+      ten_year_risk: tenYearRisk,
+      algorithm_used: 'Modified Framingham Stroke Risk Profile',
+      reference: 'AHA/ASA Stroke Prevention Guidelines 2019'
+    }
+  }
 }
