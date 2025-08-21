@@ -37,6 +37,245 @@ app.post('/api/auth/login', async (c) => {
   }
 })
 
+// Dynamic report route
+app.get('/report', async (c) => {
+  const { env } = c
+  const sessionId = c.req.query('session')
+  const isDemo = c.req.query('demo') === 'true'
+  
+  if (!sessionId) {
+    return c.html('<h1>Error: No session ID provided</h1>')
+  }
+
+  try {
+    // Get session and patient data
+    const session = await env.DB.prepare(`
+      SELECT s.*, p.full_name, p.date_of_birth, p.gender, p.country
+      FROM assessment_sessions s
+      JOIN patients p ON s.patient_id = p.id
+      WHERE s.id = ?
+    `).bind(sessionId).first()
+
+    if (!session) {
+      return c.html('<h1>Error: Session not found</h1>')
+    }
+
+    // Get biological age results
+    const bioAge = await env.DB.prepare(`
+      SELECT * FROM biological_age WHERE session_id = ?
+    `).bind(sessionId).first()
+
+    // Get risk assessments
+    const risks = await env.DB.prepare(`
+      SELECT * FROM risk_calculations WHERE session_id = ?
+    `).bind(sessionId).all()
+
+    // Calculate age from date of birth
+    const birthDate = new Date(session.date_of_birth)
+    const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+
+    // Generate dynamic report HTML
+    return c.html(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Personalized Health Assessment Report - ${session.full_name}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+          <link href="/css/styles.css" rel="stylesheet">
+          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          
+          <style>
+              @media print {
+                  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                  .no-print { display: none !important; }
+                  .page-break { page-break-before: always; }
+              }
+              
+              .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+              .report-section { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem; overflow: hidden; }
+              .report-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+              .report-header i { font-size: 1.5rem; }
+              .report-header h2 { font-size: 1.5rem; font-weight: bold; margin: 0; }
+              .report-content { padding: 2rem; }
+              .metric-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1.5rem; text-align: center; }
+              .risk-low { background-color: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
+              .risk-moderate { background-color: #fef3c7; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
+              .risk-high { background-color: #fee2e2; color: #991b1b; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
+          </style>
+      </head>
+      <body class="bg-gray-50">
+          <!-- Header -->
+          <div class="gradient-bg text-white no-print">
+              <div class="max-w-7xl mx-auto px-6 py-8">
+                  <div class="flex items-center justify-between">
+                      <div>
+                          <h1 class="text-3xl font-bold mb-2">Personalized Health Assessment Report</h1>
+                          <p class="text-blue-100">Generated on: ${new Date().toLocaleDateString()}</p>
+                          <p class="text-sm text-blue-200 mt-2">
+                              Dr. Graham Player, Ph.D — Professional Healthcare Innovation Consultant – Longenix Health — Predict • Prevent • Persist
+                          </p>
+                      </div>
+                      <div class="text-right">
+                          <a href="/" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition mr-2">
+                              <i class="fas fa-home mr-2"></i>Home
+                          </a>
+                          <button onclick="window.print()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                              <i class="fas fa-print mr-2"></i>Print
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Print Header -->
+          <div class="hidden print:block bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 text-center">
+              <h1 class="text-2xl font-bold">Personalized Health Assessment Report</h1>
+              <p class="mt-2">Dr. Graham Player, Ph.D — Professional Healthcare Innovation Consultant – Longenix Health</p>
+              <p class="text-sm mt-1">Predict • Prevent • Persist</p>
+          </div>
+
+          <div class="max-w-7xl mx-auto px-6 py-8">
+              <!-- Client Information Header -->
+              <div class="report-section">
+                  <div class="report-content">
+                      <div class="grid md:grid-cols-2 gap-6 mb-6">
+                          <div>
+                              <h3 class="text-lg font-semibold mb-4">Client Information</h3>
+                              <div class="space-y-2 text-sm">
+                                  <div><span class="font-medium">Name:</span> ${session.full_name}</div>
+                                  <div><span class="font-medium">Date of Birth:</span> ${new Date(session.date_of_birth).toLocaleDateString()}</div>
+                                  <div><span class="font-medium">Age:</span> ${age} years</div>
+                                  <div><span class="font-medium">Gender:</span> ${session.gender}</div>
+                                  <div><span class="font-medium">Country:</span> ${session.country}</div>
+                              </div>
+                          </div>
+                          <div>
+                              <h3 class="text-lg font-semibold mb-4">Assessment Summary</h3>
+                              <div class="space-y-2 text-sm">
+                                  <div><span class="font-medium">Assessment Date:</span> ${new Date(session.started_at).toLocaleDateString()}</div>
+                                  <div><span class="font-medium">Assessment Method:</span> ${isDemo ? 'Demo Data' : 'Manual Entry'}</div>
+                                  <div><span class="font-medium">Report Version:</span> 3.0 Dynamic</div>
+                                  <div><span class="font-medium">Practitioner:</span> Dr. Graham Player, Ph.D</div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Section 1: Executive Summary -->
+              <div class="report-section">
+                  <div class="report-header">
+                      <i class="fas fa-chart-line"></i>
+                      <h2>1. Executive Summary</h2>
+                  </div>
+                  <div class="report-content">
+                      <!-- Key Metrics Dashboard -->
+                      <div class="grid md:grid-cols-4 gap-6 mb-8">
+                          <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 text-center">
+                              <i class="fas fa-dna text-3xl text-blue-600 mb-3"></i>
+                              <h3 class="font-semibold text-gray-800 mb-2">Biological Age</h3>
+                              <p class="text-3xl font-bold text-blue-600">${bioAge ? bioAge.average_biological_age.toFixed(1) : 'N/A'}</p>
+                              <p class="text-sm text-gray-600">vs ${age} chronological</p>
+                              <p class="text-xs ${bioAge && bioAge.age_advantage > 0 ? 'text-green-600' : 'text-red-600'} mt-1">
+                                  ${bioAge ? (bioAge.age_advantage > 0 ? `${bioAge.age_advantage.toFixed(1)} years younger` : `${Math.abs(bioAge.age_advantage).toFixed(1)} years older`) : 'Data pending'}
+                              </p>
+                          </div>
+
+                          <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 text-center">
+                              <i class="fas fa-shield-alt text-3xl text-green-600 mb-3"></i>
+                              <h3 class="font-semibold text-gray-800 mb-2">Overall Risk</h3>
+                              <p class="text-2xl font-bold text-green-600">${risks.results && risks.results.length > 0 ? risks.results[0].risk_level.charAt(0).toUpperCase() + risks.results[0].risk_level.slice(1) : 'Calculating'}</p>
+                              <p class="text-sm text-gray-600">${risks.results ? risks.results.length : 0} categories assessed</p>
+                          </div>
+
+                          <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 text-center">
+                              <i class="fas fa-heartbeat text-3xl text-purple-600 mb-3"></i>
+                              <h3 class="font-semibold text-gray-800 mb-2">Assessment Type</h3>
+                              <p class="text-2xl font-bold text-purple-600">${isDemo ? 'Demo' : 'Personal'}</p>
+                              <p class="text-sm text-gray-600">${isDemo ? 'Sample data' : 'Your real data'}</p>
+                              <p class="text-xs text-purple-600 mt-1">${isDemo ? 'Evidence-based calculations' : 'Personalized results'}</p>
+                          </div>
+
+                          <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 text-center">
+                              <i class="fas fa-lightbulb text-3xl text-orange-600 mb-3"></i>
+                              <h3 class="font-semibold text-gray-800 mb-2">Algorithms Used</h3>
+                              <p class="text-2xl font-bold text-orange-600">${bioAge ? '3+' : '0'}</p>
+                              <p class="text-sm text-gray-600">evidence-based methods</p>
+                              <p class="text-xs text-orange-600 mt-1">Research-backed</p>
+                          </div>
+                      </div>
+
+                      <!-- Dynamic Summary Text -->
+                      <div class="bg-gray-50 rounded-lg p-6">
+                          <h3 class="text-lg font-semibold mb-4">Clinical Summary</h3>
+                          <div class="prose prose-sm max-w-none text-gray-700">
+                              <p>This comprehensive health assessment for <strong>${session.full_name}</strong> reveals a biological age of <strong>${bioAge ? bioAge.average_biological_age.toFixed(1) : 'calculating'} years</strong>, ${bioAge && bioAge.age_advantage > 0 ? `representing a favorable ${bioAge.age_advantage.toFixed(1)}-year advantage` : bioAge && bioAge.age_advantage < 0 ? `indicating ${Math.abs(bioAge.age_advantage).toFixed(1)} years of accelerated aging` : 'with results being calculated'} compared to the chronological age of ${age} years.</p>
+                              
+                              <p><strong>Key Findings:</strong></p>
+                              <ul class="ml-6 space-y-1">
+                                  ${bioAge ? `<li>Phenotypic Age: ${bioAge.phenotypic_age.toFixed(1)} years</li>` : ''}
+                                  ${bioAge ? `<li>Klemera-Doubal Age: ${bioAge.klemera_doubal_age.toFixed(1)} years</li>` : ''}
+                                  ${bioAge ? `<li>Metabolic Age: ${bioAge.metabolic_age.toFixed(1)} years</li>` : ''}
+                                  ${risks.results && risks.results.length > 0 ? `<li>Risk assessments completed for ${risks.results.length} categories</li>` : ''}
+                                  <li>Assessment method: ${isDemo ? 'Demonstration with realistic sample data' : 'Personal data entry with real-time processing'}</li>
+                              </ul>
+
+                              ${!isDemo ? '<p><strong>Note:</strong> This report is based on YOUR actual health data and provides personalized insights specific to your health profile.</p>' : '<p><strong>Note:</strong> This is a demonstration report using realistic sample data to showcase our evidence-based assessment capabilities.</p>'}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Section 2: Risk Assessment Results -->
+              ${risks.results && risks.results.length > 0 ? `
+              <div class="report-section">
+                  <div class="report-header">
+                      <i class="fas fa-exclamation-triangle"></i>
+                      <h2>2. Disease Risk Assessment</h2>
+                  </div>
+                  <div class="report-content">
+                      <div class="grid md:grid-cols-2 gap-6">
+                          ${risks.results.map(risk => `
+                              <div class="border rounded-lg p-6">
+                                  <h3 class="text-lg font-semibold mb-3">${risk.risk_category.replace('_', ' ').replace(/\\b\\w/g, l => l.toUpperCase())} Risk</h3>
+                                  <div class="flex items-center justify-between mb-4">
+                                      <span class="risk-${risk.risk_level}">${risk.risk_level.toUpperCase()}</span>
+                                      <span class="text-2xl font-bold">${risk.ten_year_risk.toFixed(1)}%</span>
+                                  </div>
+                                  <p class="text-sm text-gray-600 mb-2">10-year risk estimate</p>
+                                  <p class="text-xs text-gray-500">Algorithm: ${risk.algorithm_used}</p>
+                              </div>
+                          `).join('')}
+                      </div>
+                  </div>
+              </div>` : ''}
+
+              <!-- Footer -->
+              <div class="mt-12 p-6 bg-gray-100 rounded-lg text-center text-sm text-gray-600">
+                  <p><strong>Medical Disclaimer:</strong> This assessment tool is for educational and informational purposes only. 
+                  It is not intended to replace professional medical advice, diagnosis, or treatment. 
+                  Always seek the advice of your physician or other qualified health provider with any questions 
+                  you may have regarding a medical condition.</p>
+                  
+                  <div class="mt-4 pt-4 border-t border-gray-300">
+                      <p class="font-semibold">Dr. Graham Player, Ph.D</p>
+                      <p>Professional Healthcare Innovation Consultant – Longenix Health</p>
+                      <p>Predict • Prevent • Persist</p>
+                  </div>
+              </div>
+          </div>
+      </body>
+      </html>
+    `)
+  } catch (error) {
+    console.error('Report generation error:', error)
+    return c.html(`<h1>Error generating report: ${error.message}</h1>`)
+  }
+})
+
 // Favicon route
 app.get('/favicon.ico', (c) => {
   return c.text('', 204) // No content
@@ -215,6 +454,241 @@ app.post('/api/assessment/save', async (c) => {
     return c.json({
       success: false,
       error: 'Failed to save assessment data'
+    }, 500)
+  }
+})
+
+// API endpoint to complete assessment and calculate results
+app.post('/api/assessment/complete', async (c) => {
+  const { env } = c
+  const { sessionId, patientId, assessmentData } = await c.req.json()
+  
+  try {
+    // Import medical algorithms
+    const { BiologicalAgeCalculator, DiseaseRiskCalculator } = await import('./medical-algorithms')
+    
+    // Get patient data for calculations
+    const patient = await env.DB.prepare(`
+      SELECT * FROM patients WHERE id = ?
+    `).bind(patientId).first()
+
+    if (!patient) {
+      return c.json({ success: false, error: 'Patient not found' }, 404)
+    }
+
+    // Calculate age from date of birth
+    const birthDate = new Date(patient.date_of_birth)
+    const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+
+    // Prepare patient data for algorithms
+    const patientData = {
+      age,
+      gender: patient.gender,
+      height_cm: parseFloat(assessmentData.height) || 170,
+      weight_kg: parseFloat(assessmentData.weight) || 70,
+      systolic_bp: parseInt(assessmentData.systolicBP) || 120,
+      diastolic_bp: parseInt(assessmentData.diastolicBP) || 80,
+      biomarkers: {
+        glucose: parseFloat(assessmentData.glucose) || null,
+        hba1c: parseFloat(assessmentData.hba1c) || null,
+        total_cholesterol: parseFloat(assessmentData.totalCholesterol) || null,
+        hdl_cholesterol: parseFloat(assessmentData.hdlCholesterol) || null,
+        ldl_cholesterol: parseFloat(assessmentData.ldlCholesterol) || null,
+        triglycerides: parseFloat(assessmentData.triglycerides) || null,
+        creatinine: parseFloat(assessmentData.creatinine) || null,
+        egfr: parseFloat(assessmentData.egfr) || null,
+        albumin: parseFloat(assessmentData.albumin) || null,
+        c_reactive_protein: parseFloat(assessmentData.cReactiveProtein) || null,
+        // Add more biomarkers as needed
+      }
+    }
+
+    // Calculate biological age
+    const biologicalAge = BiologicalAgeCalculator.calculateBiologicalAge(patientData)
+
+    // Calculate disease risks
+    const ascvdRisk = DiseaseRiskCalculator.calculateASCVDRisk(patientData)
+    const diabetesRisk = DiseaseRiskCalculator.calculateDiabetesRisk(patientData, assessmentData.lifestyle || {})
+    const kidneyRisk = DiseaseRiskCalculator.calculateKidneyDiseaseRisk(patientData)
+
+    // Save biological age results
+    await env.DB.prepare(`
+      INSERT INTO biological_age (session_id, chronological_age, phenotypic_age, klemera_doubal_age, 
+                                 metabolic_age, telomere_age, average_biological_age, age_advantage, calculation_method)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      sessionId,
+      age,
+      biologicalAge.phenotypic_age,
+      biologicalAge.klemera_doubal_age,
+      biologicalAge.metabolic_age,
+      biologicalAge.telomere_age,
+      biologicalAge.average_biological_age,
+      biologicalAge.age_advantage,
+      'Phenotypic Age + KDM + Metabolic Age'
+    ).run()
+
+    // Save risk assessments
+    const risks = [ascvdRisk, diabetesRisk, kidneyRisk]
+    for (const risk of risks) {
+      await env.DB.prepare(`
+        INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, 
+                                     ten_year_risk, algorithm_used)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        risk.risk_category,
+        risk.risk_score,
+        risk.risk_level,
+        risk.ten_year_risk,
+        risk.algorithm_used
+      ).run()
+    }
+
+    // Update session status
+    await env.DB.prepare(`
+      UPDATE assessment_sessions SET status = 'completed', completed_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).bind(sessionId).run()
+
+    return c.json({
+      success: true,
+      sessionId,
+      biologicalAge,
+      risks,
+      message: 'Assessment completed and results calculated'
+    })
+  } catch (error) {
+    console.error('Assessment completion error:', error)
+    return c.json({
+      success: false,
+      error: 'Failed to complete assessment'
+    }, 500)
+  }
+})
+
+// API endpoint to create demo assessment
+app.post('/api/assessment/demo', async (c) => {
+  const { env } = c
+  const { country } = await c.req.json()
+  
+  try {
+    // Import medical algorithms
+    const { BiologicalAgeCalculator, DiseaseRiskCalculator } = await import('./medical-algorithms')
+    
+    // Create demo patient
+    const demoPatient = {
+      full_name: 'Demo Patient',
+      date_of_birth: '1978-05-15', // 45 years old
+      gender: 'female',
+      ethnicity: 'caucasian',
+      email: 'demo@longenixhealth.com',
+      phone: '+1 (555) 123-4567',
+      country: country || 'US'
+    }
+
+    const patientResult = await env.DB.prepare(`
+      INSERT INTO patients (full_name, date_of_birth, gender, ethnicity, email, phone, country)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      demoPatient.full_name,
+      demoPatient.date_of_birth,
+      demoPatient.gender,
+      demoPatient.ethnicity,
+      demoPatient.email,
+      demoPatient.phone,
+      demoPatient.country
+    ).run()
+
+    const patientId = patientResult.meta.last_row_id
+
+    // Create demo session
+    const sessionResult = await env.DB.prepare(`
+      INSERT INTO assessment_sessions (patient_id, session_type, status)
+      VALUES (?, 'demo', 'completed')
+    `).bind(patientId).run()
+
+    const sessionId = sessionResult.meta.last_row_id
+
+    // Demo patient data with realistic biomarkers
+    const patientData = {
+      age: 45,
+      gender: 'female' as const,
+      height_cm: 165,
+      weight_kg: 68,
+      systolic_bp: 125,
+      diastolic_bp: 78,
+      biomarkers: {
+        glucose: 92,
+        hba1c: 5.4,
+        total_cholesterol: 195,
+        hdl_cholesterol: 58,
+        ldl_cholesterol: 115,
+        triglycerides: 110,
+        creatinine: 0.9,
+        egfr: 95,
+        albumin: 4.1,
+        c_reactive_protein: 1.2,
+        white_blood_cells: 6.5,
+        hemoglobin: 13.8
+      }
+    }
+
+    // Calculate results
+    const biologicalAge = BiologicalAgeCalculator.calculateBiologicalAge(patientData)
+    const ascvdRisk = DiseaseRiskCalculator.calculateASCVDRisk(patientData)
+    const diabetesRisk = DiseaseRiskCalculator.calculateDiabetesRisk(patientData)
+    const kidneyRisk = DiseaseRiskCalculator.calculateKidneyDiseaseRisk(patientData)
+
+    // Save results to database
+    await env.DB.prepare(`
+      INSERT INTO biological_age (session_id, chronological_age, phenotypic_age, klemera_doubal_age, 
+                                 metabolic_age, telomere_age, average_biological_age, age_advantage, calculation_method)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      sessionId,
+      patientData.age,
+      biologicalAge.phenotypic_age,
+      biologicalAge.klemera_doubal_age,
+      biologicalAge.metabolic_age,
+      biologicalAge.telomere_age,
+      biologicalAge.average_biological_age,
+      biologicalAge.age_advantage,
+      'Demo: Phenotypic Age + KDM + Metabolic Age'
+    ).run()
+
+    const risks = [ascvdRisk, diabetesRisk, kidneyRisk]
+    for (const risk of risks) {
+      await env.DB.prepare(`
+        INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, 
+                                     ten_year_risk, algorithm_used)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        risk.risk_category,
+        risk.risk_score,
+        risk.risk_level,
+        risk.ten_year_risk,
+        risk.algorithm_used
+      ).run()
+    }
+
+    return c.json({
+      success: true,
+      sessionId,
+      patientId,
+      demoData: {
+        patient: demoPatient,
+        biologicalAge,
+        risks
+      },
+      message: 'Demo assessment created successfully'
+    })
+  } catch (error) {
+    console.error('Demo creation error:', error)
+    return c.json({
+      success: false,
+      error: 'Failed to create demo assessment'
     }, 500)
   }
 })
