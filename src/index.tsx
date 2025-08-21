@@ -42,6 +42,183 @@ app.get('/favicon.ico', (c) => {
   return c.text('', 204) // No content
 })
 
+// Assessment form route
+app.get('/assessment', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Comprehensive Health Assessment Form - Longenix Health</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/css/styles.css" rel="stylesheet">
+    </head>
+    <body class="bg-gray-50">
+        <!-- Header -->
+        <div class="gradient-bg text-white">
+            <div class="max-w-7xl mx-auto px-6 py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold">Dynamic Health Assessment Form</h1>
+                        <p class="text-blue-100">Complete health evaluation with real-time processing</p>
+                    </div>
+                    <a href="/" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                        <i class="fas fa-arrow-left mr-2"></i>Back to Home
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="bg-white py-4">
+            <div class="max-w-4xl mx-auto px-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-gray-700">Step <span id="currentStep">1</span> of 8</span>
+                    <span class="text-sm text-gray-500"><span id="progressPercent">12</span>% Complete</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill" style="width: 12%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Container -->
+        <div class="max-w-4xl mx-auto px-6 py-8">
+            <form id="dynamicAssessmentForm" class="bg-white rounded-lg shadow-lg p-8">
+                
+                <!-- Step 1: Demographics & Personal Information -->
+                <div id="step1" class="assessment-step">
+                    <div class="text-center mb-8">
+                        <i class="fas fa-user text-4xl text-blue-600 mb-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Personal Information</h2>
+                        <p class="text-gray-600">Your data will create YOUR personalized report</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="form-group">
+                            <label class="form-label">Full Name *</label>
+                            <input type="text" name="fullName" class="form-input" placeholder="Enter your full name" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Date of Birth *</label>
+                            <input type="date" name="dateOfBirth" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Gender *</label>
+                            <select name="gender" class="form-select" required>
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Ethnicity</label>
+                            <select name="ethnicity" class="form-select">
+                                <option value="">Select ethnicity</option>
+                                <option value="caucasian">Caucasian</option>
+                                <option value="african_american">African American</option>
+                                <option value="hispanic">Hispanic/Latino</option>
+                                <option value="asian">Asian</option>
+                                <option value="native_american">Native American</option>
+                                <option value="pacific_islander">Pacific Islander</option>
+                                <option value="mixed">Mixed</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" name="email" class="form-input" placeholder="your.email@example.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" name="phone" class="form-input" placeholder="+1 (555) 123-4567">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="flex justify-between mt-8">
+                    <button type="button" id="prevBtn" class="bg-gray-300 text-gray-700 py-2 px-6 rounded-lg hover:bg-gray-400 transition duration-300 hidden">
+                        <i class="fas fa-arrow-left mr-2"></i>Previous
+                    </button>
+                    <button type="button" id="nextBtn" class="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                        Next<i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <button type="submit" id="submitBtn" class="bg-green-600 text-white py-2 px-6 rounded-lg hover:bg-green-700 transition duration-300 hidden">
+                        <i class="fas fa-check mr-2"></i>Generate Report
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-center justify-center">
+            <div class="bg-white rounded-lg p-8 text-center">
+                <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-gray-600">Processing your personalized assessment...</p>
+            </div>
+        </div>
+
+        <!-- JavaScript -->
+        <script src="/js/assessment.js"></script>
+    </body>
+    </html>
+  `)
+})
+
+// API endpoint to save assessment data
+app.post('/api/assessment/save', async (c) => {
+  const { env } = c
+  const data = await c.req.json()
+  
+  try {
+    // Create patient record
+    const patientResult = await env.DB.prepare(`
+      INSERT INTO patients (full_name, date_of_birth, gender, ethnicity, email, phone, country)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      data.fullName,
+      data.dateOfBirth,
+      data.gender,
+      data.ethnicity || null,
+      data.email || null,
+      data.phone || null,
+      data.country || 'US'
+    ).run()
+
+    const patientId = patientResult.meta.last_row_id
+
+    // Create assessment session
+    const sessionResult = await env.DB.prepare(`
+      INSERT INTO assessment_sessions (patient_id, session_type, status)
+      VALUES (?, 'manual', 'in_progress')
+    `).bind(patientId).run()
+
+    const sessionId = sessionResult.meta.last_row_id
+
+    return c.json({
+      success: true,
+      patientId,
+      sessionId,
+      message: 'Assessment data saved successfully'
+    })
+  } catch (error) {
+    console.error('Database error:', error)
+    return c.json({
+      success: false,
+      error: 'Failed to save assessment data'
+    }, 500)
+  }
+})
+
 // Test API endpoint
 app.get('/api/test', (c) => {
   return c.json({ 
@@ -252,34 +429,55 @@ app.get('/', (c) => {
                             </div>
                         </div>
 
-                        <!-- Other assessment methods... -->
+                        <!-- File Upload -->
                         <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-not-allowed opacity-75">
                             <div class="text-center">
                                 <i class="fas fa-upload text-4xl text-gray-400 mb-4"></i>
                                 <h3 class="text-xl font-semibold mb-3 text-gray-600">Upload Lab Results</h3>
                                 <p class="text-gray-500 mb-6">Coming Soon - File upload functionality</p>
+                                <ul class="text-sm text-gray-400 text-left space-y-2 mb-6">
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>PDF Lab Reports</li>
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>CSV Data Files</li>
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>Medical Records</li>
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>AI Data Extraction</li>
+                                </ul>
                                 <button disabled class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg cursor-not-allowed">
                                     Coming Soon
                                 </button>
                             </div>
                         </div>
 
+                        <!-- Load Demo Client -->
                         <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-pointer" onclick="startAssessment('demo')">
                             <div class="text-center">
                                 <i class="fas fa-user-friends text-4xl text-purple-600 mb-4"></i>
                                 <h3 class="text-xl font-semibold mb-3">Load Demo Client</h3>
-                                <p class="text-gray-600 mb-6">View sample assessment with pre-loaded demo data</p>
+                                <p class="text-gray-600 mb-6">View sample assessment with realistic demo data</p>
+                                <ul class="text-sm text-gray-500 text-left space-y-2 mb-6">
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Complete Sample Data</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Evidence-Based Calculations</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>All 10+ Report Sections</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Personalized Results</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Professional Formatting</li>
+                                </ul>
                                 <button class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition duration-300">
                                     Load Demo
                                 </button>
                             </div>
                         </div>
 
+                        <!-- Existing Client Reports -->
                         <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-not-allowed opacity-75">
                             <div class="text-center">
                                 <i class="fas fa-folder-open text-4xl text-gray-400 mb-4"></i>
                                 <h3 class="text-xl font-semibold mb-3 text-gray-600">Existing Client Reports</h3>
                                 <p class="text-gray-500 mb-6">Coming Soon - Client management system</p>
+                                <ul class="text-sm text-gray-400 text-left space-y-2 mb-6">
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>Client Search by Name</li>
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>Report History</li>
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>Progress Tracking</li>
+                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>Export & Print</li>
+                                </ul>
                                 <button disabled class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg cursor-not-allowed">
                                     Coming Soon
                                 </button>
@@ -320,6 +518,27 @@ app.get('/', (c) => {
 
         <!-- JavaScript -->
         <script src="/js/app.js"></script>
+        <script>
+            // Make app instance globally available for onclick functions
+            let longenixApp;
+            document.addEventListener('DOMContentLoaded', () => {
+                longenixApp = new LongenixAssessment();
+                window.longenixApp = longenixApp;
+            });
+            
+            // Global functions for onclick handlers
+            function startAssessment(method) {
+                if (window.longenixApp) {
+                    window.longenixApp.startAssessment(method);
+                }
+            }
+            
+            function viewSampleReport() {
+                if (window.longenixApp) {
+                    window.longenixApp.viewSampleReport();
+                }
+            }
+        </script>
     </body>
     </html>
   `)

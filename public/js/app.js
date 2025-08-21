@@ -147,6 +147,87 @@ class LongenixAssessment {
             return;
         }
 
+        // Show loading
+        this.showLoadingOverlay(true);
+
+        // Handle different assessment methods
+        switch(method) {
+            case 'manual':
+                // Redirect to dynamic assessment form
+                window.location.href = '/assessment';
+                break;
+            
+            case 'demo':
+                // Load demo data and generate report
+                this.loadDemoData();
+                break;
+                
+            case 'upload':
+                alert('File upload functionality coming soon!');
+                this.showLoadingOverlay(false);
+                break;
+                
+            case 'existing':
+                alert('Client management system coming soon!');
+                this.showLoadingOverlay(false);
+                break;
+                
+            default:
+                alert('Unknown assessment method');
+                this.showLoadingOverlay(false);
+        }
+    }
+
+    loadDemoData() {
+        // Generate a demo report with sample data
+        // This will create a session with demo patient data
+        fetch('/api/assessment/demo', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                country: this.selectedCountry
+            })
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // Redirect to demo report
+                window.location.href = `/report?session=${result.sessionId}&demo=true`;
+            } else {
+                alert('Failed to load demo data: ' + result.error);
+            }
+        })
+        .catch(error => {
+            console.error('Demo data error:', error);
+            alert('Failed to load demo data');
+        })
+        .finally(() => {
+            this.showLoadingOverlay(false);
+        });
+    }
+
+    showLoadingOverlay(show) {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+    }
+
+    viewSampleReport() {
+        if (!this.isAuthenticated) {
+            alert('Please authenticate first');
+            return;
+        }
+        
+        // Load demo and show report
+        this.startAssessment('demo');
+
         switch (method) {
             case 'manual':
                 this.startManualAssessment();
