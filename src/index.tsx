@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
+import { BiologicalAgeCalculator, DiseaseRiskCalculator } from './medical-algorithms'
 
 type Bindings = {
   DB: D1Database;
@@ -464,8 +465,7 @@ app.post('/api/assessment/complete', async (c) => {
   const { sessionId, patientId, assessmentData } = await c.req.json()
   
   try {
-    // Import medical algorithms
-    const { BiologicalAgeCalculator, DiseaseRiskCalculator } = await import('./medical-algorithms')
+    // Medical algorithms are imported at the top
     
     // Get patient data for calculations
     const patient = await env.DB.prepare(`
@@ -573,8 +573,7 @@ app.post('/api/assessment/demo', async (c) => {
   const { country } = await c.req.json()
   
   try {
-    // Import medical algorithms
-    const { BiologicalAgeCalculator, DiseaseRiskCalculator } = await import('./medical-algorithms')
+    // Medical algorithms are imported at the top
     
     // Create demo patient
     const demoPatient = {
