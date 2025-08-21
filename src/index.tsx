@@ -11,10 +11,9 @@ const app = new Hono<{ Bindings: Bindings }>()
 // Enable CORS for API routes
 app.use('/api/*', cors())
 
-// Serve static files 
-app.use('/css/*', serveStatic({ root: './public' }))
-app.use('/js/*', serveStatic({ root: './public' }))
-app.use('/static/*', serveStatic({ root: './public' }))
+// Serve static files
+app.use('/css/*', serveStatic())
+app.use('/js/*', serveStatic())
 
 // Authentication API
 app.post('/api/auth/login', async (c) => {
@@ -36,6 +35,11 @@ app.post('/api/auth/login', async (c) => {
       error: 'Invalid credentials' 
     }, 401)
   }
+})
+
+// Favicon route
+app.get('/favicon.ico', (c) => {
+  return c.text('', 204) // No content
 })
 
 // Test API endpoint
