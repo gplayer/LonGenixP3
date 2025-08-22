@@ -71,9 +71,983 @@ app.get('/report', async (c) => {
       SELECT * FROM risk_calculations WHERE session_id = ?
     `).bind(sessionId).all()
 
+    // Get comprehensive assessment data
+    const assessmentData = await env.DB.prepare(`
+      SELECT json_data FROM assessment_data WHERE session_id = ? AND data_type = 'comprehensive_lifestyle'
+    `).bind(sessionId).first()
+
+    // Parse comprehensive assessment data
+    let comprehensiveData = null
+    if (assessmentData) {
+      try {
+        comprehensiveData = JSON.parse(assessmentData.json_data)
+      } catch (e) {
+        console.error('Error parsing comprehensive data:', e)
+      }
+    }
+
     // Calculate age from date of birth
     const birthDate = new Date(session.date_of_birth)
     const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+
+    // Helper functions for dynamic content generation
+    function generateFunctionalMedicineSection() {
+      if (!comprehensiveData) {
+        return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see personalized functional medicine analysis.</p>`
+      }
+
+
+
+
+
+      const systemsData = [
+        {
+          id: 'assimilation',
+          name: 'Assimilation System',
+          icon: 'fas fa-utensils',
+          description: 'Digestion, absorption, microbiota/GI function',
+          questions: [
+            'How often do you experience bloating after meals?',
+            'Do you have regular, well-formed bowel movements?',
+            'How would you rate your digestive comfort overall?',
+            'Do you have known food sensitivities or intolerances?',
+            'How often do you experience gas or abdominal discomfort?',
+            'Do you feel satisfied and energized after meals?'
+          ]
+        },
+        {
+          id: 'biotransformation',
+          name: 'Biotransformation & Elimination',
+          icon: 'fas fa-filter',
+          description: 'Detoxification and toxin elimination',
+          questions: [
+            'How often do you feel fatigued or sluggish?',
+            'Do you have regular bowel movements (at least once daily)?',
+            'How well do you tolerate alcohol or caffeine?',
+            'Do you sweat easily during physical activity?',
+            'How sensitive are you to strong odors or chemicals?',
+            'How would you rate your overall energy for detoxification?'
+          ]
+        },
+        {
+          id: 'defense',
+          name: 'Defense & Repair',
+          icon: 'fas fa-shield-virus',
+          description: 'Immune function, inflammation, and infection/microbes',
+          questions: [
+            'How often do you get colds or infections?',
+            'How quickly do you recover from illness?',
+            'Do you have any autoimmune conditions or symptoms?',
+            'How well do cuts and wounds heal?',
+            'Do you experience chronic inflammation or pain?',
+            'How would you rate your overall immune strength?'
+          ]
+        },
+        {
+          id: 'structural',
+          name: 'Structural Integrity',
+          icon: 'fas fa-dumbbell',
+          description: 'Musculoskeletal system and subcellular membranes',
+          questions: [
+            'Do you experience joint pain or stiffness?',
+            'How would you rate your muscle strength?',
+            'Do you have good posture and alignment?',
+            'How often do you experience back or neck pain?',
+            'Do you have good balance and coordination?',
+            'How would you rate your overall physical mobility?'
+          ]
+        },
+        {
+          id: 'communication',
+          name: 'Communication System',
+          icon: 'fas fa-brain',
+          description: 'Endocrine, neurotransmitters, and immune messengers',
+          questions: [
+            'How stable is your mood throughout the day?',
+            'Do you have regular, restful sleep patterns?',
+            'How well do you handle stress?',
+            'Do you experience hormone-related symptoms?',
+            'How sharp is your mental focus and concentration?',
+            'How would you rate your emotional regulation?'
+          ]
+        },
+        {
+          id: 'energy',
+          name: 'Energy System',
+          icon: 'fas fa-bolt',
+          description: 'Energy regulation and mitochondrial function',
+          questions: [
+            'How are your energy levels throughout the day?',
+            'Do you experience afternoon energy crashes?',
+            'How well do you recover from physical exertion?',
+            'Do you feel refreshed after sleep?',
+            'How stable is your energy without caffeine?',
+            'How would you rate your overall vitality?'
+          ]
+        },
+        {
+          id: 'transport',
+          name: 'Transport System',
+          icon: 'fas fa-heartbeat',
+          description: 'Cardiovascular and lymphatic systems',
+          questions: [
+            'Do you have good circulation (warm hands/feet)?',
+            'How is your cardiovascular fitness?',
+            'Do you experience swelling or fluid retention?',
+            'How well do you tolerate physical activity?',
+            'Do you have any heart-related symptoms?',
+            'How would you rate your overall circulation?'
+          ]
+        }
+      ]
+
+      return systemsData.map(system => {
+        // Calculate system score and collect responses
+        let totalQuestions = 0
+        let positiveResponses = 0
+        const userResponses = []
+        
+        // Check both flat structure (assimilation_q1) and nested structure (functionalMedicine.assimilation.*)
+        for (let i = 1; i <= 6; i++) {
+          const questionKey = `${system.id}_q${i}`
+          let response = null
+          
+          // Try flat structure first (expected from form)
+          if (comprehensiveData[questionKey]) {
+            response = comprehensiveData[questionKey]
+          }
+          // Try nested structure (what appears to be stored)
+          else if (comprehensiveData.functionalMedicine && 
+                   comprehensiveData.functionalMedicine[system.id]) {
+            const systemData = comprehensiveData.functionalMedicine[system.id]
+            // Look for question responses in nested structure
+            response = systemData[`q${i}`] || systemData[questionKey] || null
+          }
+          
+          if (response) {
+            totalQuestions++
+            const questionText = system.questions[i-1] || `Question ${i}`
+            userResponses.push({ question: questionText, answer: response })
+            
+            // Score based on response type
+            if (response === 'yes' || response === 'excellent' || response === 'very_good' || response === 'always' || response === 'fast' || response === 'none') {
+              positiveResponses += 2
+            } else if (response === 'good' || response === 'often' || response === 'normal' || response === 'mild') {
+              positiveResponses += 1.5
+            } else if (response === 'fair' || response === 'sometimes' || response === 'slow' || response === 'moderate') {
+              positiveResponses += 1
+            } else if (response === 'poor' || response === 'rarely' || response === 'never' || response === 'very_slow' || response === 'severe') {
+              positiveResponses += 0.5
+            }
+          }
+        }
+        
+        // If no individual questions found, check for summary data
+        if (totalQuestions === 0 && comprehensiveData.functionalMedicine && 
+            comprehensiveData.functionalMedicine[system.id]) {
+          const systemData = comprehensiveData.functionalMedicine[system.id]
+          
+          // Look for any available data in this system
+          Object.keys(systemData).forEach(key => {
+            const value = systemData[key]
+            if (value && (typeof value === 'string' || typeof value === 'number')) {
+              totalQuestions++
+              userResponses.push({ 
+                question: key.replace(/([A-Z])/g, ' $1').toLowerCase().replace(/^./, str => str.toUpperCase()),
+                answer: String(value)
+              })
+              
+              // Score based on response type
+              const strValue = String(value).toLowerCase()
+              if (strValue === 'yes' || strValue === 'excellent' || strValue === 'very_good' || strValue === 'good' || strValue === 'always' || strValue === 'fast' || strValue === 'none') {
+                positiveResponses += 2
+              } else if (strValue === 'fair' || strValue === 'sometimes' || strValue === 'slow' || strValue === 'moderate') {
+                positiveResponses += 1
+              } else if (strValue === 'poor' || strValue === 'rarely' || strValue === 'never' || strValue === 'very_slow' || strValue === 'severe' || strValue === 'no') {
+                positiveResponses += 0.5
+              } else {
+                positiveResponses += 1.5 // Default for unknown positive values
+              }
+            }
+          })
+        }
+        
+
+        
+        const score = totalQuestions > 0 ? Math.round((positiveResponses / (totalQuestions * 2)) * 100) : 0
+        const status = score >= 85 ? 'excellent' : score >= 70 ? 'optimal' : score >= 55 ? 'good' : 'needs-attention'
+        const color = status === 'excellent' ? 'green' : status === 'optimal' ? 'blue' : status === 'good' ? 'yellow' : 'red'
+        
+        // Generate analysis based on responses
+        let analysis = ''
+        if (totalQuestions === 0) {
+          analysis = `No assessment data available for ${system.name.toLowerCase()}. Complete the comprehensive assessment to see detailed analysis.`
+        } else if (score >= 85) {
+          analysis = `Excellent function with optimal performance indicators. ${system.name.toLowerCase()} shows strong capacity and minimal concerns.`
+        } else if (score >= 70) {
+          analysis = `Good overall function with some areas for optimization. ${system.name.toLowerCase()} demonstrates adequate performance with potential for enhancement.`
+        } else if (score >= 55) {
+          analysis = `Moderate function with several areas needing attention. ${system.name.toLowerCase()} shows mixed performance requiring targeted interventions.`
+        } else {
+          analysis = `Significant dysfunction requiring immediate attention. ${system.name.toLowerCase()} shows compromised performance needing comprehensive support.`
+        }
+        
+        return `
+          <div class="bg-white border-2 border-gray-200 rounded-xl p-6">
+            <div class="flex items-center mb-4">
+              <div class="bg-${color}-100 p-3 rounded-full mr-4">
+                <i class="${system.icon} text-${color}-600 text-xl"></i>
+              </div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-lg text-gray-800">${system.name}</h4>
+                <p class="text-sm text-gray-600">${system.description}</p>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium">System Function Score</span>
+                <span class="text-2xl font-bold text-${color}-600">${score}/100</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-${color}-600 h-2 rounded-full" style="width: ${score}%"></div>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800">${status.toUpperCase().replace('-', ' ')}</span>
+            </div>
+            
+            <div class="mb-4">
+              <h5 class="text-sm font-semibold text-gray-700 mb-2">Clinical Analysis:</h5>
+              <p class="text-xs text-gray-600">${analysis}</p>
+            </div>
+            
+            ${userResponses.length > 0 ? `
+              <div class="border-t border-gray-200 pt-4">
+                <h5 class="text-sm font-semibold text-gray-700 mb-3">Assessment Responses:</h5>
+                <div class="space-y-2">
+                  ${userResponses.map(resp => `
+                    <div class="text-xs">
+                      <div class="text-gray-600 mb-1">${resp.question}</div>
+                      <div class="text-${color}-700 font-medium ml-2">→ ${resp.answer.replace(/_/g, ' ').toUpperCase()}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : `
+              <div class="text-xs text-gray-500 italic">No responses recorded for this system</div>
+            `}
+          </div>
+        `
+      }).join('')
+    }
+
+    function generateATMSection() {
+      if (!comprehensiveData) {
+        return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see personalized root-cause analysis.</p>`
+      }
+
+      // Extract ATM data from comprehensive assessment
+      const antecedents = []
+      const triggers = []
+      const mediators = []
+
+      // Process dynamic entries
+      if (comprehensiveData.antecedentsDescription && Array.isArray(comprehensiveData.antecedentsDescription)) {
+        comprehensiveData.antecedentsDescription.forEach((desc, index) => {
+          if (desc && desc.trim()) {
+            antecedents.push({
+              description: desc,
+              date: comprehensiveData.antecedentsDate?.[index] || '',
+              severity: comprehensiveData.antecedentsSeverity?.[index] || ''
+            })
+          }
+        })
+      }
+
+      if (comprehensiveData.triggersDescription && Array.isArray(comprehensiveData.triggersDescription)) {
+        comprehensiveData.triggersDescription.forEach((desc, index) => {
+          if (desc && desc.trim()) {
+            triggers.push({
+              description: desc,
+              date: comprehensiveData.triggersDate?.[index] || '',
+              impact: comprehensiveData.triggersImpact?.[index] || ''
+            })
+          }
+        })
+      }
+
+      if (comprehensiveData.mediatorsDescription && Array.isArray(comprehensiveData.mediatorsDescription)) {
+        comprehensiveData.mediatorsDescription.forEach((desc, index) => {
+          if (desc && desc.trim()) {
+            mediators.push({
+              description: desc,
+              date: comprehensiveData.mediatorsDate?.[index] || '',
+              frequency: comprehensiveData.mediatorsFrequency?.[index] || ''
+            })
+          }
+        })
+      }
+
+      return `
+        <div class="grid md:grid-cols-3 gap-8 mb-8">
+          <!-- Antecedents -->
+          <div class="bg-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4">
+              <i class="fas fa-history mr-2"></i>Antecedents (Predisposing)
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">Factors that create vulnerability or lay the groundwork for dysfunction</p>
+            <div class="space-y-3">
+              ${comprehensiveData.geneticPredispositions ? `
+                <div class="bg-white rounded-lg p-3 border border-blue-200">
+                  <h4 class="font-semibold text-blue-700 text-sm">Genetic Predispositions</h4>
+                  <p class="text-xs text-gray-600 mt-2">${comprehensiveData.geneticPredispositions}</p>
+                </div>
+              ` : ''}
+              
+              ${comprehensiveData.earlyStress && comprehensiveData.earlyStress !== '' ? `
+                <div class="bg-white rounded-lg p-3 border border-blue-200">
+                  <h4 class="font-semibold text-blue-700 text-sm">Early Life Stress/Trauma</h4>
+                  <p class="text-xs text-gray-600 mt-2">Level: ${comprehensiveData.earlyStress.replace('-', ' ').toUpperCase()}</p>
+                </div>
+              ` : ''}
+              
+              ${antecedents.map(item => `
+                <div class="bg-white rounded-lg p-3 border border-blue-200">
+                  <h4 class="font-semibold text-blue-700 text-sm">Predisposing Factor ${item.date ? `(${item.date})` : ''}</h4>
+                  <p class="text-xs text-gray-600 mt-2">${item.description}</p>
+                  ${item.severity ? `<p class="text-xs text-blue-600 mt-1">Severity: ${item.severity}</p>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Triggers -->
+          <div class="bg-red-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-red-800 mb-4">
+              <i class="fas fa-bolt mr-2"></i>Triggers (Precipitating)
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">Events that initiated or worsened current health concerns</p>
+            <div class="space-y-3">
+              ${comprehensiveData.symptomOnset ? `
+                <div class="bg-white rounded-lg p-3 border border-red-200">
+                  <h4 class="font-semibold text-red-700 text-sm">Symptom Onset</h4>
+                  <p class="text-xs text-gray-600 mt-2">${comprehensiveData.symptomOnset}</p>
+                </div>
+              ` : ''}
+              
+              ${triggers.map(item => `
+                <div class="bg-white rounded-lg p-3 border border-red-200">
+                  <h4 class="font-semibold text-red-700 text-sm">Trigger Event ${item.date ? `(${item.date})` : ''}</h4>
+                  <p class="text-xs text-gray-600 mt-2">${item.description}</p>
+                  ${item.impact ? `<p class="text-xs text-red-600 mt-1">Impact: ${item.impact}</p>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Mediators -->
+          <div class="bg-green-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-green-800 mb-4">
+              <i class="fas fa-sync mr-2"></i>Mediators (Perpetuating)
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">Ongoing factors that maintain or worsen current patterns</p>
+            <div class="space-y-3">
+              ${comprehensiveData.healthBarriers ? `
+                <div class="bg-white rounded-lg p-3 border border-green-200">
+                  <h4 class="font-semibold text-green-700 text-sm">Health Barriers</h4>
+                  <p class="text-xs text-gray-600 mt-2">${comprehensiveData.healthBarriers}</p>
+                </div>
+              ` : ''}
+              
+              ${mediators.map(item => `
+                <div class="bg-white rounded-lg p-3 border border-green-200">
+                  <h4 class="font-semibold text-green-700 text-sm">Ongoing Factor ${item.date ? `(Started ${item.date})` : ''}</h4>
+                  <p class="text-xs text-gray-600 mt-2">${item.description}</p>
+                  ${item.frequency ? `<p class="text-xs text-green-600 mt-1">Frequency: ${item.frequency}</p>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    function generateLifestyleSection() {
+      if (!comprehensiveData) {
+        return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see personalized lifestyle analysis.</p>`
+      }
+
+      // Extract lifestyle data
+      const exercise = {
+        frequency: comprehensiveData.exerciseFrequency || 'Not specified',
+        minutes: comprehensiveData.exerciseMinutes || 'Not specified',
+        types: []
+      }
+
+      // Process exercise types
+      if (comprehensiveData.exerciseTypes) {
+        const types = Array.isArray(comprehensiveData.exerciseTypes) ? comprehensiveData.exerciseTypes : [comprehensiveData.exerciseTypes]
+        exercise.types = types.filter(type => type) // Remove empty values
+        if (exercise.types.includes('other') && comprehensiveData.exerciseTypesOther) {
+          exercise.types = exercise.types.filter(type => type !== 'other')
+          exercise.types.push(comprehensiveData.exerciseTypesOther)
+        }
+      }
+
+      const sleep = {
+        hours: comprehensiveData.sleepHours || 'Not specified',
+        quality: comprehensiveData.sleepQuality || 'Not specified'
+      }
+
+      const stress = {
+        level: comprehensiveData.stressLevel || 'Not specified',
+        techniques: []
+      }
+
+      if (comprehensiveData.stressTechniques) {
+        const techniques = Array.isArray(comprehensiveData.stressTechniques) ? comprehensiveData.stressTechniques : [comprehensiveData.stressTechniques]
+        stress.techniques = techniques.filter(tech => tech)
+      }
+
+      return `
+        <div class="grid md:grid-cols-3 gap-6">
+          <!-- Exercise -->
+          <div class="bg-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4">
+              <i class="fas fa-dumbbell mr-2"></i>Physical Activity
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Frequency per week:</p>
+                <p class="text-sm text-gray-600">${exercise.frequency}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-700">Duration per session:</p>
+                <p class="text-sm text-gray-600">${exercise.minutes} minutes</p>
+              </div>
+              ${exercise.types.length > 0 ? `
+                <div>
+                  <p class="text-sm font-medium text-gray-700">Activity types:</p>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    ${exercise.types.map(type => `
+                      <span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">${type}</span>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Sleep -->
+          <div class="bg-purple-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-purple-800 mb-4">
+              <i class="fas fa-moon mr-2"></i>Sleep Quality
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Hours per night:</p>
+                <p class="text-sm text-gray-600">${sleep.hours}</p>
+              </div>
+              <div>
+                <p class="text-sm font-medium text-gray-700">Sleep quality:</p>
+                <p class="text-sm text-gray-600">${sleep.quality}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stress Management -->
+          <div class="bg-red-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-red-800 mb-4">
+              <i class="fas fa-brain mr-2"></i>Stress Management
+            </h3>
+            <div class="space-y-3">
+              <div>
+                <p class="text-sm font-medium text-gray-700">Stress level (1-5):</p>
+                <p class="text-sm text-gray-600">${stress.level}</p>
+              </div>
+              ${stress.techniques.length > 0 ? `
+                <div>
+                  <p class="text-sm font-medium text-gray-700">Management techniques:</p>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    ${stress.techniques.map(tech => `
+                      <span class="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded">${tech}</span>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    function generateBiomarkerSection() {
+      if (!comprehensiveData) {
+        return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see biomarker analysis.</p>`
+      }
+
+
+
+      const biomarkerCategories = {
+        'Metabolic Panel': [
+          { name: 'glucose', label: 'Fasting Glucose', unit: 'mg/dL', range: '70-99' },
+          { name: 'hba1c', label: 'HbA1c', unit: '%', range: '4.0-5.6' },
+          { name: 'insulin', label: 'Fasting Insulin', unit: 'μU/mL', range: '2.6-24.9' },
+          { name: 'cPeptide', label: 'C-Peptide', unit: 'ng/mL', range: '1.1-4.4' },
+          { name: 'fructosamine', label: 'Fructosamine', unit: 'μmol/L', range: '205-285' }
+        ],
+        'Lipid Panel': [
+          { name: 'totalCholesterol', label: 'Total Cholesterol', unit: 'mg/dL', range: '<200' },
+          { name: 'hdlCholesterol', label: 'HDL Cholesterol', unit: 'mg/dL', range: '>40 (M), >50 (F)' },
+          { name: 'ldlCholesterol', label: 'LDL Cholesterol', unit: 'mg/dL', range: '<100' },
+          { name: 'triglycerides', label: 'Triglycerides', unit: 'mg/dL', range: '<150' },
+          { name: 'nonHdlCholesterol', label: 'Non-HDL Cholesterol', unit: 'mg/dL', range: '<130' },
+          { name: 'apoA1', label: 'Apolipoprotein A1', unit: 'mg/dL', range: '>120 (M), >140 (F)' },
+          { name: 'apoB', label: 'Apolipoprotein B', unit: 'mg/dL', range: '<90' },
+          { name: 'lipoproteinA', label: 'Lipoprotein(a)', unit: 'mg/dL', range: '<30' }
+        ],
+        'Kidney Function': [
+          { name: 'creatinine', label: 'Creatinine', unit: 'mg/dL', range: '0.6-1.2' },
+          { name: 'bun', label: 'BUN (Blood Urea Nitrogen)', unit: 'mg/dL', range: '7-20' },
+          { name: 'egfr', label: 'eGFR', unit: 'mL/min/1.73m²', range: '>90' },
+          { name: 'albumin', label: 'Albumin', unit: 'g/dL', range: '3.5-5.0' },
+          { name: 'microalbumin', label: 'Microalbumin (Urine)', unit: 'mg/g creatinine', range: '<30' },
+          { name: 'cystatinC', label: 'Cystatin C', unit: 'mg/L', range: '0.53-0.95' }
+        ],
+        'Liver Function': [
+          { name: 'alt', label: 'ALT (Alanine Transaminase)', unit: 'U/L', range: '7-56' },
+          { name: 'ast', label: 'AST (Aspartate Transaminase)', unit: 'U/L', range: '10-40' },
+          { name: 'alp', label: 'Alkaline Phosphatase', unit: 'U/L', range: '44-147' },
+          { name: 'totalBilirubin', label: 'Total Bilirubin', unit: 'mg/dL', range: '0.3-1.2' },
+          { name: 'directBilirubin', label: 'Direct Bilirubin', unit: 'mg/dL', range: '0.0-0.3' },
+          { name: 'ggt', label: 'GGT (Gamma-Glutamyl Transferase)', unit: 'U/L', range: '9-48' }
+        ],
+        'Thyroid Function': [
+          { name: 'tsh', label: 'TSH (Thyroid Stimulating Hormone)', unit: 'μIU/mL', range: '0.27-4.20' },
+          { name: 'freeT4', label: 'Free T4', unit: 'ng/dL', range: '0.93-1.70' },
+          { name: 'freeT3', label: 'Free T3', unit: 'pg/mL', range: '2.0-4.4' },
+          { name: 'reverseT3', label: 'Reverse T3', unit: 'ng/dL', range: '9.2-24.1' },
+          { name: 'thyroglobulinAb', label: 'Thyroglobulin Antibodies', unit: 'IU/mL', range: '<4' },
+          { name: 'tpoAb', label: 'TPO Antibodies', unit: 'IU/mL', range: '<34' }
+        ],
+        'Inflammatory Markers': [
+          { name: 'crp', label: 'C-Reactive Protein (hs-CRP)', unit: 'mg/L', range: '<3.0' },
+          { name: 'esr', label: 'ESR (Erythrocyte Sedimentation Rate)', unit: 'mm/hr', range: '<20 (M), <30 (F)' },
+          { name: 'interleukin6', label: 'Interleukin-6 (IL-6)', unit: 'pg/mL', range: '<3.4' },
+          { name: 'tnfAlpha', label: 'TNF-α (Tumor Necrosis Factor)', unit: 'pg/mL', range: '<8.1' }
+        ],
+        'Complete Blood Count': [
+          { name: 'wbc', label: 'White Blood Cells', unit: '10³/μL', range: '4.5-11.0' },
+          { name: 'rbc', label: 'Red Blood Cells', unit: '10⁶/μL', range: '4.7-6.1 (M), 4.2-5.4 (F)' },
+          { name: 'hemoglobin', label: 'Hemoglobin', unit: 'g/dL', range: '14-18 (M), 12-16 (F)' },
+          { name: 'hematocrit', label: 'Hematocrit', unit: '%', range: '42-52 (M), 37-47 (F)' },
+          { name: 'platelets', label: 'Platelets', unit: '10³/μL', range: '150-450' },
+          { name: 'neutrophils', label: 'Neutrophils', unit: '%', range: '40-74' },
+          { name: 'lymphocytes', label: 'Lymphocytes', unit: '%', range: '19-48' },
+          { name: 'monocytes', label: 'Monocytes', unit: '%', range: '3.4-9' }
+        ],
+        'Nutritional Status': [
+          { name: 'vitaminD', label: 'Vitamin D (25-OH)', unit: 'ng/mL', range: '30-100' },
+          { name: 'vitaminB12', label: 'Vitamin B12', unit: 'pg/mL', range: '232-1245' },
+          { name: 'folate', label: 'Folate', unit: 'ng/mL', range: '2.7-17.0' },
+          { name: 'ferritin', label: 'Ferritin', unit: 'ng/mL', range: '15-150 (F), 15-200 (M)' },
+          { name: 'iron', label: 'Iron', unit: 'μg/dL', range: '60-170 (M), 60-140 (F)' },
+          { name: 'tibc', label: 'TIBC (Total Iron Binding Capacity)', unit: 'μg/dL', range: '240-450' },
+          { name: 'transferrinSat', label: 'Transferrin Saturation', unit: '%', range: '20-50' },
+          { name: 'omega3Index', label: 'Omega-3 Index', unit: '%', range: '>8' }
+        ],
+        'Hormones (Optional)': [
+          { name: 'testosterone', label: 'Testosterone (Total)', unit: 'ng/dL', range: '300-1000 (M), 15-70 (F)' },
+          { name: 'freeTestosterone', label: 'Free Testosterone', unit: 'pg/mL', range: '9-30 (M), 0.3-3.2 (F)' },
+          { name: 'estradiol', label: 'Estradiol', unit: 'pg/mL', range: '7-42 (M), varies with cycle (F)' },
+          { name: 'progesterone', label: 'Progesterone', unit: 'ng/mL', range: '<1.4 (M), varies with cycle (F)' },
+          { name: 'cortisol', label: 'Cortisol (AM)', unit: 'μg/dL', range: '6.2-19.4' },
+          { name: 'dheas', label: 'DHEA-S', unit: 'μg/dL', range: '164-530 (M), 57-279 (F)' }
+        ]
+      }
+
+      let enteredCount = 0
+      let totalCount = 0
+
+      const categoryHtml = Object.keys(biomarkerCategories).map(category => {
+        const markers = biomarkerCategories[category]
+        const categoryMarkers = markers.map(marker => {
+          totalCount++
+          // Check both flat structure and nested biomarkers structure
+          let value = comprehensiveData[marker.name]
+          if (!value && comprehensiveData.biomarkers) {
+            value = comprehensiveData.biomarkers[marker.name]
+          }
+          const hasValue = value !== undefined && value !== null && String(value).trim() !== ''
+          if (hasValue) enteredCount++
+          
+          return `
+            <div class="bg-white rounded-lg p-4 border ${hasValue ? 'border-green-200' : 'border-gray-200'}">
+              <div class="flex justify-between items-start mb-2">
+                <h5 class="text-sm font-semibold text-gray-800">${marker.label}</h5>
+                ${hasValue ? '<i class="fas fa-check-circle text-green-500 text-sm"></i>' : '<i class="fas fa-circle text-gray-300 text-sm"></i>'}
+              </div>
+              <div class="space-y-1">
+                <div class="flex justify-between items-center">
+                  <span class="text-lg font-bold ${hasValue ? 'text-blue-600' : 'text-gray-400'}">
+                    ${hasValue ? value : '--'}
+                  </span>
+                  <span class="text-xs text-gray-500">${marker.unit}</span>
+                </div>
+                <div class="text-xs text-gray-600">
+                  <span class="font-medium">Reference:</span> ${marker.range} ${marker.unit}
+                </div>
+                ${hasValue ? `
+                  <div class="text-xs mt-2">
+                    <span class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">ENTERED</span>
+                  </div>
+                ` : `
+                  <div class="text-xs mt-2">
+                    <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">NOT ENTERED</span>
+                  </div>
+                `}
+              </div>
+            </div>
+          `
+        }).join('')
+
+        return `
+          <div class="mb-8">
+            <h4 class="text-lg font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2">
+              <i class="fas fa-flask mr-2 text-blue-600"></i>${category}
+            </h4>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${categoryMarkers}
+            </div>
+          </div>
+        `
+      }).join('')
+
+      return `
+
+        <div class="mb-6">
+          <div class="bg-blue-50 rounded-lg p-4 mb-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="text-lg font-semibold text-blue-800">Biomarker Summary</h4>
+                <p class="text-sm text-blue-700">Comprehensive laboratory analysis with ${totalCount} total biomarkers</p>
+              </div>
+              <div class="text-right">
+                <div class="text-3xl font-bold text-blue-600">${enteredCount}/${totalCount}</div>
+                <div class="text-sm text-blue-700">Biomarkers Entered</div>
+              </div>
+            </div>
+            <div class="mt-4">
+              <div class="w-full bg-blue-200 rounded-full h-2">
+                <div class="bg-blue-600 h-2 rounded-full" style="width: ${totalCount > 0 ? Math.round((enteredCount / totalCount) * 100) : 0}%"></div>
+              </div>
+              <p class="text-xs text-blue-600 mt-1">${totalCount > 0 ? Math.round((enteredCount / totalCount) * 100) : 0}% completion rate</p>
+            </div>
+          </div>
+        </div>
+        ${categoryHtml}
+      `
+    }
+
+    function generateMentalHealthSection() {
+      if (!comprehensiveData) {
+        return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see personalized mental health analysis.</p>`
+      }
+
+      // Calculate PHQ-9 score
+      let phq9Score = 0
+      let phq9Count = 0
+      for (let i = 1; i <= 9; i++) {
+        const response = comprehensiveData[`phq9_q${i}`]
+        if (response !== undefined && response !== '') {
+          phq9Score += parseInt(response) || 0
+          phq9Count++
+        }
+      }
+
+      // Calculate GAD-7 score
+      let gad7Score = 0
+      let gad7Count = 0
+      for (let i = 1; i <= 7; i++) {
+        const response = comprehensiveData[`gad7_q${i}`]
+        if (response !== undefined && response !== '') {
+          gad7Score += parseInt(response) || 0
+          gad7Count++
+        }
+      }
+
+      const phq9Level = phq9Score <= 4 ? 'Minimal' : phq9Score <= 9 ? 'Mild' : phq9Score <= 14 ? 'Moderate' : phq9Score <= 19 ? 'Moderately Severe' : 'Severe'
+      const gad7Level = gad7Score <= 4 ? 'Minimal' : gad7Score <= 9 ? 'Mild' : gad7Score <= 14 ? 'Moderate' : 'Severe'
+
+      return `
+        <div class="grid md:grid-cols-2 gap-8">
+          <!-- PHQ-9 Depression Screening -->
+          <div class="bg-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4">
+              <i class="fas fa-heart mr-2"></i>PHQ-9 Depression Screening
+            </h3>
+            <div class="text-center mb-4">
+              <div class="text-4xl font-bold text-blue-600 mb-2">${phq9Count > 0 ? phq9Score : '--'}</div>
+              <p class="text-sm text-gray-600">Total Score (0-27)</p>
+              <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                phq9Level === 'Minimal' ? 'bg-green-100 text-green-800' :
+                phq9Level === 'Mild' ? 'bg-yellow-100 text-yellow-800' :
+                phq9Level === 'Moderate' ? 'bg-orange-100 text-orange-800' :
+                'bg-red-100 text-red-800'
+              } mt-2">${phq9Level}</span>
+            </div>
+            <div class="text-xs text-gray-600">
+              <p>Based on ${phq9Count}/9 completed responses</p>
+              <p class="mt-2">PHQ-9 is a validated screening tool for depression symptoms over the past 2 weeks.</p>
+            </div>
+          </div>
+
+          <!-- GAD-7 Anxiety Screening -->
+          <div class="bg-purple-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-purple-800 mb-4">
+              <i class="fas fa-brain mr-2"></i>GAD-7 Anxiety Screening
+            </h3>
+            <div class="text-center mb-4">
+              <div class="text-4xl font-bold text-purple-600 mb-2">${gad7Count > 0 ? gad7Score : '--'}</div>
+              <p class="text-sm text-gray-600">Total Score (0-21)</p>
+              <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                gad7Level === 'Minimal' ? 'bg-green-100 text-green-800' :
+                gad7Level === 'Mild' ? 'bg-yellow-100 text-yellow-800' :
+                gad7Level === 'Moderate' ? 'bg-orange-100 text-orange-800' :
+                'bg-red-100 text-red-800'
+              } mt-2">${gad7Level}</span>
+            </div>
+            <div class="text-xs text-gray-600">
+              <p>Based on ${gad7Count}/7 completed responses</p>
+              <p class="mt-2">GAD-7 is a validated screening tool for anxiety symptoms over the past 2 weeks.</p>
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    function generateMedicalHistorySection() {
+      if (!comprehensiveData) {
+        return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see medical history analysis.</p>`
+      }
+
+      // Extract medical history data
+      const currentConditions = comprehensiveData.currentConditions || ''
+      const pastConditions = comprehensiveData.pastConditions || []
+      const pastConditionsDetails = comprehensiveData.pastConditionsDetails || ''
+      const currentMedications = comprehensiveData.currentMedications || ''
+      const currentSupplements = comprehensiveData.currentSupplements || ''
+      const drugAllergies = comprehensiveData.drugAllergies || ''
+      const familyHistory = comprehensiveData.familyHistory || []
+      const familyHistoryDetails = comprehensiveData.familyHistoryDetails || ''
+      const familyHealthPatterns = comprehensiveData.familyHealthPatterns || ''
+      
+      // Women's health data
+      const regularCycles = comprehensiveData.regularCycles || ''
+      const pregnancies = comprehensiveData.pregnancies || ''
+      const liveBirths = comprehensiveData.liveBirths || ''
+      const hormoneUse = comprehensiveData.hormoneUse || ''
+      const menarcheAge = comprehensiveData.menarcheAge || ''
+
+      return `
+        <div class="space-y-8">
+          <!-- Current Medical Conditions -->
+          ${currentConditions ? `
+            <div class="bg-red-50 rounded-lg p-6">
+              <h3 class="text-lg font-semibold text-red-800 mb-4">
+                <i class="fas fa-heartbeat mr-2"></i>Current Medical Conditions
+              </h3>
+              <div class="bg-white rounded-lg p-4 border border-red-200">
+                <p class="text-sm text-gray-700 leading-relaxed">${currentConditions}</p>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Past Medical History -->
+          ${pastConditions.length > 0 || pastConditionsDetails ? `
+            <div class="bg-orange-50 rounded-lg p-6">
+              <h3 class="text-lg font-semibold text-orange-800 mb-4">
+                <i class="fas fa-history mr-2"></i>Past Medical History
+              </h3>
+              ${pastConditions.length > 0 ? `
+                <div class="mb-4">
+                  <p class="text-sm font-medium text-gray-700 mb-2">Reported Conditions:</p>
+                  <div class="flex flex-wrap gap-2">
+                    ${Array.isArray(pastConditions) ? pastConditions.map(condition => `
+                      <span class="inline-block px-3 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">${condition.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                    `).join('') : `<span class="inline-block px-3 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">${pastConditions}</span>`}
+                  </div>
+                </div>
+              ` : ''}
+              ${pastConditionsDetails ? `
+                <div class="bg-white rounded-lg p-4 border border-orange-200">
+                  <p class="text-sm font-medium text-gray-700 mb-2">Additional Details:</p>
+                  <p class="text-sm text-gray-700 leading-relaxed">${pastConditionsDetails}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Current Medications & Supplements -->
+          ${currentMedications || currentSupplements || drugAllergies ? `
+            <div class="bg-blue-50 rounded-lg p-6">
+              <h3 class="text-lg font-semibold text-blue-800 mb-4">
+                <i class="fas fa-pills mr-2"></i>Current Medications & Supplements
+              </h3>
+              <div class="grid md:grid-cols-2 gap-6">
+                ${currentMedications ? `
+                  <div class="bg-white rounded-lg p-4 border border-blue-200">
+                    <h4 class="font-semibold text-blue-700 mb-2">Current Medications</h4>
+                    <p class="text-sm text-gray-700 leading-relaxed">${currentMedications}</p>
+                  </div>
+                ` : ''}
+                ${currentSupplements ? `
+                  <div class="bg-white rounded-lg p-4 border border-blue-200">
+                    <h4 class="font-semibold text-blue-700 mb-2">Supplements & Vitamins</h4>
+                    <p class="text-sm text-gray-700 leading-relaxed">${currentSupplements}</p>
+                  </div>
+                ` : ''}
+              </div>
+              ${drugAllergies ? `
+                <div class="mt-4 bg-red-100 rounded-lg p-4 border border-red-300">
+                  <h4 class="font-semibold text-red-700 mb-2">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>Drug Allergies & Adverse Reactions
+                  </h4>
+                  <p class="text-sm text-gray-700 leading-relaxed">${drugAllergies}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Family History -->
+          ${familyHistory.length > 0 || familyHistoryDetails || familyHealthPatterns ? `
+            <div class="bg-purple-50 rounded-lg p-6">
+              <h3 class="text-lg font-semibold text-purple-800 mb-4">
+                <i class="fas fa-users mr-2"></i>Family Health History
+              </h3>
+              ${familyHistory.length > 0 ? `
+                <div class="mb-4">
+                  <p class="text-sm font-medium text-gray-700 mb-3">Reported Family Conditions:</p>
+                  <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <h5 class="text-sm font-semibold text-purple-700 mb-2">Cardiovascular</h5>
+                      <div class="space-y-1">
+                        ${familyHistory.filter(condition => condition.includes('family_heart') || condition.includes('family_stroke') || condition.includes('family_hypertension') || condition.includes('family_high_cholesterol')).map(condition => `
+                          <span class="block text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">${condition.replace('family_', '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                        `).join('')}
+                      </div>
+                    </div>
+                    <div>
+                      <h5 class="text-sm font-semibold text-purple-700 mb-2">Metabolic</h5>
+                      <div class="space-y-1">
+                        ${familyHistory.filter(condition => condition.includes('family_diabetes') || condition.includes('family_obesity') || condition.includes('family_thyroid') || condition.includes('family_kidney')).map(condition => `
+                          <span class="block text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">${condition.replace('family_', '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                        `).join('')}
+                      </div>
+                    </div>
+                    <div>
+                      <h5 class="text-sm font-semibold text-purple-700 mb-2">Other Conditions</h5>
+                      <div class="space-y-1">
+                        ${familyHistory.filter(condition => condition.includes('family_cancer') || condition.includes('family_mental') || condition.includes('family_autoimmune') || condition.includes('family_alzheimers')).map(condition => `
+                          <span class="block text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">${condition.replace('family_', '').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                        `).join('')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+              ${familyHistoryDetails ? `
+                <div class="mb-4 bg-white rounded-lg p-4 border border-purple-200">
+                  <h4 class="font-semibold text-purple-700 mb-2">Family History Details</h4>
+                  <p class="text-sm text-gray-700 leading-relaxed">${familyHistoryDetails}</p>
+                </div>
+              ` : ''}
+              ${familyHealthPatterns ? `
+                <div class="bg-white rounded-lg p-4 border border-purple-200">
+                  <h4 class="font-semibold text-purple-700 mb-2">Additional Family Health Patterns</h4>
+                  <p class="text-sm text-gray-700 leading-relaxed">${familyHealthPatterns}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Women's Health History -->
+          ${regularCycles || pregnancies || liveBirths || hormoneUse || menarcheAge ? `
+            <div class="bg-pink-50 rounded-lg p-6">
+              <h3 class="text-lg font-semibold text-pink-800 mb-4">
+                <i class="fas fa-venus mr-2"></i>Women's Health History
+              </h3>
+              <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-3">
+                  ${menarcheAge ? `
+                    <div>
+                      <p class="text-sm font-medium text-gray-700">Age at first menstruation:</p>
+                      <p class="text-sm text-gray-600">${menarcheAge} years old</p>
+                    </div>
+                  ` : ''}
+                  ${regularCycles ? `
+                    <div>
+                      <p class="text-sm font-medium text-gray-700">Regular menstrual cycles:</p>
+                      <p class="text-sm text-gray-600">${regularCycles.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="space-y-3">
+                  ${pregnancies || liveBirths ? `
+                    <div>
+                      <p class="text-sm font-medium text-gray-700">Pregnancy history:</p>
+                      <p class="text-sm text-gray-600">
+                        ${pregnancies ? `${pregnancies} pregnancies` : ''}
+                        ${pregnancies && liveBirths ? ', ' : ''}
+                        ${liveBirths ? `${liveBirths} live births` : ''}
+                      </p>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+              ${hormoneUse ? `
+                <div class="mt-4 bg-white rounded-lg p-4 border border-pink-200">
+                  <h4 class="font-semibold text-pink-700 mb-2">Hormone Therapy & Contraception</h4>
+                  <p class="text-sm text-gray-700 leading-relaxed">${hormoneUse}</p>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+
+          <!-- Clinical Significance -->
+          <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">
+              <i class="fas fa-stethoscope mr-2"></i>Clinical Significance & Risk Assessment
+            </h3>
+            <div class="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 class="font-semibold text-blue-700 mb-3">Identified Risk Factors</h4>
+                <ul class="space-y-2 text-sm text-gray-700">
+                  ${currentConditions ? '<li>• Current active medical conditions requiring monitoring</li>' : ''}
+                  ${familyHistory.some(h => h.includes('heart') || h.includes('diabetes') || h.includes('stroke')) ? '<li>• Family history of cardiovascular/metabolic disease</li>' : ''}
+                  ${familyHistory.some(h => h.includes('cancer')) ? '<li>• Family history of cancer requiring screening considerations</li>' : ''}
+                  ${currentMedications ? '<li>• Current medication regimen requiring coordination</li>' : ''}
+                  ${drugAllergies ? '<li>• Known drug allergies/adverse reactions documented</li>' : ''}
+                  ${pastConditions.length === 0 && !currentConditions && familyHistory.length === 0 ? '<li>• No significant medical or family history risk factors identified</li>' : ''}
+                </ul>
+              </div>
+              <div>
+                <h4 class="font-semibold text-green-700 mb-3">Protective Factors</h4>
+                <ul class="space-y-2 text-sm text-gray-700">
+                  ${pastConditions.length === 0 ? '<li>• No significant past medical history</li>' : ''}
+                  ${!currentConditions ? '<li>• No current active medical conditions</li>' : ''}
+                  ${currentSupplements ? '<li>• Proactive supplement regimen for health optimization</li>' : ''}
+                  ${!drugAllergies ? '<li>• No known drug allergies or adverse reactions</li>' : ''}
+                  <li>• Engaged in comprehensive health assessment process</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    }
 
     // Generate dynamic report HTML
     return c.html(`
@@ -459,137 +1433,14 @@ app.get('/report', async (c) => {
                   <div class="report-content">
                       <div class="mb-6">
                           <p class="text-gray-700 mb-4">
-                              Comprehensive evaluation of 12 interconnected body systems using functional medicine principles. 
-                              This assessment identifies root causes and system imbalances rather than isolated symptoms.
+                              Comprehensive evaluation of the 7 core functional medicine systems using clinical assessment principles. 
+                              This assessment identifies root causes and system imbalances based on your specific responses.
                           </p>
                       </div>
                       
                       <!-- 7 Functional Medicine Core Systems -->
                       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                          ${[
-                              { 
-                                  name: 'Assimilation', 
-                                  icon: 'fas fa-utensils', 
-                                  status: 'good', 
-                                  score: 78,
-                                  description: 'Digestion, absorption, microbiota/GI function',
-                                  details: 'Nutrient absorption and gut health assessment',
-                                  markers: ['Digestive enzymes', 'Gut permeability', 'Microbiome diversity', 'Nutrient absorption']
-                              },
-                              { 
-                                  name: 'Biotransformation & Elimination', 
-                                  icon: 'fas fa-filter', 
-                                  status: 'optimal', 
-                                  score: 85,
-                                  description: 'Detoxification and toxin elimination',
-                                  details: 'Phase I & II liver detoxification pathways',
-                                  markers: ['Liver function', 'Glutathione levels', 'Methylation capacity', 'Elimination pathways']
-                              },
-                              { 
-                                  name: 'Defense & Repair', 
-                                  icon: 'fas fa-shield-virus', 
-                                  status: 'excellent', 
-                                  score: 92,
-                                  description: 'Immune function, inflammation, and infection/microbes',
-                                  details: 'Immune system strength and inflammatory response',
-                                  markers: ['White cell function', 'Inflammatory markers', 'Antioxidant status', 'Tissue repair']
-                              },
-                              { 
-                                  name: 'Structural Integrity', 
-                                  icon: 'fas fa-dumbbell', 
-                                  status: 'good', 
-                                  score: 80,
-                                  description: 'Musculoskeletal system and subcellular membranes',
-                                  details: 'Bone, muscle, and connective tissue health',
-                                  markers: ['Bone density', 'Muscle mass', 'Joint function', 'Membrane integrity']
-                              },
-                              { 
-                                  name: 'Communication', 
-                                  icon: 'fas fa-brain', 
-                                  status: 'optimal', 
-                                  score: 88,
-                                  description: 'Endocrine, neurotransmitters, and immune messengers',
-                                  details: 'Hormonal and neurological communication systems',
-                                  markers: ['Hormone balance', 'Neurotransmitters', 'Stress response', 'Sleep regulation']
-                              },
-                              { 
-                                  name: 'Energy', 
-                                  icon: 'fas fa-bolt', 
-                                  status: 'excellent', 
-                                  score: 90,
-                                  description: 'Energy regulation and mitochondrial function',
-                                  details: 'Cellular energy production and metabolic efficiency',
-                                  markers: ['Mitochondrial function', 'Metabolic flexibility', 'Energy production', 'Fatigue levels']
-                              },
-                              { 
-                                  name: 'Transport', 
-                                  icon: 'fas fa-heartbeat', 
-                                  status: 'excellent', 
-                                  score: 94,
-                                  description: 'Cardiovascular and lymphatic systems',
-                                  details: 'Circulation, heart function, and lymphatic drainage',
-                                  markers: ['Cardiovascular health', 'Circulation', 'Lymphatic function', 'Blood pressure']
-                              }
-                          ].map(system => `
-                              <div class="bg-white border-2 border-gray-200 rounded-xl p-6">
-                                  <div class="flex items-center mb-4">
-                                      <div class="bg-${
-                                          system.status === 'excellent' ? 'green' :
-                                          system.status === 'optimal' ? 'blue' :
-                                          system.status === 'good' ? 'yellow' : 'red'
-                                      }-100 p-3 rounded-full mr-4">
-                                          <i class="${system.icon} text-${
-                                              system.status === 'excellent' ? 'green' :
-                                              system.status === 'optimal' ? 'blue' :
-                                              system.status === 'good' ? 'yellow' : 'red'
-                                          }-600 text-xl"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <h4 class="font-semibold text-lg text-gray-800">${system.name}</h4>
-                                          <p class="text-sm text-gray-600">${system.description}</p>
-                                      </div>
-                                  </div>
-                                  
-                                  <div class="mb-4">
-                                      <div class="flex justify-between items-center mb-2">
-                                          <span class="text-sm font-medium">System Function</span>
-                                          <span class="text-2xl font-bold text-${
-                                              system.status === 'excellent' ? 'green' :
-                                              system.status === 'optimal' ? 'blue' :
-                                              system.status === 'good' ? 'yellow' : 'red'
-                                          }-600">${system.score}/100</span>
-                                      </div>
-                                      <div class="w-full bg-gray-200 rounded-full h-2">
-                                          <div class="bg-${
-                                              system.status === 'excellent' ? 'green' :
-                                              system.status === 'optimal' ? 'blue' :
-                                              system.status === 'good' ? 'yellow' : 'red'
-                                          }-600 h-2 rounded-full" style="width: ${system.score}%"></div>
-                                      </div>
-                                  </div>
-                                  
-                                  <div class="mb-4">
-                                      <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-${
-                                          system.status === 'excellent' ? 'green' :
-                                          system.status === 'optimal' ? 'blue' :
-                                          system.status === 'good' ? 'yellow' : 'red'
-                                      }-100 text-${
-                                          system.status === 'excellent' ? 'green' :
-                                          system.status === 'optimal' ? 'blue' :
-                                          system.status === 'good' ? 'yellow' : 'red'
-                                      }-800">${system.status.toUpperCase()}</span>
-                                  </div>
-                                  
-                                  <div>
-                                      <p class="text-xs text-gray-600 mb-2">${system.details}</p>
-                                      <div class="space-y-1">
-                                          ${system.markers.map(marker => `
-                                              <p class="text-xs text-gray-500">• ${marker}</p>
-                                          `).join('')}
-                                      </div>
-                                  </div>
-                              </div>
-                          `).join('')}
+                          ${generateFunctionalMedicineSection()}
                       </div>
 
                       <!-- System Integration Analysis -->
@@ -633,110 +1484,7 @@ app.get('/report', async (c) => {
                           </p>
                       </div>
                       
-                      <!-- ATM Framework -->
-                      <div class="grid md:grid-cols-3 gap-8 mb-8">
-                          <!-- Antecedents -->
-                          <div class="bg-blue-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-blue-800 mb-4">
-                                  <i class="fas fa-history mr-2"></i>Antecedents (Predisposing)
-                              </h3>
-                              <p class="text-sm text-gray-600 mb-4">Factors that create vulnerability or lay the groundwork for dysfunction</p>
-                              <div class="space-y-3">
-                                  <div class="bg-white rounded-lg p-3 border border-blue-200">
-                                      <h4 class="font-semibold text-blue-700 text-sm">Genetic Factors</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Family history of cardiovascular disease</li>
-                                          <li>• Genetic predisposition to metabolic issues</li>
-                                          <li>• Inherited detoxification variations</li>
-                                      </ul>
-                                  </div>
-                                  <div class="bg-white rounded-lg p-3 border border-blue-200">
-                                      <h4 class="font-semibold text-blue-700 text-sm">Early Life Factors</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Birth complications or early stress</li>
-                                          <li>• Childhood nutrition patterns</li>
-                                          <li>• Early antibiotic exposure</li>
-                                      </ul>
-                                  </div>
-                                  <div class="bg-white rounded-lg p-3 border border-blue-200">
-                                      <h4 class="font-semibold text-blue-700 text-sm">Constitutional Factors</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Gender-specific health risks</li>
-                                          <li>• Age-related vulnerability patterns</li>
-                                          <li>• Baseline metabolic characteristics</li>
-                                      </ul>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Triggers -->
-                          <div class="bg-red-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-red-800 mb-4">
-                                  <i class="fas fa-bolt mr-2"></i>Triggers (Precipitating)
-                              </h3>
-                              <p class="text-sm text-gray-600 mb-4">Events or exposures that initiate dysfunction or symptoms</p>
-                              <div class="space-y-3">
-                                  <div class="bg-white rounded-lg p-3 border border-red-200">
-                                      <h4 class="font-semibold text-red-700 text-sm">Acute Stressors</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Major life changes or trauma</li>
-                                          <li>• Acute illness or infections</li>
-                                          <li>• Surgical procedures or injuries</li>
-                                      </ul>
-                                  </div>
-                                  <div class="bg-white rounded-lg p-3 border border-red-200">
-                                      <h4 class="font-semibold text-red-700 text-sm">Environmental Exposures</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Toxic chemical exposure</li>
-                                          <li>• Pathogenic microorganisms</li>
-                                          <li>• Electromagnetic field exposure</li>
-                                      </ul>
-                                  </div>
-                                  <div class="bg-white rounded-lg p-3 border border-red-200">
-                                      <h4 class="font-semibold text-red-700 text-sm">Lifestyle Triggers</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Dietary changes or food sensitivities</li>
-                                          <li>• Sleep pattern disruptions</li>
-                                          <li>• Sudden exercise changes</li>
-                                      </ul>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Mediators/Perpetuators -->
-                          <div class="bg-orange-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-orange-800 mb-4">
-                                  <i class="fas fa-repeat mr-2"></i>Mediators/Perpetuators
-                              </h3>
-                              <p class="text-sm text-gray-600 mb-4">Ongoing factors that maintain or worsen dysfunction</p>
-                              <div class="space-y-3">
-                                  <div class="bg-white rounded-lg p-3 border border-orange-200">
-                                      <h4 class="font-semibold text-orange-700 text-sm">Chronic Stressors</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Ongoing work or relationship stress</li>
-                                          <li>• Chronic sleep deprivation</li>
-                                          <li>• Financial or emotional pressures</li>
-                                      </ul>
-                                  </div>
-                                  <div class="bg-white rounded-lg p-3 border border-orange-200">
-                                      <h4 class="font-semibold text-orange-700 text-sm">Lifestyle Patterns</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Suboptimal nutrition patterns</li>
-                                          <li>• Sedentary lifestyle habits</li>
-                                          <li>• Irregular circadian rhythms</li>
-                                      </ul>
-                                  </div>
-                                  <div class="bg-white rounded-lg p-3 border border-orange-200">
-                                      <h4 class="font-semibold text-orange-700 text-sm">Biochemical Imbalances</h4>
-                                      <ul class="text-xs text-gray-600 mt-2 space-y-1">
-                                          <li>• Nutrient deficiencies</li>
-                                          <li>• Hormonal imbalances</li>
-                                          <li>• Inflammatory cascade perpetuation</li>
-                                      </ul>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+                      ${generateATMSection()}
 
                       <!-- Chronological ATM Timeline -->
                       <div class="bg-gray-50 rounded-lg p-6 mb-6">
@@ -853,13 +1601,9 @@ app.get('/report', async (c) => {
                           </p>
                       </div>
                       
-                      <!-- Biomarker Categories -->
-                      <div class="space-y-8">
-                          <!-- Metabolic Panel -->
-                          <div class="bg-blue-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-blue-800 mb-4">
-                                  <i class="fas fa-fire mr-2"></i>Metabolic Panel
-                              </h3>
+                      ${generateBiomarkerSection()}
+                  </div>
+              </div>
                               <div class="overflow-x-auto">
                                   <table class="min-w-full bg-white rounded-lg shadow-sm">
                                       <thead class="bg-gray-50">
@@ -1384,152 +2128,7 @@ app.get('/report', async (c) => {
                           </p>
                       </div>
                       
-                      <!-- Lifestyle Categories -->
-                      <div class="grid md:grid-cols-2 gap-8 mb-8">
-                          <!-- Nutrition Assessment -->
-                          <div class="bg-green-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-green-800 mb-4">
-                                  <i class="fas fa-apple-alt mr-2"></i>Nutrition Assessment
-                              </h3>
-                              <div class="space-y-4">
-                                  <div class="flex justify-between items-center">
-                                      <span class="text-sm font-medium">Diet Quality Score</span>
-                                      <div class="flex items-center">
-                                          <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
-                                              <div class="bg-green-600 h-2 rounded-full" style="width: 75%"></div>
-                                          </div>
-                                          <span class="text-sm font-semibold">75/100</span>
-                                      </div>
-                                  </div>
-                                  <div class="space-y-2 text-sm">
-                                      <div class="flex justify-between">
-                                          <span>Vegetable Intake</span>
-                                          <span class="text-green-600 font-medium">Good</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Protein Quality</span>
-                                          <span class="text-green-600 font-medium">Excellent</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Omega-3 Intake</span>
-                                          <span class="text-yellow-600 font-medium">Moderate</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Processed Foods</span>
-                                          <span class="text-green-600 font-medium">Low</span>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Physical Activity -->
-                          <div class="bg-blue-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-blue-800 mb-4">
-                                  <i class="fas fa-running mr-2"></i>Physical Activity
-                              </h3>
-                              <div class="space-y-4">
-                                  <div class="flex justify-between items-center">
-                                      <span class="text-sm font-medium">Activity Score</span>
-                                      <div class="flex items-center">
-                                          <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
-                                              <div class="bg-blue-600 h-2 rounded-full" style="width: 80%"></div>
-                                          </div>
-                                          <span class="text-sm font-semibold">80/100</span>
-                                      </div>
-                                  </div>
-                                  <div class="space-y-2 text-sm">
-                                      <div class="flex justify-between">
-                                          <span>Cardio Frequency</span>
-                                          <span class="text-blue-600 font-medium">4-5x/week</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Strength Training</span>
-                                          <span class="text-blue-600 font-medium">3x/week</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Daily Steps</span>
-                                          <span class="text-green-600 font-medium">8,500 avg</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Recovery Days</span>
-                                          <span class="text-green-600 font-medium">Adequate</span>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Sleep Quality -->
-                          <div class="bg-purple-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-purple-800 mb-4">
-                                  <i class="fas fa-moon mr-2"></i>Sleep Quality
-                              </h3>
-                              <div class="space-y-4">
-                                  <div class="flex justify-between items-center">
-                                      <span class="text-sm font-medium">Sleep Score</span>
-                                      <div class="flex items-center">
-                                          <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
-                                              <div class="bg-purple-600 h-2 rounded-full" style="width: 85%"></div>
-                                          </div>
-                                          <span class="text-sm font-semibold">85/100</span>
-                                      </div>
-                                  </div>
-                                  <div class="space-y-2 text-sm">
-                                      <div class="flex justify-between">
-                                          <span>Sleep Duration</span>
-                                          <span class="text-green-600 font-medium">7.5 hours</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Sleep Efficiency</span>
-                                          <span class="text-green-600 font-medium">92%</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Sleep Latency</span>
-                                          <span class="text-green-600 font-medium">10 min</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Wake Episodes</span>
-                                          <span class="text-yellow-600 font-medium">2 per night</span>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Stress & Recovery -->
-                          <div class="bg-red-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-red-800 mb-4">
-                                  <i class="fas fa-heart mr-2"></i>Stress & Recovery
-                              </h3>
-                              <div class="space-y-4">
-                                  <div class="flex justify-between items-center">
-                                      <span class="text-sm font-medium">Stress Management</span>
-                                      <div class="flex items-center">
-                                          <div class="w-24 bg-gray-200 rounded-full h-2 mr-3">
-                                              <div class="bg-yellow-500 h-2 rounded-full" style="width: 65%"></div>
-                                          </div>
-                                          <span class="text-sm font-semibold">65/100</span>
-                                      </div>
-                                  </div>
-                                  <div class="space-y-2 text-sm">
-                                      <div class="flex justify-between">
-                                          <span>Perceived Stress</span>
-                                          <span class="text-yellow-600 font-medium">Moderate</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Meditation Practice</span>
-                                          <span class="text-red-600 font-medium">Irregular</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Social Support</span>
-                                          <span class="text-green-600 font-medium">Strong</span>
-                                      </div>
-                                      <div class="flex justify-between">
-                                          <span>Work-Life Balance</span>
-                                          <span class="text-yellow-600 font-medium">Improving</span>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+                      ${generateLifestyleSection()}
 
                       <!-- Environmental Factors -->
                       <div class="bg-gray-50 rounded-lg p-6 mb-6">
@@ -1598,71 +2197,7 @@ app.get('/report', async (c) => {
                       </div>
                       
                       <!-- Mental Health Questionnaires -->
-                      <div class="grid md:grid-cols-2 gap-8 mb-8">
-                          <!-- PHQ-9 Depression Screening -->
-                          <div class="bg-blue-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-blue-800 mb-4">
-                                  <i class="fas fa-clipboard-check mr-2"></i>PHQ-9 Depression Screening
-                              </h3>
-                              <div class="space-y-3">
-                                  <div class="bg-white rounded-lg p-4 border border-blue-200">
-                                      <div class="flex justify-between items-center mb-3">
-                                          <span class="font-medium text-gray-800">Total Score</span>
-                                          <div class="flex items-center">
-                                              <span class="text-2xl font-bold text-green-600 mr-2">3</span>
-                                              <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">MINIMAL</span>
-                                          </div>
-                                      </div>
-                                      <div class="text-xs text-gray-600 space-y-1">
-                                          <div class="flex justify-between"><span>Little interest/pleasure:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Feeling down/depressed:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Sleep problems:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Feeling tired:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Appetite changes:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Feeling bad about self:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Concentration problems:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Moving/speaking slowly:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Thoughts of self-harm:</span><span>Not at all (0)</span></div>
-                                      </div>
-                                  </div>
-                                  <div class="text-sm text-green-700 bg-green-50 rounded p-3">
-                                      <strong>Interpretation:</strong> Score of 3 indicates minimal depression symptoms. 
-                                      Excellent mental health with no significant depressive concerns.
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- GAD-7 Anxiety Screening -->
-                          <div class="bg-purple-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-purple-800 mb-4">
-                                  <i class="fas fa-heartbeat mr-2"></i>GAD-7 Anxiety Screening
-                              </h3>
-                              <div class="space-y-3">
-                                  <div class="bg-white rounded-lg p-4 border border-purple-200">
-                                      <div class="flex justify-between items-center mb-3">
-                                          <span class="font-medium text-gray-800">Total Score</span>
-                                          <div class="flex items-center">
-                                              <span class="text-2xl font-bold text-green-600 mr-2">4</span>
-                                              <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">MINIMAL</span>
-                                          </div>
-                                      </div>
-                                      <div class="text-xs text-gray-600 space-y-1">
-                                          <div class="flex justify-between"><span>Feeling nervous/anxious:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Can't stop worrying:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Worrying about different things:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Trouble relaxing:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Being restless:</span><span>Not at all (0)</span></div>
-                                          <div class="flex justify-between"><span>Easily annoyed/irritable:</span><span>Several days (1)</span></div>
-                                          <div class="flex justify-between"><span>Feeling afraid:</span><span>Not at all (0)</span></div>
-                                      </div>
-                                  </div>
-                                  <div class="text-sm text-green-700 bg-green-50 rounded p-3">
-                                      <strong>Interpretation:</strong> Score of 4 indicates minimal anxiety symptoms. 
-                                      Well-managed stress levels with occasional normal worry patterns.
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+                      ${generateMentalHealthSection()}
 
                       <!-- Cognitive Function Assessment -->
                       <div class="grid md:grid-cols-2 gap-8 mb-8">
@@ -2066,11 +2601,30 @@ app.get('/report', async (c) => {
                   </div>
               </div>
 
-              <!-- Section 11: Key Findings Summary -->
+              <!-- Section 11: Medical & Family History -->
+              <div class="report-section">
+                  <div class="report-header">
+                      <i class="fas fa-user-md"></i>
+                      <h2>11. Medical & Family History Assessment</h2>
+                  </div>
+                  <div class="report-content">
+                      <div class="mb-6">
+                          <p class="text-gray-700 mb-4">
+                              Comprehensive medical background including current conditions, past medical history, medications, 
+                              family health patterns, and genetic predispositions. This information provides essential context 
+                              for risk stratification and personalized treatment planning.
+                          </p>
+                      </div>
+                      
+                      ${generateMedicalHistorySection()}
+                  </div>
+              </div>
+
+              <!-- Section 12: Key Findings Summary -->
               <div class="report-section">
                   <div class="report-header">
                       <i class="fas fa-star"></i>
-                      <h2>11. Key Findings Summary</h2>
+                      <h2>12. Key Findings Summary</h2>
                   </div>
                   <div class="report-content">
                       <div class="mb-6">
@@ -2212,11 +2766,11 @@ app.get('/report', async (c) => {
                   </div>
               </div>
 
-              <!-- Section 12: Personalized Recommendations -->
+              <!-- Section 13: Personalized Recommendations -->
               <div class="report-section">
                   <div class="report-header">
                       <i class="fas fa-prescription-bottle-alt"></i>
-                      <h2>12. Personalized Recommendations</h2>
+                      <h2>13. Personalized Recommendations</h2>
                   </div>
                   <div class="report-content">
                       <div class="mb-6">
@@ -2431,11 +2985,11 @@ app.get('/report', async (c) => {
                   </div>
               </div>
 
-              <!-- Section 13: Areas for Optimization -->
+              <!-- Section 14: Areas for Optimization -->
               <div class="report-section">
                   <div class="report-header">
                       <i class="fas fa-chart-line"></i>
-                      <h2>13. Areas for Optimization</h2>
+                      <h2>14. Areas for Optimization</h2>
                   </div>
                   <div class="report-content">
                       <div class="mb-6">
@@ -3383,6 +3937,119 @@ app.post('/api/assessment/demo', async (c) => {
         risk.algorithm_used
       ).run()
     }
+
+    // Add comprehensive demo data for functional medicine sections
+    const demoComprehensiveData = {
+      // Demographics
+      fullName: 'Demo Patient Complete',
+      dateOfBirth: '1976-05-15',
+      gender: 'female',
+      
+      // Functional Medicine Systems with realistic responses
+      // Assimilation System
+      assimilation_q1: 'rarely',
+      assimilation_q2: 'yes',
+      assimilation_q3: 'good',
+      assimilation_q4: 'no',
+      assimilation_q5: 'rarely',
+      assimilation_q6: 'yes',
+      
+      // Biotransformation System
+      biotransformation_q1: 'good',
+      biotransformation_q2: 'rarely',
+      biotransformation_q3: 'no',
+      biotransformation_q4: 'sometimes',
+      biotransformation_q5: 'yes',
+      biotransformation_q6: 'rarely',
+      
+      // Defense & Repair System
+      defense_q1: 'rarely',
+      defense_q2: 'good',
+      defense_q3: 'no',
+      defense_q4: 'rarely',
+      defense_q5: 'good',
+      defense_q6: 'no',
+      
+      // Energy System
+      energy_q1: 'good',
+      energy_q2: 'rarely',
+      energy_q3: 'good',
+      energy_q4: 'no',
+      energy_q5: 'good',
+      energy_q6: 'rarely',
+      
+      // Transport System
+      transport_q1: 'no',
+      transport_q2: 'good',
+      transport_q3: 'rarely',
+      transport_q4: 'good',
+      transport_q5: 'no',
+      transport_q6: 'good',
+      
+      // Communication System
+      communication_q1: 'good',
+      communication_q2: 'rarely',
+      communication_q3: 'no',
+      communication_q4: 'good',
+      communication_q5: 'rarely',
+      communication_q6: 'good',
+      
+      // Structural System
+      structural_q1: 'rarely',
+      structural_q2: 'good',
+      structural_q3: 'no',
+      structural_q4: 'good',
+      structural_q5: 'rarely',
+      structural_q6: 'good',
+      
+      // Mental Health Assessment
+      phq9_q1: '1',
+      phq9_q2: '0',
+      phq9_q3: '1',
+      phq9_q4: '0',
+      phq9_q5: '1',
+      phq9_q6: '0',
+      phq9_q7: '0',
+      phq9_q8: '1',
+      phq9_q9: '0',
+      
+      gad7_q1: '1',
+      gad7_q2: '0',
+      gad7_q3: '1',
+      gad7_q4: '0',
+      gad7_q5: '1',
+      gad7_q6: '0',
+      gad7_q7: '1',
+      
+      // Lifestyle Assessment
+      exerciseFrequency: '5-6 times',
+      exerciseMinutes: '46-60',
+      exerciseTypes: ['cardio', 'strength', 'flexibility'],
+      sleepHours: '7-8',
+      sleepQuality: 'good',
+      stressLevel: '2',
+      stressTechniques: ['meditation', 'exercise'],
+      
+      // Medical History
+      hasCurrentConditions: 'no',
+      takingMedications: 'no',
+      takingSupplements: 'yes',
+      currentSupplements: 'Vitamin D3 2000 IU daily, Omega-3 fish oil 1000mg, Magnesium glycinate 400mg',
+      familyHistory: ['family_heart_disease'],
+      familyHistoryDetails: 'Father had heart attack at age 65, otherwise family history unremarkable',
+      regularCycles: 'yes',
+      pregnancies: '2',
+      liveBirths: '2'
+    }
+
+    // Store comprehensive demo data
+    await env.DB.prepare(`
+      INSERT INTO assessment_data (session_id, data_type, json_data, created_at)
+      VALUES (?, 'comprehensive_lifestyle', ?, datetime('now'))
+    `).bind(
+      sessionId,
+      JSON.stringify(demoComprehensiveData)
+    ).run()
 
     return c.json({
       success: true,
