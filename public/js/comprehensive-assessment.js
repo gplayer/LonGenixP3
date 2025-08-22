@@ -22,6 +22,7 @@ class ComprehensiveAssessment {
     }
 
     init() {
+        console.log('ComprehensiveAssessment initializing...');
         this.renderForm();
         this.setupEventListeners();
     }
@@ -49,8 +50,13 @@ class ComprehensiveAssessment {
     }
 
     renderForm() {
-        const container = document.getElementById('assessment-container');
-        if (!container) return;
+        console.log('Rendering form...');
+        const container = document.getElementById('assessmentContainer');
+        if (!container) {
+            console.error('Container not found in renderForm!');
+            return;
+        }
+        console.log('Container found, rendering content...');
 
         container.innerHTML = `
             <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
@@ -856,8 +862,24 @@ class ComprehensiveAssessment {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize if we're on the assessment page
-    if (document.getElementById('assessment-container')) {
+    console.log('DOM loaded, checking authentication...');
+    
+    // Check authentication status
+    const savedAuth = sessionStorage.getItem('longenix_auth');
+    if (!savedAuth) {
+        console.log('Not authenticated, redirecting to home...');
+        alert('Please authenticate first from the main page.');
+        window.location.href = '/';
+        return;
+    }
+    
+    console.log('Authenticated, looking for assessmentContainer...');
+    const container = document.getElementById('assessmentContainer');
+    if (container) {
+        console.log('Found assessmentContainer, initializing ComprehensiveAssessment...');
         new ComprehensiveAssessment();
+    } else {
+        console.error('assessmentContainer not found!');
+        container.innerHTML = '<div class="text-center p-8 text-red-600">Error: Assessment container not found</div>';
     }
 });
