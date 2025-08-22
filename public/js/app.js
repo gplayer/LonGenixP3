@@ -152,8 +152,13 @@ class LongenixAssessment {
 
         // Handle different assessment methods
         switch(method) {
+            case 'comprehensive':
+                // Redirect to comprehensive assessment form
+                window.location.href = '/comprehensive-assessment';
+                break;
+                
             case 'manual':
-                // Redirect to dynamic assessment form
+                // Redirect to quick assessment form
                 window.location.href = '/assessment';
                 break;
             

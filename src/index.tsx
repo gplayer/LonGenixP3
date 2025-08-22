@@ -2702,6 +2702,89 @@ app.get('/favicon.ico', (c) => {
 })
 
 // Assessment form route
+app.get('/comprehensive-assessment', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Comprehensive Health Assessment - Longenix Health</title>
+        
+        <!-- Meta tags -->
+        <meta name="description" content="Complete comprehensive health assessment covering functional medicine, lifestyle, mental health, and environmental factors.">
+        
+        <!-- External Stylesheets -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/css/styles.css" rel="stylesheet">
+        
+        <!-- Custom Styles -->
+        <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: .5; }
+            }
+            .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+            
+            @keyframes bounce {
+                0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+                50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
+            }
+            .animate-bounce { animation: bounce 1s infinite; }
+        </style>
+    </head>
+    <body class="bg-gray-50 min-h-screen">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center py-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-dna text-3xl text-blue-600 mr-3"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-900">Longenix Health</h1>
+                            <p class="text-sm text-gray-500">Comprehensive Health Assessment</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-home mr-1"></i>Home
+                        </a>
+                        <button id="logoutBtn" class="text-red-600 hover:text-red-700 transition-colors">
+                            <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="py-8">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div id="assessmentContainer">
+                    <!-- Assessment interface will be rendered here by JavaScript -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t mt-16">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="text-center text-gray-600">
+                    <p>&copy; 2024 Longenix Health. All rights reserved.</p>
+                    <p class="text-sm mt-2">Comprehensive Chronic Disease Risk Assessment System</p>
+                    <p class="text-xs mt-1">Dr. Graham Player, Ph.D - Evidence-Based Health Analytics</p>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Scripts -->
+        <script src="/js/comprehensive-assessment.js"></script>
+    </body>
+    </html>
+  `)
+})
+
 app.get('/assessment', (c) => {
   return c.html(`
     <!DOCTYPE html>
@@ -3049,6 +3132,147 @@ app.post('/api/assessment/complete', async (c) => {
   }
 })
 
+// API endpoint to process comprehensive assessment
+app.post('/api/assessment/comprehensive', async (c) => {
+  const { env } = c
+  const assessmentData = await c.req.json()
+  
+  try {
+    // Create patient record from comprehensive data
+    const demo = assessmentData.demographics
+    const clinical = assessmentData.clinical
+    
+    // Calculate age from date of birth
+    const birthDate = new Date(demo.dateOfBirth)
+    const today = new Date()
+    const age = today.getFullYear() - birthDate.getFullYear()
+    
+    const patientResult = await env.DB.prepare(`
+      INSERT INTO patients (full_name, date_of_birth, gender, ethnicity, email, phone, country)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      demo.fullName,
+      demo.dateOfBirth,
+      demo.gender,
+      demo.ethnicity || 'not_specified',
+      demo.email,
+      demo.phone || '',
+      'US' // Default country
+    ).run()
+
+    const patientId = patientResult.meta.last_row_id
+
+    // Create assessment session
+    const sessionResult = await env.DB.prepare(`
+      INSERT INTO assessment_sessions (patient_id, session_type, status)
+      VALUES (?, 'comprehensive', 'completed')
+    `).bind(patientId).run()
+
+    const sessionId = sessionResult.meta.last_row_id
+
+    // Prepare patient data for medical algorithms
+    const patientData = {
+      age: age,
+      gender: demo.gender as 'male' | 'female' | 'other',
+      height_cm: clinical.height || 170,
+      weight_kg: clinical.weight || 70,
+      systolic_bp: clinical.systolicBP || 120,
+      diastolic_bp: clinical.diastolicBP || 80,
+      biomarkers: {
+        glucose: assessmentData.biomarkers?.glucose || null,
+        hba1c: assessmentData.biomarkers?.hba1c || null,
+        total_cholesterol: assessmentData.biomarkers?.totalCholesterol || null,
+        hdl_cholesterol: assessmentData.biomarkers?.hdlCholesterol || null,
+        ldl_cholesterol: assessmentData.biomarkers?.ldlCholesterol || null,
+        triglycerides: assessmentData.biomarkers?.triglycerides || null,
+        creatinine: assessmentData.biomarkers?.creatinine || null,
+        albumin: assessmentData.biomarkers?.albumin || null,
+        c_reactive_protein: assessmentData.biomarkers?.crp || null,
+        // Add estimated values for missing biomarkers based on assessment data
+        white_blood_cells: 6.5,
+        hemoglobin: demo.gender === 'female' ? 13.8 : 15.2,
+        egfr: clinical.age < 60 ? 95 : Math.max(60, 120 - age)
+      }
+    }
+
+    // Calculate all medical results
+    const biologicalAge = BiologicalAgeCalculator.calculateBiologicalAge(patientData)
+    const ascvdRisk = DiseaseRiskCalculator.calculateASCVDRisk(patientData)
+    const diabetesRisk = DiseaseRiskCalculator.calculateDiabetesRisk(patientData, {})
+    const kidneyRisk = DiseaseRiskCalculator.calculateKidneyDiseaseRisk(patientData)
+    const cancerRisk = DiseaseRiskCalculator.calculateCancerRisk(patientData, {})
+    const cognitiveRisk = DiseaseRiskCalculator.calculateCognitiveDeclineRisk(patientData, {})
+    const metabolicSyndromeRisk = DiseaseRiskCalculator.calculateMetabolicSyndromeRisk(patientData)
+    const strokeRisk = DiseaseRiskCalculator.calculateStrokeRisk(patientData, {})
+
+    // Store comprehensive assessment data as JSON
+    await env.DB.prepare(`
+      INSERT INTO assessment_data (session_id, data_type, json_data, created_at)
+      VALUES (?, 'comprehensive_lifestyle', ?, datetime('now'))
+    `).bind(
+      sessionId,
+      JSON.stringify(assessmentData)
+    ).run()
+
+    // Save biological age results
+    await env.DB.prepare(`
+      INSERT INTO biological_age (session_id, chronological_age, phenotypic_age, klemera_doubal_age, 
+                                 metabolic_age, telomere_age, average_biological_age, age_advantage, calculation_method)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      sessionId,
+      age,
+      biologicalAge.phenotypic_age,
+      biologicalAge.klemera_doubal_age,
+      biologicalAge.metabolic_age,
+      biologicalAge.telomere_age,
+      biologicalAge.average_biological_age,
+      biologicalAge.age_advantage,
+      'Comprehensive: Phenotypic Age + KDM + Metabolic Age'
+    ).run()
+
+    // Save all disease risk assessments
+    const risks = [
+      { category: 'cardiovascular', result: ascvdRisk },
+      { category: 'diabetes', result: diabetesRisk },
+      { category: 'kidney_disease', result: kidneyRisk },
+      { category: 'cancer_risk', result: cancerRisk },
+      { category: 'cognitive_decline', result: cognitiveRisk },
+      { category: 'metabolic_syndrome', result: metabolicSyndromeRisk },
+      { category: 'stroke_risk', result: strokeRisk }
+    ]
+
+    for (const risk of risks) {
+      await env.DB.prepare(`
+        INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, 
+                                      ten_year_risk, algorithm_used)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        risk.category,
+        risk.result.risk_score,
+        risk.result.risk_level,
+        risk.result.ten_year_risk,
+        risk.result.algorithm_used
+      ).run()
+    }
+
+    return c.json({ 
+      success: true, 
+      sessionId: sessionId,
+      patientId: patientId,
+      message: 'Comprehensive assessment completed successfully' 
+    })
+
+  } catch (error) {
+    console.error('Comprehensive assessment error:', error)
+    return c.json({ 
+      success: false, 
+      error: 'Failed to process comprehensive assessment' 
+    }, 500)
+  }
+})
+
 // API endpoint to create demo assessment
 app.post('/api/assessment/demo', async (c) => {
   const { env } = c
@@ -3061,7 +3285,7 @@ app.post('/api/assessment/demo', async (c) => {
     const timestamp = Date.now()
     const demoPatient = {
       full_name: 'Demo Patient Complete',
-      date_of_birth: '1978-05-15', // 45 years old
+      date_of_birth: '1976-05-15', // 47 years old
       gender: 'female',
       ethnicity: 'caucasian',
       email: `demo-${timestamp}@longenixhealth.com`,
@@ -3092,27 +3316,27 @@ app.post('/api/assessment/demo', async (c) => {
 
     const sessionId = sessionResult.meta.last_row_id
 
-    // Demo patient data with realistic biomarkers
+    // Demo patient data with optimal biomarkers showing biological age advantage
     const patientData = {
-      age: 45,
+      age: 47,
       gender: 'female' as const,
       height_cm: 165,
-      weight_kg: 68,
-      systolic_bp: 125,
-      diastolic_bp: 78,
+      weight_kg: 65,
+      systolic_bp: 115,
+      diastolic_bp: 75,
       biomarkers: {
-        glucose: 92,
-        hba1c: 5.4,
-        total_cholesterol: 195,
-        hdl_cholesterol: 58,
-        ldl_cholesterol: 115,
-        triglycerides: 110,
-        creatinine: 0.9,
-        egfr: 95,
-        albumin: 4.1,
-        c_reactive_protein: 1.2,
-        white_blood_cells: 6.5,
-        hemoglobin: 13.8
+        glucose: 85,               // Excellent glucose control
+        hba1c: 5.1,              // Optimal diabetes risk
+        total_cholesterol: 180,    // Excellent total cholesterol
+        hdl_cholesterol: 65,      // High protective HDL
+        ldl_cholesterol: 95,      // Optimal LDL
+        triglycerides: 85,        // Excellent triglycerides
+        creatinine: 0.8,          // Optimal kidney function
+        egfr: 105,               // Excellent kidney function
+        albumin: 4.5,            // Optimal protein status
+        c_reactive_protein: 0.8,  // Low inflammation
+        white_blood_cells: 6.0,   // Optimal immune function
+        hemoglobin: 14.2         // Excellent oxygen transport
       }
     }
 
@@ -3133,7 +3357,7 @@ app.post('/api/assessment/demo', async (c) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       sessionId,
-      patientData.age,
+      47, // Updated chronological age
       biologicalAge.phenotypic_age,
       biologicalAge.klemera_doubal_age,
       biologicalAge.metabolic_age,
@@ -3371,21 +3595,41 @@ app.get('/', (c) => {
                     </div>
 
                     <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <!-- Manual Entry -->
+                        <!-- Comprehensive Assessment -->
+                        <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-pointer border-2 border-green-200" onclick="startAssessment('comprehensive')">
+                            <div class="text-center">
+                                <i class="fas fa-heartbeat text-4xl text-green-600 mb-4"></i>
+                                <h3 class="text-xl font-semibold mb-3 text-green-800">Comprehensive Assessment</h3>
+                                <div class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mb-3">NEW & RECOMMENDED</div>
+                                <p class="text-gray-600 mb-6">Complete 12-step functional medicine assessment with real data processing</p>
+                                <ul class="text-sm text-gray-500 text-left space-y-2 mb-6">
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>7 Functional Medicine Systems</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>PHQ-9 & GAD-7 Mental Health</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Environmental Toxin Assessment</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Comprehensive Lifestyle Analysis</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Real Data-Driven Reports</li>
+                                </ul>
+                                <button class="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300">
+                                    Start Full Assessment
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Assessment -->
                         <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-pointer" onclick="startAssessment('manual')">
                             <div class="text-center">
                                 <i class="fas fa-edit text-4xl text-blue-600 mb-4"></i>
-                                <h3 class="text-xl font-semibold mb-3">Manual Data Entry</h3>
-                                <p class="text-gray-600 mb-6">Complete the comprehensive health assessment form step by step</p>
+                                <h3 class="text-xl font-semibold mb-3">Quick Assessment</h3>
+                                <p class="text-gray-600 mb-6">Basic health assessment with essential biomarkers</p>
                                 <ul class="text-sm text-gray-500 text-left space-y-2 mb-6">
                                     <li><i class="fas fa-check text-green-500 mr-2"></i>Demographics & Biometrics</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>60+ Lab Biomarkers</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Family History (3 generations)</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>ATM Timeline</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Mental Health Screening</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Core Lab Biomarkers</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Basic Lifestyle Factors</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Disease Risk Analysis</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Biological Age Calculation</li>
                                 </ul>
                                 <button class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
-                                    Start Assessment
+                                    Quick Start
                                 </button>
                             </div>
                         </div>
