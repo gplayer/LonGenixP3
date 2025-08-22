@@ -3833,6 +3833,11 @@ app.post('/api/assessment/demo', async (c) => {
   const { country } = await c.req.json()
   
   try {
+    // Test database connection first
+    if (!env.DB) {
+      throw new Error('Database not available - DB binding not configured')
+    }
+    
     // Medical algorithms are imported at the top
     
     // Create demo patient with unique email
@@ -4066,7 +4071,8 @@ app.post('/api/assessment/demo', async (c) => {
     console.error('Demo creation error:', error)
     return c.json({
       success: false,
-      error: 'Failed to create demo assessment'
+      error: 'Failed to create demo assessment',
+      details: error instanceof Error ? error.message : String(error)
     }, 500)
   }
 })
