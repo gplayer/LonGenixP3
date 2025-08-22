@@ -39,6 +39,9 @@ class ComprehensiveAssessment {
             if (e.target.classList.contains('submit-assessment-btn')) {
                 this.submitAssessment();
             }
+            if (e.target.classList.contains('download-form-pdf-btn')) {
+                this.downloadFormPDF();
+            }
         });
 
         // Auto-save on form changes
@@ -89,7 +92,10 @@ class ComprehensiveAssessment {
                                 Save & Resume Later
                             </button>
                             ${this.currentStep === this.totalSteps ? 
-                                '<button type="button" class="submit-assessment-btn px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Complete Assessment</button>' :
+                                `<button type="button" class="download-form-pdf-btn px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 mr-3">
+                                    <i class="fas fa-file-pdf mr-2"></i>Download Form PDF
+                                 </button>
+                                 <button type="button" class="submit-assessment-btn px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Complete Assessment</button>` :
                                 '<button type="button" class="next-step-btn px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Next Step</button>'
                             }
                         </div>
@@ -1853,6 +1859,130 @@ class ComprehensiveAssessment {
         } catch (error) {
             console.error('Submission error:', error);
             alert('Assessment submission failed. Please try again.');
+        }
+    }
+
+    downloadFormPDF() {
+        // Show loading indicator
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating PDF...';
+        button.disabled = true;
+
+        try {
+            // Make sure all form data is current
+            this.saveFormData();
+
+            // Configure jsPDF
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            // PDF styling
+            const pageHeight = 295;
+            const pageWidth = 210;
+            const margin = 20;
+            let yPosition = margin;
+            const lineHeight = 6;
+            const sectionSpacing = 10;
+
+            // Helper function to add text with word wrapping
+            const addText = (text, x, y, options = {}) => {
+                const maxWidth = options.maxWidth || (pageWidth - 2 * margin);
+                const fontSize = options.fontSize || 10;
+                const fontStyle = options.fontStyle || 'normal';
+                
+                pdf.setFontSize(fontSize);
+                pdf.setFont('helvetica', fontStyle);
+                
+                if (text.length * fontSize * 0.35 > maxWidth) {
+                    const lines = pdf.splitTextToSize(text, maxWidth);
+                    lines.forEach((line, index) => {
+                        pdf.text(line, x, y + (index * lineHeight));
+                    });
+                    return lines.length * lineHeight;
+                } else {
+                    pdf.text(text, x, y);
+                    return lineHeight;
+                }
+            };
+
+            // Check if we need a new page
+            const checkNewPage = () => {
+                if (yPosition > pageHeight - margin * 2) {
+                    pdf.addPage();
+                    yPosition = margin;
+                }
+            };
+
+            // Title
+            addText('Comprehensive Health Assessment Form', margin, yPosition, { fontSize: 16, fontStyle: 'bold' });
+            yPosition += lineHeight * 2;
+            
+            // Date
+            const currentDate = new Date().toLocaleDateString();
+            addText(`Assessment Date: ${currentDate}`, margin, yPosition, { fontSize: 10 });
+            yPosition += lineHeight * 2;
+
+            // Process form data by steps
+            const stepTitles = {
+                1: 'Demographics & Basic Health Information',
+                2: 'Lifestyle Factors & Daily Habits', 
+                3: 'Functional Medicine Assessment',
+                4: 'Mental Health & Wellbeing',
+                5: 'Laboratory Values & Biomarkers',
+                6: 'ATM Framework Analysis',
+                7: 'Medical & Family History'
+            };
+
+            Object.entries(this.formData).forEach(([key, value]) => {
+                if (value && key !== 'currentStep') {
+                    checkNewPage();
+                    
+                    // Format the key as a readable label
+                    const label = key.replace(/([A-Z])/g, ' $1')
+                                    .replace(/^./, str => str.toUpperCase())
+                                    .replace(/([a-z])([A-Z])/g, '$1 $2');
+                    
+                    // Add question/field
+                    const usedHeight = addText(`${label}:`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+                    yPosition += usedHeight;
+                    
+                    // Add answer/value
+                    let displayValue = value;
+                    if (Array.isArray(value)) {
+                        displayValue = value.join(', ');
+                    } else if (typeof value === 'object') {
+                        displayValue = JSON.stringify(value, null, 2);
+                    }
+                    
+                    const answerHeight = addText(String(displayValue), margin + 5, yPosition, { fontSize: 10 });
+                    yPosition += answerHeight + 3;
+                    
+                    checkNewPage();
+                }
+            });
+
+            // Footer on last page
+            checkNewPage();
+            yPosition = pageHeight - margin;
+            addText('Generated by Longenix Health Assessment System', margin, yPosition, { fontSize: 8, fontStyle: 'italic' });
+            addText(`Dr. Graham Player, Ph.D - Professional Healthcare Innovation Consultant`, margin, yPosition - 5, { fontSize: 8, fontStyle: 'italic' });
+
+            // Generate filename
+            const patientName = this.formData.fullName || 'Patient';
+            const date = new Date().toISOString().split('T')[0];
+            const filename = `Health_Assessment_Form_${patientName.replace(/[^a-z0-9]/gi, '_')}_${date}.pdf`;
+
+            // Download PDF
+            pdf.save(filename);
+
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            alert('Error generating PDF. Please make sure you have completed the form and try again.');
+        } finally {
+            // Reset button
+            button.innerHTML = originalText;
+            button.disabled = false;
         }
     }
 }

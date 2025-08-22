@@ -1061,6 +1061,8 @@ app.get('/report', async (c) => {
           <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
           <link href="/css/styles.css" rel="stylesheet">
           <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
           
           <style>
               @media print {
@@ -1097,6 +1099,9 @@ app.get('/report', async (c) => {
                           <a href="/" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition mr-2">
                               <i class="fas fa-home mr-2"></i>Home
                           </a>
+                          <button onclick="downloadReportPDF()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition mr-2">
+                              <i class="fas fa-file-pdf mr-2"></i>Download PDF
+                          </button>
                           <button onclick="window.print()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
                               <i class="fas fa-print mr-2"></i>Print
                           </button>
@@ -3241,6 +3246,80 @@ app.get('/report', async (c) => {
                   </div>
               </div>
           </div>
+
+          <script>
+              // PDF Generation Functions
+              function downloadReportPDF() {
+                  // Show loading indicator
+                  const button = event.target.closest('button');
+                  const originalText = button.innerHTML;
+                  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating PDF...';
+                  button.disabled = true;
+                  
+                  // Configure jsPDF
+                  const { jsPDF } = window.jspdf;
+                  
+                  // Get the main content area (excluding header)
+                  const reportContent = document.querySelector('.max-w-7xl.mx-auto.px-6.py-8');
+                  
+                  // Configure html2canvas options
+                  const options = {
+                      scale: 2, // Higher resolution
+                      useCORS: true,
+                      allowTaint: true,
+                      backgroundColor: '#ffffff',
+                      width: reportContent.scrollWidth,
+                      height: reportContent.scrollHeight,
+                      scrollX: 0,
+                      scrollY: 0
+                  };
+                  
+                  html2canvas(reportContent, options).then(canvas => {
+                      const imgData = canvas.toDataURL('image/png');
+                      
+                      // Calculate dimensions
+                      const imgWidth = 210; // A4 width in mm
+                      const pageHeight = 295; // A4 height in mm
+                      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                      let heightLeft = imgHeight;
+                      
+                      // Create PDF
+                      const pdf = new jsPDF('p', 'mm', 'a4');
+                      let position = 0;
+                      
+                      // Add first page
+                      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                      heightLeft -= pageHeight;
+                      
+                      // Add additional pages if needed
+                      while (heightLeft >= 0) {
+                          position = heightLeft - imgHeight;
+                          pdf.addPage();
+                          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                          heightLeft -= pageHeight;
+                      }
+                      
+                      // Generate filename with patient name and date
+                      const patientName = '${session.full_name}';
+                      const date = new Date().toISOString().split('T')[0];
+                      const filename = \`Health_Assessment_Report_\${patientName.replace(/[^a-z0-9]/gi, '_')}_\${date}.pdf\`;
+                      
+                      // Download PDF
+                      pdf.save(filename);
+                      
+                      // Reset button
+                      button.innerHTML = originalText;
+                      button.disabled = false;
+                  }).catch(error => {
+                      console.error('PDF generation error:', error);
+                      alert('Error generating PDF. Please try again.');
+                      
+                      // Reset button
+                      button.innerHTML = originalText;
+                      button.disabled = false;
+                  });
+              }
+          </script>
       </body>
       </html>
     `)
@@ -3833,11 +3912,6 @@ app.post('/api/assessment/demo', async (c) => {
   const { country } = await c.req.json()
   
   try {
-    // Test database connection first
-    if (!env.DB) {
-      throw new Error('Database not available - DB binding not configured')
-    }
-    
     // Medical algorithms are imported at the top
     
     // Create demo patient with unique email
@@ -4071,8 +4145,7 @@ app.post('/api/assessment/demo', async (c) => {
     console.error('Demo creation error:', error)
     return c.json({
       success: false,
-      error: 'Failed to create demo assessment',
-      details: error instanceof Error ? error.message : String(error)
+      error: 'Failed to create demo assessment'
     }, 500)
   }
 })
@@ -4105,6 +4178,8 @@ app.get('/', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
         
         <!-- Local CSS -->
         <link href="/css/styles.css" rel="stylesheet">
