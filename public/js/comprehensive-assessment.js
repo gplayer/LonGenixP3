@@ -862,14 +862,27 @@ class ComprehensiveAssessment {
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, checking authentication...');
+    console.log('DOM loaded, checking for containers...');
     
-    // Check authentication status
+    // Check authentication status for comprehensive assessment
     const savedAuth = sessionStorage.getItem('longenix_auth');
+    console.log('Authentication status:', savedAuth ? 'Found' : 'Not found');
+    
     if (!savedAuth) {
-        console.log('Not authenticated, redirecting to home...');
-        alert('Please authenticate first from the main page.');
-        window.location.href = '/';
+        console.log('Not authenticated, showing authentication message...');
+        const container = document.getElementById('assessmentContainer');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center p-8 bg-white rounded-lg shadow-lg max-w-2xl mx-auto">
+                    <i class="fas fa-lock text-4xl text-red-500 mb-4"></i>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Authentication Required</h2>
+                    <p class="text-gray-600 mb-6">Please authenticate first from the main page to access the comprehensive assessment.</p>
+                    <a href="/" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>Go to Home Page
+                    </a>
+                </div>
+            `;
+        }
         return;
     }
     
@@ -880,6 +893,15 @@ document.addEventListener('DOMContentLoaded', () => {
         new ComprehensiveAssessment();
     } else {
         console.error('assessmentContainer not found!');
-        container.innerHTML = '<div class="text-center p-8 text-red-600">Error: Assessment container not found</div>';
+        document.body.innerHTML += `
+            <div class="text-center p-8 text-red-600 bg-white rounded-lg shadow-lg max-w-2xl mx-auto mt-8">
+                <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                <h2 class="text-xl font-semibold mb-4">Container Error</h2>
+                <p>Assessment container not found. Please refresh the page.</p>
+                <button onclick="location.reload()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Refresh Page
+                </button>
+            </div>
+        `;
     }
 });
