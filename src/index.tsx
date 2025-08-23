@@ -2655,7 +2655,7 @@ app.get('/report', async (c) => {
                                   <ul class="space-y-2 text-sm text-gray-700">
                                       <li class="flex items-start">
                                           <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
-                                          <span><strong>Biological Age Advantage:</strong> 0.2 years younger than chronological age</span>
+                                          <span><strong>Biological Age Advantage:</strong> ${bioAge && bioAge.age_advantage > 0 ? `${bioAge.age_advantage.toFixed(1)} years younger` : bioAge && bioAge.age_advantage < 0 ? `${Math.abs(bioAge.age_advantage).toFixed(1)} years older` : 'calculating'} than chronological age</span>
                                       </li>
                                       <li class="flex items-start">
                                           <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
@@ -3968,10 +3968,9 @@ app.post('/api/assessment/comprehensive', async (c) => {
     const demo = assessmentData.demographics
     const clinical = assessmentData.clinical
     
-    // Calculate age from date of birth
+    // Calculate age from date of birth (consistent with other endpoints)
     const birthDate = new Date(demo.dateOfBirth)
-    const today = new Date()
-    const age = today.getFullYear() - birthDate.getFullYear()
+    const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     
     const patientResult = await env.DB.prepare(`
       INSERT INTO patients (full_name, date_of_birth, gender, ethnicity, email, phone, country)
@@ -4122,7 +4121,7 @@ app.post('/api/assessment/demo', async (c) => {
       },
       'usa_risk': {
         full_name: 'Robert Martinez',
-        date_of_birth: '1968-03-22', // 56 years old
+        date_of_birth: '1968-03-22', // 57 years old
         gender: 'male',
         ethnicity: 'hispanic',
         email: `demo-usa-risk-${timestamp}@longenixhealth.com`,
@@ -4203,7 +4202,7 @@ app.post('/api/assessment/demo', async (c) => {
         }
       },
       'usa_risk': {
-        age: 56,
+        age: 57,
         gender: 'male' as const,
         height_cm: 178,
         weight_kg: 95,
