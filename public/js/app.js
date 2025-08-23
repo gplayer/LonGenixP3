@@ -183,7 +183,7 @@ class LongenixAssessment {
         }
     }
 
-    loadDemoData() {
+    loadDemoData(demoType = 'usa_optimal') {
         // Generate a demo report with sample data
         // This will create a session with demo patient data
         fetch('/api/assessment/demo', {
@@ -192,7 +192,8 @@ class LongenixAssessment {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                country: this.selectedCountry
+                country: this.selectedCountry,
+                demoType: demoType
             })
         })
         .then(response => response.json())

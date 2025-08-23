@@ -1102,6 +1102,11 @@ app.get('/report', async (c) => {
                           <button onclick="downloadReportPDF()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition mr-2">
                               <i class="fas fa-file-pdf mr-2"></i>Download PDF
                           </button>
+                          ${isDemo ? `
+                          <button onclick="viewInputForm()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition mr-2">
+                              <i class="fas fa-clipboard-list mr-2"></i>View Form Data
+                          </button>
+                          ` : ''}
                           <button onclick="window.print()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
                               <i class="fas fa-print mr-2"></i>Print
                           </button>
@@ -3319,6 +3324,12 @@ app.get('/report', async (c) => {
                       button.disabled = false;
                   });
               }
+              
+              function viewInputForm() {
+                  // Open form data view in new window
+                  const sessionId = '${sessionId}';
+                  window.open(\`/form-data?session=\${sessionId}\`, '_blank');
+              }
           </script>
       </body>
       </html>
@@ -3416,6 +3427,188 @@ app.get('/comprehensive-assessment', (c) => {
     </body>
     </html>
   `)
+})
+
+// Form data viewer route
+app.get('/form-data', async (c) => {
+  const { env } = c
+  const sessionId = c.req.query('session')
+  
+  if (!sessionId) {
+    return c.html('<h1>Session ID required</h1>')
+  }
+
+  try {
+    // Get session and patient info
+    const session = await env.DB.prepare(`
+      SELECT p.full_name, p.date_of_birth, p.gender, p.country, p.ethnicity, s.session_type, s.created_at
+      FROM assessment_sessions s
+      JOIN patients p ON s.patient_id = p.id
+      WHERE s.id = ?
+    `).bind(sessionId).first()
+
+    if (!session) {
+      return c.html('<h1>Session not found</h1>')
+    }
+
+    // Get comprehensive assessment data
+    const assessmentData = await env.DB.prepare(`
+      SELECT json_data FROM assessment_data 
+      WHERE session_id = ? AND data_type = 'comprehensive_lifestyle'
+    `).bind(sessionId).first()
+
+    const formData = assessmentData ? JSON.parse(assessmentData.json_data) : {}
+
+    return c.html(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Assessment Form Data - ${session.full_name}</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+      </head>
+      <body class="bg-gray-50">
+          <div class="max-w-6xl mx-auto px-6 py-8">
+              <!-- Header -->
+              <div class="bg-white rounded-lg shadow-lg mb-8">
+                  <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-lg">
+                      <div class="flex items-center justify-between">
+                          <div>
+                              <h1 class="text-2xl font-bold mb-2">
+                                  <i class="fas fa-clipboard-list mr-3"></i>Assessment Form Data
+                              </h1>
+                              <p class="text-blue-100">${session.full_name}</p>
+                          </div>
+                          <div class="text-right">
+                              <button onclick="window.close()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition mr-2">
+                                  <i class="fas fa-times mr-2"></i>Close
+                              </button>
+                              <button onclick="downloadFormDataPDF()" class="bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
+                                  <i class="fas fa-file-pdf mr-2"></i>Download PDF
+                              </button>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div class="p-6">
+                      <div class="grid md:grid-cols-2 gap-6 mb-6">
+                          <div>
+                              <h3 class="text-lg font-semibold mb-4">Patient Information</h3>
+                              <div class="space-y-2 text-sm">
+                                  <div><span class="font-medium">Name:</span> ${session.full_name}</div>
+                                  <div><span class="font-medium">Date of Birth:</span> ${session.date_of_birth}</div>
+                                  <div><span class="font-medium">Gender:</span> ${session.gender}</div>
+                                  <div><span class="font-medium">Country:</span> ${session.country}</div>
+                                  <div><span class="font-medium">Session Type:</span> ${session.session_type}</div>
+                              </div>
+                          </div>
+                          <div>
+                              <h3 class="text-lg font-semibold mb-4">Assessment Details</h3>
+                              <div class="space-y-2 text-sm">
+                                  <div><span class="font-medium">Assessment Date:</span> ${new Date(session.created_at).toLocaleDateString()}</div>
+                                  <div><span class="font-medium">Data Fields:</span> ${Object.keys(formData).length} items</div>
+                                  <div><span class="font-medium">Status:</span> Completed</div>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Form Data -->
+              <div id="form-content" class="bg-white rounded-lg shadow-lg p-8">
+                  <h2 class="text-xl font-semibold mb-6">
+                      <i class="fas fa-list mr-2 text-blue-600"></i>Assessment Responses
+                  </h2>
+                  
+                  <div class="space-y-6">
+                      ${Object.entries(formData).map(([key, value]) => {
+                        if (!value || key === 'currentStep') return ''
+                        
+                        const label = key.replace(/([A-Z])/g, ' $1')
+                                        .replace(/^./, str => str.toUpperCase())
+                                        .replace(/([a-z])([A-Z])/g, '$1 $2')
+                        
+                        let displayValue = value
+                        if (Array.isArray(value)) {
+                          displayValue = value.join(', ')
+                        } else if (typeof value === 'object') {
+                          displayValue = JSON.stringify(value, null, 2)
+                        }
+                        
+                        return `
+                          <div class="border-l-4 border-blue-500 pl-4 py-2">
+                              <div class="font-medium text-gray-800 mb-1">${label}</div>
+                              <div class="text-gray-600 text-sm">${String(displayValue)}</div>
+                          </div>
+                        `
+                      }).join('')}
+                  </div>
+              </div>
+          </div>
+          
+          <script>
+              function downloadFormDataPDF() {
+                  const button = event.target;
+                  const originalText = button.innerHTML;
+                  button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating PDF...';
+                  button.disabled = true;
+                  
+                  const { jsPDF } = window.jspdf;
+                  const content = document.getElementById('form-content');
+                  
+                  html2canvas(content, {
+                      scale: 2,
+                      useCORS: true,
+                      allowTaint: true,
+                      backgroundColor: '#ffffff'
+                  }).then(canvas => {
+                      const imgData = canvas.toDataURL('image/png');
+                      const pdf = new jsPDF('p', 'mm', 'a4');
+                      
+                      const imgWidth = 210;
+                      const pageHeight = 295;
+                      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                      let heightLeft = imgHeight;
+                      let position = 0;
+                      
+                      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                      heightLeft -= pageHeight;
+                      
+                      while (heightLeft >= 0) {
+                          position = heightLeft - imgHeight;
+                          pdf.addPage();
+                          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                          heightLeft -= pageHeight;
+                      }
+                      
+                      const patientName = '${session.full_name}';
+                      const date = new Date().toISOString().split('T')[0];
+                      const filename = \`Assessment_Form_Data_\${patientName.replace(/[^a-z0-9]/gi, '_')}_\${date}.pdf\`;
+                      
+                      pdf.save(filename);
+                      
+                      button.innerHTML = originalText;
+                      button.disabled = false;
+                  }).catch(error => {
+                      console.error('PDF generation error:', error);
+                      alert('Error generating PDF. Please try again.');
+                      button.innerHTML = originalText;
+                      button.disabled = false;
+                  });
+              }
+          </script>
+      </body>
+      </html>
+    `)
+
+  } catch (error) {
+    console.error('Form data viewing error:', error)
+    return c.html(`<h1>Error loading form data: ${error.message}</h1>`)
+  }
 })
 
 app.get('/assessment', (c) => {
@@ -3909,22 +4102,58 @@ app.post('/api/assessment/comprehensive', async (c) => {
 // API endpoint to create demo assessment
 app.post('/api/assessment/demo', async (c) => {
   const { env } = c
-  const { country } = await c.req.json()
+  const { country, demoType } = await c.req.json()
   
   try {
     // Medical algorithms are imported at the top
     
     // Create demo patient with unique email
     const timestamp = Date.now()
-    const demoPatient = {
-      full_name: 'Demo Patient Complete',
-      date_of_birth: '1976-05-15', // 47 years old
-      gender: 'female',
-      ethnicity: 'caucasian',
-      email: `demo-${timestamp}@longenixhealth.com`,
-      phone: '+1 (555) 123-4567',
-      country: country || 'US'
+    const demoPatients = {
+      'usa_optimal': {
+        full_name: 'Sarah Johnson',
+        date_of_birth: '1978-05-15', // 46 years old
+        gender: 'female',
+        ethnicity: 'caucasian',
+        email: `demo-usa-optimal-${timestamp}@longenixhealth.com`,
+        phone: '+1 (555) 123-4567',
+        country: 'US',
+        profile: 'Health-conscious marketing manager with optimal biomarkers'
+      },
+      'usa_risk': {
+        full_name: 'Robert Martinez',
+        date_of_birth: '1968-03-22', // 56 years old
+        gender: 'male',
+        ethnicity: 'hispanic',
+        email: `demo-usa-risk-${timestamp}@longenixhealth.com`,
+        phone: '+1 (555) 234-5678',
+        country: 'US',
+        profile: 'Executive with elevated cardiovascular risk factors'
+      },
+      'australia_balanced': {
+        full_name: 'Emma Thompson',
+        date_of_birth: '1975-09-10', // 49 years old
+        gender: 'female',
+        ethnicity: 'caucasian',
+        email: `demo-aus-balanced-${timestamp}@longenixhealth.com`,
+        phone: '+61 2 9876 5432',
+        country: 'Australia',
+        profile: 'Active nurse with moderate health indicators'
+      },
+      'philippines_young': {
+        full_name: 'Maria Santos',
+        date_of_birth: '1985-12-03', // 38 years old
+        gender: 'female',
+        ethnicity: 'asian',
+        email: `demo-ph-young-${timestamp}@longenixhealth.com`,
+        phone: '+63 2 8765 4321',
+        country: 'Philippines',
+        profile: 'Young teacher with excellent metabolic health'
+      }
     }
+    
+    const selectedDemo = demoType || 'usa_optimal'
+    const demoPatient = demoPatients[selectedDemo] || demoPatients['usa_optimal']
 
     const patientResult = await env.DB.prepare(`
       INSERT INTO patients (full_name, date_of_birth, gender, ethnicity, email, phone, country)
@@ -3949,29 +4178,99 @@ app.post('/api/assessment/demo', async (c) => {
 
     const sessionId = sessionResult.meta.last_row_id
 
-    // Demo patient data with optimal biomarkers showing biological age advantage
-    const patientData = {
-      age: 47,
-      gender: 'female' as const,
-      height_cm: 165,
-      weight_kg: 65,
-      systolic_bp: 115,
-      diastolic_bp: 75,
-      biomarkers: {
-        glucose: 85,               // Excellent glucose control
-        hba1c: 5.1,              // Optimal diabetes risk
-        total_cholesterol: 180,    // Excellent total cholesterol
-        hdl_cholesterol: 65,      // High protective HDL
-        ldl_cholesterol: 95,      // Optimal LDL
-        triglycerides: 85,        // Excellent triglycerides
-        creatinine: 0.8,          // Optimal kidney function
-        egfr: 105,               // Excellent kidney function
-        albumin: 4.5,            // Optimal protein status
-        c_reactive_protein: 0.8,  // Low inflammation
-        white_blood_cells: 6.0,   // Optimal immune function
-        hemoglobin: 14.2         // Excellent oxygen transport
+    // Create different demo patient data profiles
+    const demoProfiles = {
+      'usa_optimal': {
+        age: 46,
+        gender: 'female' as const,
+        height_cm: 165,
+        weight_kg: 65,
+        systolic_bp: 115,
+        diastolic_bp: 75,
+        biomarkers: {
+          glucose: 85,               // Excellent glucose control
+          hba1c: 5.1,              // Optimal diabetes risk
+          total_cholesterol: 180,    // Excellent total cholesterol
+          hdl_cholesterol: 65,      // High protective HDL
+          ldl_cholesterol: 95,      // Optimal LDL
+          triglycerides: 85,        // Excellent triglycerides
+          creatinine: 0.8,          // Optimal kidney function
+          egfr: 105,               // Excellent kidney function
+          albumin: 4.5,            // Optimal protein status
+          c_reactive_protein: 0.8,  // Low inflammation
+          white_blood_cells: 6.0,   // Optimal immune function
+          hemoglobin: 14.2         // Excellent oxygen transport
+        }
+      },
+      'usa_risk': {
+        age: 56,
+        gender: 'male' as const,
+        height_cm: 178,
+        weight_kg: 95,
+        systolic_bp: 145,
+        diastolic_bp: 92,
+        biomarkers: {
+          glucose: 118,              // Pre-diabetic range
+          hba1c: 6.2,              // Elevated diabetes risk
+          total_cholesterol: 245,    // High cholesterol
+          hdl_cholesterol: 38,      // Low protective HDL
+          ldl_cholesterol: 155,     // High LDL
+          triglycerides: 185,       // Elevated triglycerides
+          creatinine: 1.3,          // Mild kidney impairment
+          egfr: 68,                // Reduced kidney function
+          albumin: 3.8,            // Lower protein status
+          c_reactive_protein: 4.2,  // High inflammation
+          white_blood_cells: 9.5,   // Elevated immune activation
+          hemoglobin: 13.8         // Lower normal range
+        }
+      },
+      'australia_balanced': {
+        age: 49,
+        gender: 'female' as const,
+        height_cm: 168,
+        weight_kg: 72,
+        systolic_bp: 125,
+        diastolic_bp: 80,
+        biomarkers: {
+          glucose: 95,              // Normal but not optimal
+          hba1c: 5.4,              // Good diabetes control
+          total_cholesterol: 195,   // Borderline cholesterol
+          hdl_cholesterol: 55,     // Adequate HDL
+          ldl_cholesterol: 115,    // Borderline LDL
+          triglycerides: 110,      // Normal triglycerides
+          creatinine: 0.9,         // Normal kidney function
+          egfr: 88,               // Good kidney function
+          albumin: 4.2,           // Good protein status
+          c_reactive_protein: 1.8, // Mild inflammation
+          white_blood_cells: 7.2,  // Normal immune function
+          hemoglobin: 13.5        // Normal oxygen transport
+        }
+      },
+      'philippines_young': {
+        age: 38,
+        gender: 'female' as const,
+        height_cm: 158,
+        weight_kg: 52,
+        systolic_bp: 110,
+        diastolic_bp: 70,
+        biomarkers: {
+          glucose: 82,              // Excellent glucose control
+          hba1c: 4.9,             // Optimal diabetes risk
+          total_cholesterol: 165,   // Excellent total cholesterol
+          hdl_cholesterol: 72,     // Very high protective HDL
+          ldl_cholesterol: 85,     // Optimal LDL
+          triglycerides: 75,       // Excellent triglycerides
+          creatinine: 0.7,         // Excellent kidney function
+          egfr: 115,              // Superior kidney function
+          albumin: 4.7,           // Excellent protein status
+          c_reactive_protein: 0.5, // Very low inflammation
+          white_blood_cells: 5.5,  // Optimal immune function
+          hemoglobin: 13.8        // Good oxygen transport
+        }
       }
     }
+    
+    const patientData = demoProfiles[selectedDemo] || demoProfiles['usa_optimal']
 
     // Calculate results - All 7 disease risk categories
     const biologicalAge = BiologicalAgeCalculator.calculateBiologicalAge(patientData)
@@ -3990,7 +4289,7 @@ app.post('/api/assessment/demo', async (c) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       sessionId,
-      47, // Updated chronological age
+      patientData.age, // Dynamic chronological age based on demo type
       biologicalAge.phenotypic_age,
       biologicalAge.klemera_doubal_age,
       biologicalAge.metabolic_age,
@@ -4017,21 +4316,23 @@ app.post('/api/assessment/demo', async (c) => {
       ).run()
     }
 
-    // Add comprehensive demo data for functional medicine sections
-    const demoComprehensiveData = {
-      // Demographics
-      fullName: 'Demo Patient Complete',
-      dateOfBirth: '1976-05-15',
-      gender: 'female',
-      
-      // Functional Medicine Systems with realistic responses
-      // Assimilation System
-      assimilation_q1: 'rarely',
-      assimilation_q2: 'yes',
-      assimilation_q3: 'good',
-      assimilation_q4: 'no',
-      assimilation_q5: 'rarely',
-      assimilation_q6: 'yes',
+    // Add comprehensive demo data for functional medicine sections based on demo type
+    const demoComprehensiveProfiles = {
+      'usa_optimal': {
+        // Demographics
+        fullName: 'Sarah Johnson',
+        dateOfBirth: '1978-05-15',
+        gender: 'female',
+        occupation: 'Marketing Manager',
+        country: 'US',
+        
+        // Functional Medicine Systems - Optimal responses
+        assimilation_q1: 'rarely',        // Digestive issues
+        assimilation_q2: 'yes',          // Regular bowel movements
+        assimilation_q3: 'excellent',    // Digestion quality
+        assimilation_q4: 'no',           // Food sensitivities
+        assimilation_q5: 'rarely',       // Bloating
+        assimilation_q6: 'yes',          // Nutrient absorption
       
       // Biotransformation System
       biotransformation_q1: 'good',
@@ -4100,26 +4401,132 @@ app.post('/api/assessment/demo', async (c) => {
       gad7_q6: '0',
       gad7_q7: '1',
       
-      // Lifestyle Assessment
-      exerciseFrequency: '5-6 times',
-      exerciseMinutes: '46-60',
-      exerciseTypes: ['cardio', 'strength', 'flexibility'],
-      sleepHours: '7-8',
-      sleepQuality: 'good',
-      stressLevel: '2',
-      stressTechniques: ['meditation', 'exercise'],
-      
       // Medical History
       hasCurrentConditions: 'no',
-      takingMedications: 'no',
-      takingSupplements: 'yes',
-      currentSupplements: 'Vitamin D3 2000 IU daily, Omega-3 fish oil 1000mg, Magnesium glycinate 400mg',
-      familyHistory: ['family_heart_disease'],
-      familyHistoryDetails: 'Father had heart attack at age 65, otherwise family history unremarkable',
-      regularCycles: 'yes',
-      pregnancies: '2',
-      liveBirths: '2'
+        // Lifestyle factors
+        exerciseFrequency: 'daily',
+        exerciseTypes: ['cardio', 'strength'],
+        sleepHours: '7-8',
+        sleepQuality: 'excellent', 
+        stressLevel: 'low',
+        smokingStatus: 'never',
+        alcoholConsumption: 'moderate',
+        
+        // Medical history
+        takingMedications: 'no',
+        takingSupplements: 'yes',
+        currentSupplements: 'Vitamin D3, Omega-3, Magnesium',
+        familyHistory: ['family_heart_disease'],
+        familyHistoryDetails: 'Father had heart attack at age 65',
+        regularCycles: 'yes',
+        pregnancies: '2',
+        liveBirths: '2'
+      },
+      
+      'usa_risk': {
+        fullName: 'Robert Martinez',
+        dateOfBirth: '1968-03-22',
+        gender: 'male',
+        occupation: 'Executive',
+        country: 'US',
+        
+        // Functional Medicine Systems - Risk factors
+        assimilation_q1: 'often',          // Digestive issues
+        assimilation_q2: 'no',            // Irregular bowel movements
+        assimilation_q3: 'poor',          // Poor digestion
+        assimilation_q4: 'yes',           // Food sensitivities
+        assimilation_q5: 'often',         // Frequent bloating
+        assimilation_q6: 'questionable',  // Poor absorption
+        
+        // Lifestyle factors - Risk profile
+        exerciseFrequency: 'rarely',
+        exerciseTypes: ['none'],
+        sleepHours: '5-6',
+        sleepQuality: 'poor',
+        stressLevel: 'high',
+        smokingStatus: 'former',
+        alcoholConsumption: 'heavy',
+        
+        // Medical history
+        takingMedications: 'yes',
+        currentMedications: 'Lisinopril 10mg, Metformin 500mg, Atorvastatin 20mg',
+        takingSupplements: 'no',
+        familyHistory: ['family_heart_disease', 'family_diabetes'],
+        familyHistoryDetails: 'Multiple family members with heart disease and diabetes'
+      },
+      
+      'australia_balanced': {
+        fullName: 'Emma Thompson',
+        dateOfBirth: '1975-09-10',
+        gender: 'female',
+        occupation: 'Nurse',
+        country: 'Australia',
+        
+        // Functional Medicine Systems - Balanced responses
+        assimilation_q1: 'sometimes',      // Occasional digestive issues
+        assimilation_q2: 'mostly',         // Usually regular
+        assimilation_q3: 'good',          // Good digestion
+        assimilation_q4: 'some',          // Some sensitivities
+        assimilation_q5: 'sometimes',     // Occasional bloating
+        assimilation_q6: 'good',          // Good absorption
+        
+        // Lifestyle factors - Balanced profile
+        exerciseFrequency: 'regular',
+        exerciseTypes: ['walking', 'yoga'],
+        sleepHours: '7',
+        sleepQuality: 'good',
+        stressLevel: 'moderate',
+        smokingStatus: 'never',
+        alcoholConsumption: 'social',
+        
+        // Medical history
+        takingMedications: 'no',
+        takingSupplements: 'yes',
+        currentSupplements: 'Multivitamin, Calcium',
+        familyHistory: ['family_osteoporosis'],
+        familyHistoryDetails: 'Mother has osteoporosis',
+        regularCycles: 'mostly',
+        pregnancies: '1',
+        liveBirths: '1'
+      },
+      
+      'philippines_young': {
+        fullName: 'Maria Santos',
+        dateOfBirth: '1985-12-03',
+        gender: 'female',
+        occupation: 'Teacher',
+        country: 'Philippines',
+        
+        // Functional Medicine Systems - Excellent responses
+        assimilation_q1: 'rarely',        // Rare digestive issues
+        assimilation_q2: 'yes',          // Regular bowel movements
+        assimilation_q3: 'excellent',    // Excellent digestion
+        assimilation_q4: 'no',           // No sensitivities
+        assimilation_q5: 'rarely',       // Rare bloating
+        assimilation_q6: 'excellent',    // Excellent absorption
+        
+        // Lifestyle factors - Optimal profile
+        exerciseFrequency: 'daily',
+        exerciseTypes: ['dancing', 'walking', 'sports'],
+        sleepHours: '8',
+        sleepQuality: 'excellent',
+        stressLevel: 'low',
+        smokingStatus: 'never',
+        alcoholConsumption: 'rare',
+        
+        // Medical history
+        takingMedications: 'no',
+        takingSupplements: 'yes',
+        currentSupplements: 'Vitamin C, Iron',
+        familyHistory: [],
+        familyHistoryDetails: 'No significant family history',
+        regularCycles: 'yes',
+        pregnancies: '0',
+        liveBirths: '0'
+      }
     }
+    
+    const demoComprehensiveData = demoComprehensiveProfiles[selectedDemo] || demoComprehensiveProfiles['usa_optimal']
 
     // Store comprehensive demo data
     await env.DB.prepare(`
@@ -4401,21 +4808,35 @@ app.get('/', (c) => {
                         </div>
 
                         <!-- Load Demo Client -->
-                        <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-pointer" onclick="startAssessment('demo')">
+                        <div class="bg-white rounded-lg shadow-lg p-8">
                             <div class="text-center">
                                 <i class="fas fa-user-friends text-4xl text-purple-600 mb-4"></i>
-                                <h3 class="text-xl font-semibold mb-3">Load Demo Client</h3>
-                                <p class="text-gray-600 mb-6">View sample assessment with realistic demo data</p>
+                                <h3 class="text-xl font-semibold mb-3">Demo Assessment Reports</h3>
+                                <p class="text-gray-600 mb-6">View sample assessments with different health profiles</p>
                                 <ul class="text-sm text-gray-500 text-left space-y-2 mb-6">
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Complete Sample Data</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Evidence-Based Calculations</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>All 10+ Report Sections</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Personalized Results</li>
-                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Professional Formatting</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Realistic Patient Data</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Country-Specific Profiles</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Different Risk Levels</li>
+                                    <li><i class="fas fa-check text-green-500 mr-2"></i>Complete Reports + Form Data</li>
                                 </ul>
-                                <button class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition duration-300">
-                                    Load Demo
-                                </button>
+                                
+                                <!-- Demo Selection Buttons -->
+                                <div class="space-y-3">
+                                    <div class="grid grid-cols-1 gap-3">
+                                        <button onclick="loadDemoType('usa_optimal')" class="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition text-sm">
+                                            <i class="fas fa-star mr-2"></i>🇺🇸 USA - Optimal Health
+                                        </button>
+                                        <button onclick="loadDemoType('usa_risk')" class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition text-sm">
+                                            <i class="fas fa-exclamation-triangle mr-2"></i>🇺🇸 USA - High Risk Profile
+                                        </button>
+                                        <button onclick="loadDemoType('australia_balanced')" class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition text-sm">
+                                            <i class="fas fa-balance-scale mr-2"></i>🇦🇺 Australia - Balanced Health
+                                        </button>
+                                        <button onclick="loadDemoType('philippines_young')" class="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition text-sm">
+                                            <i class="fas fa-seedling mr-2"></i>🇵🇭 Philippines - Young & Healthy
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -4489,6 +4910,12 @@ app.get('/', (c) => {
             function viewSampleReport() {
                 if (window.longenixApp) {
                     window.longenixApp.viewSampleReport();
+                }
+            }
+            
+            function loadDemoType(demoType) {
+                if (window.longenixApp) {
+                    window.longenixApp.loadDemoData(demoType);
                 }
             }
         </script>
