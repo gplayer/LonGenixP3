@@ -64,8 +64,9 @@
 - Evidence-based medical algorithms operational
 
 ## 🌐 URLs
+- **Production (Cloudflare Pages)**: https://cd3afa78.longenix-assessment.pages.dev
 - **Development Server**: http://localhost:3000 (PM2 managed)
-- **Public Access**: [Generated via GetServiceUrl when needed]
+- **Sandbox Access**: https://3000-iirurxsnx73vkdjkrpher-6532622b.e2b.dev
 - **GitHub Repository**: https://github.com/gplayer/LonGenixP3
 - **Demo Reference**: https://github.com/gplayer/LongenixHealth (static version)
 
@@ -153,10 +154,12 @@ curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/
 - **Medical Database**: Comprehensive biomarker help system with clinical recommendations
 
 ## 📋 Deployment Status
-- **Platform**: Cloudflare Pages (ready for deployment)
-- **Status**: 🔄 Development (local server running)
-- **Database**: ✅ Local SQLite ready, production D1 pending API setup
+- **Platform**: Cloudflare Pages ✅ **DEPLOYED**
+- **Production URL**: https://cd3afa78.longenix-assessment.pages.dev
+- **Status**: 🚀 Live in Production + 🔄 Development (local server running)
+- **Database**: ✅ Local SQLite ready, production D1 ready for migration
 - **Authentication**: ✅ Working password protection
+- **Cloudflare Project**: `longenix-assessment`
 - **Last Updated**: August 24, 2025
 
 ## 🎯 Critical Success Criteria
