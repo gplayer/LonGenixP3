@@ -825,6 +825,137 @@ app.get('/report', async (c) => {
             </div>
           </div>
         </div>
+
+        <!-- Individual Question Details Section -->
+        <div class="mt-8">
+          <button onclick="toggleMentalHealthDetails()" class="w-full bg-gray-100 hover:bg-gray-200 border-2 border-dashed border-gray-300 rounded-lg px-6 py-4 transition-colors">
+            <div class="flex items-center justify-center text-gray-700">
+              <i class="fas fa-list mr-3"></i>
+              <span class="font-medium">Show Individual Question Responses</span>
+              <i class="fas fa-chevron-down ml-3"></i>
+            </div>
+          </button>
+          
+          <div id="mentalHealthDetails" class="hidden mt-4">
+            <!-- PHQ-9 Individual Questions -->
+            <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-blue-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-blue-800 mb-4">
+                  <i class="fas fa-heart mr-2"></i>PHQ-9 Individual Responses
+                </h4>
+                <div class="space-y-3">
+                  ${[
+                    'Little interest or pleasure in doing things',
+                    'Feeling down, depressed, or hopeless', 
+                    'Trouble falling or staying asleep, or sleeping too much',
+                    'Feeling tired or having little energy',
+                    'Poor appetite or overeating',
+                    'Feeling bad about yourself — or that you are a failure or have let yourself or your family down',
+                    'Trouble concentrating on things, such as reading the newspaper or watching television',
+                    'Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual',
+                    'Thoughts that you would be better off dead or of hurting yourself in some way'
+                  ].map((question, index) => {
+                    const response = comprehensiveData[\`phq9_q\${index + 1}\`];
+                    const responseText = response === '0' ? 'Not at all (0)' :
+                                       response === '1' ? 'Several days (1)' :
+                                       response === '2' ? 'More than half the days (2)' :
+                                       response === '3' ? 'Nearly every day (3)' :
+                                       'Not answered';
+                    const responseColor = response === '0' ? 'text-green-600' :
+                                        response === '1' ? 'text-yellow-600' :
+                                        response === '2' ? 'text-orange-600' :
+                                        response === '3' ? 'text-red-600' :
+                                        'text-gray-400';
+                    
+                    return \`
+                      <div class="bg-white rounded-md p-3 border-l-4 \${
+                        response === '0' ? 'border-green-500' :
+                        response === '1' ? 'border-yellow-500' :
+                        response === '2' ? 'border-orange-500' :
+                        response === '3' ? 'border-red-500' :
+                        'border-gray-300'
+                      }">
+                        <p class="text-sm font-medium text-gray-800 mb-1">\${index + 1}. \${question}</p>
+                        <p class="text-sm \${responseColor} font-semibold">→ \${responseText}</p>
+                      </div>
+                    \`;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- GAD-7 Individual Questions -->
+              <div class="bg-purple-50 rounded-lg p-6">
+                <h4 class="text-lg font-semibold text-purple-800 mb-4">
+                  <i class="fas fa-brain mr-2"></i>GAD-7 Individual Responses
+                </h4>
+                <div class="space-y-3">
+                  ${[
+                    'Feeling nervous, anxious or on edge',
+                    'Not being able to stop or control worrying',
+                    'Worrying too much about different things',
+                    'Trouble relaxing',
+                    'Being so restless that it is hard to sit still',
+                    'Becoming easily annoyed or irritable',
+                    'Feeling afraid as if something awful might happen'
+                  ].map((question, index) => {
+                    const response = comprehensiveData[\`gad7_q\${index + 1}\`];
+                    const responseText = response === '0' ? 'Not at all (0)' :
+                                       response === '1' ? 'Several days (1)' :
+                                       response === '2' ? 'More than half the days (2)' :
+                                       response === '3' ? 'Nearly every day (3)' :
+                                       'Not answered';
+                    const responseColor = response === '0' ? 'text-green-600' :
+                                        response === '1' ? 'text-yellow-600' :
+                                        response === '2' ? 'text-orange-600' :
+                                        response === '3' ? 'text-red-600' :
+                                        'text-gray-400';
+                    
+                    return \`
+                      <div class="bg-white rounded-md p-3 border-l-4 \${
+                        response === '0' ? 'border-green-500' :
+                        response === '1' ? 'border-yellow-500' :
+                        response === '2' ? 'border-orange-500' :
+                        response === '3' ? 'border-red-500' :
+                        'border-gray-300'
+                      }">
+                        <p class="text-sm font-medium text-gray-800 mb-1">\${index + 1}. \${question}</p>
+                        <p class="text-sm \${responseColor} font-semibold">→ \${responseText}</p>
+                      </div>
+                    \`;
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Interpretation Guide -->
+            <div class="mt-6 bg-gray-50 rounded-lg p-4">
+              <h5 class="font-semibold text-gray-800 mb-2">
+                <i class="fas fa-info-circle mr-2"></i>Response Scale Interpretation
+              </h5>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-green-500 rounded mr-2"></div>
+                  <span><strong>0:</strong> Not at all</span>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-yellow-500 rounded mr-2"></div>
+                  <span><strong>1:</strong> Several days</span>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-orange-500 rounded mr-2"></div>
+                  <span><strong>2:</strong> More than half the days</span>
+                </div>
+                <div class="flex items-center">
+                  <div class="w-3 h-3 bg-red-500 rounded mr-2"></div>
+                  <span><strong>3:</strong> Nearly every day</span>
+                </div>
+              </div>
+              <p class="text-xs text-gray-600 mt-3">
+                Both PHQ-9 and GAD-7 assess frequency of symptoms over the past 2 weeks. Higher scores indicate more frequent symptoms.
+              </p>
+            </div>
+          </div>
+        </div>
       `
     }
 
@@ -3449,6 +3580,31 @@ app.get('/report', async (c) => {
                   } else {
                       details.classList.add('hidden');
                       button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Show Detailed Calculation Methods';
+                  }
+              }
+
+              function toggleMentalHealthDetails() {
+                  const details = document.getElementById('mentalHealthDetails');
+                  const button = event.target.closest('button');
+                  
+                  if (details.classList.contains('hidden')) {
+                      details.classList.remove('hidden');
+                      button.innerHTML = \`
+                          <div class="flex items-center justify-center text-gray-700">
+                              <i class="fas fa-list mr-3"></i>
+                              <span class="font-medium">Hide Individual Question Responses</span>
+                              <i class="fas fa-chevron-up ml-3"></i>
+                          </div>
+                      \`;
+                  } else {
+                      details.classList.add('hidden');
+                      button.innerHTML = \`
+                          <div class="flex items-center justify-center text-gray-700">
+                              <i class="fas fa-list mr-3"></i>
+                              <span class="font-medium">Show Individual Question Responses</span>
+                              <i class="fas fa-chevron-down ml-3"></i>
+                          </div>
+                      \`;
                   }
               }
 
