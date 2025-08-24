@@ -1176,12 +1176,14 @@ app.get('/report', async (c) => {
                               <p class="text-sm text-gray-600">${risks.results ? risks.results.length : 0} categories assessed</p>
                           </div>
 
-                          <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 text-center">
-                              <i class="fas fa-heartbeat text-3xl text-purple-600 mb-3"></i>
+                          <div class="bg-gradient-to-br ${isDemo ? 'from-orange-50 to-orange-100 border-2 border-orange-300' : 'from-purple-50 to-purple-100'} rounded-lg p-6 text-center">
+                              ${isDemo ? '<div class="bg-orange-200 text-orange-800 text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block"><i class="fas fa-eye mr-1"></i>DEMONSTRATION MODE</div>' : ''}
+                              <i class="fas fa-${isDemo ? 'eye' : 'heartbeat'} text-3xl ${isDemo ? 'text-orange-600' : 'text-purple-600'} mb-3"></i>
                               <h3 class="font-semibold text-gray-800 mb-2">Assessment Type</h3>
-                              <p class="text-2xl font-bold text-purple-600">${isDemo ? 'Demo' : 'Personal'}</p>
+                              <p class="text-2xl font-bold ${isDemo ? 'text-orange-600' : 'text-purple-600'}">${isDemo ? 'Demo' : 'Personal'}</p>
                               <p class="text-sm text-gray-600">${isDemo ? 'Sample data' : 'Your real data'}</p>
-                              <p class="text-xs text-purple-600 mt-1">${isDemo ? 'Evidence-based calculations' : 'Personalized results'}</p>
+                              <p class="text-xs ${isDemo ? 'text-orange-600' : 'text-purple-600'} mt-1">${isDemo ? 'Evidence-based calculations' : 'Personalized results'}</p>
+                              ${isDemo ? '<a href="/demo-validation" class="text-xs text-orange-700 hover:text-orange-900 underline mt-2 block"><i class="fas fa-info-circle mr-1"></i>Learn about demo data transparency</a>' : ''}
                           </div>
 
                           <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 text-center">
@@ -3541,6 +3543,168 @@ app.get('/demo-validation', (c) => {
                 </div>
             </div>
 
+            <!-- Demo Data Inspector -->
+            <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-search text-orange-600 mr-2"></i>
+                    Demo Data Inspector
+                </h2>
+                <p class="text-gray-600 mb-6">Transparent view of actual demo profile data used in assessments</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- USA Optimal Profile -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-semibold text-green-700 mb-3">
+                            <i class="fas fa-star mr-2"></i>🇺🇸 USA - Optimal Health Profile
+                        </h3>
+                        <div class="text-sm space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Name:</span>
+                                <span class="font-medium">Sarah Johnson</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Age:</span>
+                                <span class="font-medium">46 years</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Gender:</span>
+                                <span class="font-medium">Female</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">BMI:</span>
+                                <span class="font-medium">22.5 (Normal)</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Cholesterol:</span>
+                                <span class="font-medium">180 mg/dL</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Blood Pressure:</span>
+                                <span class="font-medium">115/75 mmHg</span>
+                            </div>
+                            <div class="mt-3 p-2 bg-green-50 rounded text-xs">
+                                <strong>Profile Purpose:</strong> Demonstrates optimal health metrics and low disease risk
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- USA High Risk Profile -->
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-semibold text-red-700 mb-3">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>🇺🇸 USA - High Risk Profile
+                        </h3>
+                        <div class="text-sm space-y-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Name:</span>
+                                <span class="font-medium">Michael Rodriguez</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Age:</span>
+                                <span class="font-medium">52 years</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Gender:</span>
+                                <span class="font-medium">Male</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">BMI:</span>
+                                <span class="font-medium">29.8 (Overweight)</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Cholesterol:</span>
+                                <span class="font-medium">240 mg/dL</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <span class="text-gray-600">Blood Pressure:</span>
+                                <span class="font-medium">145/90 mmHg</span>
+                            </div>
+                            <div class="mt-3 p-2 bg-red-50 rounded text-xs">
+                                <strong>Profile Purpose:</strong> Shows elevated risk factors and system's risk detection capabilities
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-blue-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-blue-800 mb-2">
+                        <i class="fas fa-database mr-2"></i>Data Source Transparency
+                    </h3>
+                    <div class="text-sm text-blue-700 space-y-1">
+                        <p>• <strong>Biomarker Values:</strong> Based on NHANES (National Health and Nutrition Examination Survey) population data</p>
+                        <p>• <strong>Reference Ranges:</strong> Clinical laboratory standards (LabCorp, Quest Diagnostics)</p>    
+                        <p>• <strong>Risk Thresholds:</strong> American Heart Association and CDC guidelines</p>
+                        <p>• <strong>Lifestyle Data:</strong> Evidence-based patterns from epidemiological studies</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <button onclick="toggleAllDemoProfiles()" class="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition">
+                        <i class="fas fa-expand-arrows-alt mr-2"></i>View All 4 Demo Profiles
+                    </button>
+                </div>
+
+                <!-- Hidden expanded profiles -->
+                <div id="allDemoProfiles" class="hidden mt-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Australia Balanced Profile -->
+                        <div class="border rounded-lg p-4">
+                            <h3 class="font-semibold text-blue-700 mb-3">
+                                <i class="fas fa-balance-scale mr-2"></i>🇦🇺 Australia - Balanced Health
+                            </h3>
+                            <div class="text-sm space-y-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">Name:</span>
+                                    <span class="font-medium">Emma Thompson</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">Age:</span>
+                                    <span class="font-medium">38 years</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">Gender:</span>
+                                    <span class="font-medium">Female</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">BMI:</span>
+                                    <span class="font-medium">24.8 (Normal)</span>
+                                </div>
+                                <div class="mt-3 p-2 bg-blue-50 rounded text-xs">
+                                    <strong>Profile Purpose:</strong> Demonstrates moderate health with mixed risk factors
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Philippines Young Profile -->
+                        <div class="border rounded-lg p-4">
+                            <h3 class="font-semibold text-purple-700 mb-3">
+                                <i class="fas fa-seedling mr-2"></i>🇵🇭 Philippines - Young & Healthy
+                            </h3>
+                            <div class="text-sm space-y-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">Name:</span>
+                                    <span class="font-medium">Maria Santos</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">Age:</span>
+                                    <span class="font-medium">28 years</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">Gender:</span>
+                                    <span class="font-medium">Female</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <span class="text-gray-600">BMI:</span>
+                                    <span class="font-medium">21.2 (Normal)</span>
+                                </div>
+                                <div class="mt-3 p-2 bg-purple-50 rounded text-xs">
+                                    <strong>Profile Purpose:</strong> Shows young adult with excellent health metrics
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Transparency Notice -->
             <div class="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg p-6 text-white">
                 <h2 class="text-xl font-bold mb-4">
@@ -3577,6 +3741,21 @@ app.get('/demo-validation', (c) => {
                 </p>
             </div>
         </div>
+
+        <script>
+            function toggleAllDemoProfiles() {
+                const expandedProfiles = document.getElementById('allDemoProfiles');
+                const button = event.target;
+                
+                if (expandedProfiles.classList.contains('hidden')) {
+                    expandedProfiles.classList.remove('hidden');
+                    button.innerHTML = '<i class="fas fa-compress-arrows-alt mr-2"></i>Hide Additional Profiles';
+                } else {
+                    expandedProfiles.classList.add('hidden');
+                    button.innerHTML = '<i class="fas fa-expand-arrows-alt mr-2"></i>View All 4 Demo Profiles';
+                }
+            }
+        </script>
     </body>
     </html>
   `)
