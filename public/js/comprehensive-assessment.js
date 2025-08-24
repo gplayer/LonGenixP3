@@ -115,6 +115,15 @@ class ComprehensiveAssessment {
                 </form>
             </div>
         `;
+        
+        // Setup biomarker validation after DOM is updated
+        // Use setTimeout to ensure DOM elements are available
+        setTimeout(() => {
+            if (this.currentStep === 1) {
+                this.setupBiomarkerValidation();
+                this.addBiomarkerSummary();
+            }
+        }, 0);
     }
 
     getStepDescription() {
@@ -517,19 +526,43 @@ class ComprehensiveAssessment {
             
             biomarkerCategories[category].forEach(bio => {
                 html += `
-                    <div class="bg-gray-50 p-4 rounded-lg">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">${bio.label}</label>
-                        <div class="text-xs text-gray-500 mb-2">
-                            Range: ${bio.range} ${bio.unit}
+                    <div class="bg-gray-50 p-4 rounded-lg biomarker-input-container" data-biomarker="${bio.name}">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-sm font-medium text-gray-700">${bio.label}</label>
+                            <button type="button" class="biomarker-help-btn text-gray-400 hover:text-blue-500 transition-colors" 
+                                    data-biomarker="${bio.name}" title="Click for more information">
+                                <i class="fas fa-question-circle text-sm"></i>
+                            </button>
                         </div>
-                        <input type="number" 
-                               name="${bio.name}" 
-                               min="${bio.min}" 
-                               max="${bio.max}"
-                               ${bio.step ? `step="${bio.step}"` : ''}
-                               placeholder="Enter value"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                        <div class="text-xs text-gray-400 mt-1">${bio.unit}</div>
+                        <div class="text-xs text-gray-500 mb-2">
+                            <span class="normal-range">Normal: ${bio.range} ${bio.unit}</span>
+                            <span class="validation-status ml-2 hidden"></span>
+                        </div>
+                        <div class="relative">
+                            <input type="number" 
+                                   name="${bio.name}" 
+                                   min="${bio.min}" 
+                                   max="${bio.max}"
+                                   ${bio.step ? `step="${bio.step}"` : ''}
+                                   placeholder="Enter value"
+                                   class="biomarker-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                   data-normal-min="${this.parseRangeMin(bio.range)}"
+                                   data-normal-max="${this.parseRangeMax(bio.range)}"
+                                   data-unit="${bio.unit}">
+                            <div class="validation-icon absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
+                                <i class="fas fa-check-circle text-green-500"></i>
+                                <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                                <i class="fas fa-times-circle text-red-500"></i>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1 flex justify-between">
+                            <span>${bio.unit}</span>
+                            <span class="validation-message"></span>
+                        </div>
+                        <div class="guidance-message hidden mt-2 p-2 bg-blue-50 border-l-4 border-blue-400 text-xs text-blue-700">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            <span class="guidance-text"></span>
+                        </div>
                     </div>
                 `;
             });
@@ -541,6 +574,699 @@ class ComprehensiveAssessment {
         });
 
         return html;
+    }
+
+    // Helper methods for biomarker validation
+    parseRangeMin(range) {
+        const match = range.match(/^([\d.]+)/);
+        return match ? parseFloat(match[1]) : null;
+    }
+
+    parseRangeMax(range) {
+        const match = range.match(/-([\d.]+)/);
+        return match ? parseFloat(match[1]) : null;
+    }
+
+    validateBiomarkerValue(value, normalMin, normalMax, absoluteMin, absoluteMax, biomarkerName, unit) {
+        const numValue = parseFloat(value);
+        
+        if (isNaN(numValue)) {
+            return { 
+                status: 'empty', 
+                message: '', 
+                icon: 'none',
+                guidance: 'Enter a numeric value for this biomarker'
+            };
+        }
+        
+        if (numValue < absoluteMin || numValue > absoluteMax) {
+            return { 
+                status: 'invalid', 
+                message: `Please enter a value between ${absoluteMin}-${absoluteMax} ${unit}`, 
+                icon: 'error',
+                guidance: 'This value appears to be outside the measurable range for this test'
+            };
+        }
+        
+        if (numValue >= normalMin && numValue <= normalMax) {
+            return { 
+                status: 'normal', 
+                message: 'Excellent - within normal range', 
+                icon: 'success',
+                guidance: 'This value falls within the healthy reference range'
+            };
+        }
+        
+        if (numValue < normalMin || numValue > normalMax) {
+            const severity = this.assessAbnormalSeverity(numValue, normalMin, normalMax);
+            const direction = numValue < normalMin ? 'below' : 'above';
+            const recommendation = this.getBiomarkerRecommendation(biomarkerName, direction, severity);
+            
+            return { 
+                status: 'abnormal', 
+                message: `${severity} - ${direction} normal range`, 
+                icon: 'warning',
+                guidance: recommendation
+            };
+        }
+        
+        return { 
+            status: 'unknown', 
+            message: 'Unable to validate this value', 
+            icon: 'none',
+            guidance: 'Please check that you entered the correct value'
+        };
+    }
+
+    assessAbnormalSeverity(value, normalMin, normalMax) {
+        const range = normalMax - normalMin;
+        const deviation = Math.min(
+            Math.abs(value - normalMin),
+            Math.abs(value - normalMax)
+        );
+        const deviationPercent = (deviation / range) * 100;
+        
+        if (deviationPercent <= 25) return 'Mild deviation';
+        if (deviationPercent <= 50) return 'Moderate deviation';
+        return 'Significant deviation';
+    }
+
+    getBiomarkerRecommendation(biomarkerName, direction, severity) {
+        const recommendations = {
+            'glucose': {
+                'above': 'High glucose may indicate diabetes risk. Consult your healthcare provider.',
+                'below': 'Low glucose may indicate hypoglycemia. Monitor symptoms and consult your doctor.'
+            },
+            'hba1c': {
+                'above': 'Elevated HbA1c suggests poor blood sugar control over 2-3 months.',
+                'below': 'Very low HbA1c is rare but may indicate certain medical conditions.'
+            },
+            'totalCholesterol': {
+                'above': 'High cholesterol may increase cardiovascular risk. Consider dietary changes.',
+                'below': 'Very low cholesterol may affect hormone production and cell function.'
+            },
+            'hdlCholesterol': {
+                'above': 'High HDL is generally protective against heart disease.',
+                'below': 'Low HDL cholesterol may increase heart disease risk. Exercise may help.'
+            },
+            'ldlCholesterol': {
+                'above': 'High LDL cholesterol may contribute to arterial plaque buildup.',
+                'below': 'Very low LDL is generally beneficial for cardiovascular health.'
+            },
+            'triglycerides': {
+                'above': 'High triglycerides may indicate increased cardiovascular risk.',
+                'below': 'Low triglycerides are generally not a health concern.'
+            },
+            'systolicBP': {
+                'above': 'High blood pressure may increase risk of heart disease and stroke.',
+                'below': 'Very low blood pressure may cause dizziness or fainting.'
+            },
+            'diastolicBP': {
+                'above': 'High diastolic pressure may indicate increased cardiovascular risk.',
+                'below': 'Very low diastolic pressure may affect organ perfusion.'
+            },
+            'heartRate': {
+                'above': 'High resting heart rate may indicate poor cardiovascular fitness.',
+                'below': 'Very low heart rate may indicate excellent fitness or potential issues.'
+            }
+        };
+
+        const biomarkerRec = recommendations[biomarkerName];
+        if (biomarkerRec && biomarkerRec[direction]) {
+            return biomarkerRec[direction];
+        }
+
+        // Generic recommendations based on direction and severity
+        if (direction === 'above') {
+            return severity === 'Significant deviation' 
+                ? 'This value is significantly elevated. Please consult your healthcare provider.'
+                : 'This value is above normal range. Consider lifestyle modifications or medical consultation.';
+        } else {
+            return severity === 'Significant deviation'
+                ? 'This value is significantly below normal. Please consult your healthcare provider.'
+                : 'This value is below normal range. Monitor symptoms and consider medical consultation.';
+        }
+    }
+
+    setupBiomarkerValidation() {
+        // Add event listeners for real-time validation
+        const biomarkerInputs = document.querySelectorAll('.biomarker-input');
+        
+        biomarkerInputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                this.validateBiomarkerInput(e.target);
+            });
+            
+            input.addEventListener('blur', (e) => {
+                this.validateBiomarkerInput(e.target);
+            });
+        });
+        
+        // Add help button functionality
+        const helpButtons = document.querySelectorAll('.biomarker-help-btn');
+        helpButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showBiomarkerHelp(button.dataset.biomarker);
+            });
+        });
+    }
+
+    showBiomarkerHelp(biomarkerName) {
+        const helpInfo = this.getBiomarkerHelpInfo(biomarkerName);
+        
+        // Create and show modal with biomarker information
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800">
+                            <i class="fas fa-vial text-blue-600 mr-2"></i>
+                            ${helpInfo.name}
+                        </h3>
+                        <button class="close-help-modal text-gray-400 hover:text-gray-600 text-2xl">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">What it measures:</h4>
+                            <p class="text-gray-600 text-sm">${helpInfo.description}</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Normal Range:</h4>
+                            <p class="text-gray-600 text-sm">${helpInfo.normalRange}</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Clinical Significance:</h4>
+                            <p class="text-gray-600 text-sm">${helpInfo.significance}</p>
+                        </div>
+                        
+                        ${helpInfo.tips ? `
+                        <div>
+                            <h4 class="font-semibold text-gray-700 mb-2">Tips for Improvement:</h4>
+                            <ul class="text-gray-600 text-sm space-y-1">
+                                ${helpInfo.tips.map(tip => `<li class="flex items-start"><i class="fas fa-check-circle text-green-500 mr-2 mt-0.5 text-xs"></i>${tip}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <button class="close-help-modal w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">
+                            Got it, thanks!
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add to page
+        document.body.appendChild(modal);
+        
+        // Add close functionality
+        const closeButtons = modal.querySelectorAll('.close-help-modal');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        // Close on backdrop click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+            }
+        });
+    }
+
+    getBiomarkerHelpInfo(biomarkerName) {
+        const helpDatabase = {
+            'glucose': {
+                name: 'Fasting Glucose',
+                description: 'Measures the amount of sugar (glucose) in your blood after fasting for at least 8 hours. This test helps detect diabetes and prediabetes.',
+                normalRange: '70-99 mg/dL (3.9-5.5 mmol/L)',
+                significance: 'Elevated glucose levels may indicate insulin resistance, prediabetes, or diabetes. Low levels may suggest hypoglycemia.',
+                tips: [
+                    'Maintain a balanced diet with complex carbohydrates',
+                    'Exercise regularly to improve insulin sensitivity',
+                    'Limit processed foods and added sugars',
+                    'Consider intermittent fasting (consult your doctor first)'
+                ]
+            },
+            'hba1c': {
+                name: 'HbA1c (Glycated Hemoglobin)',
+                description: 'Reflects your average blood sugar levels over the past 2-3 months. It measures the percentage of hemoglobin that has glucose attached to it.',
+                normalRange: '4.0-5.6% (20-38 mmol/mol)',
+                significance: 'HbA1c of 5.7-6.4% indicates prediabetes; 6.5% or higher indicates diabetes. Lower values generally indicate better blood sugar control.',
+                tips: [
+                    'Focus on steady, gradual weight loss if overweight',
+                    'Choose low glycemic index foods',
+                    'Monitor carbohydrate intake',
+                    'Take prescribed diabetes medications as directed'
+                ]
+            },
+            'totalCholesterol': {
+                name: 'Total Cholesterol',
+                description: 'Measures the total amount of cholesterol in your blood, including both LDL (bad) and HDL (good) cholesterol.',
+                normalRange: 'Less than 200 mg/dL (5.2 mmol/L)',
+                significance: 'High total cholesterol may increase risk of heart disease and stroke. However, the ratio of HDL to LDL is more important than total cholesterol alone.',
+                tips: [
+                    'Increase intake of omega-3 fatty acids',
+                    'Choose lean proteins and plant-based options',
+                    'Increase soluble fiber intake',
+                    'Limit saturated and trans fats'
+                ]
+            },
+            'hdlCholesterol': {
+                name: 'HDL Cholesterol (Good Cholesterol)',
+                description: 'High-density lipoprotein that helps remove other forms of cholesterol from your bloodstream and transport them to your liver for disposal.',
+                normalRange: 'Men: >40 mg/dL, Women: >50 mg/dL (>1.0/>1.3 mmol/L)',
+                significance: 'Higher HDL levels are protective against heart disease. Low HDL increases cardiovascular risk even when total cholesterol is normal.',
+                tips: [
+                    'Engage in regular aerobic exercise',
+                    'Maintain a healthy weight',
+                    'Choose healthy fats like olive oil and avocados',
+                    'Limit refined carbohydrates'
+                ]
+            },
+            'ldlCholesterol': {
+                name: 'LDL Cholesterol (Bad Cholesterol)',
+                description: 'Low-density lipoprotein that can build up in the walls of your arteries, forming plaque that narrows and hardens arteries.',
+                normalRange: 'Less than 100 mg/dL (2.6 mmol/L)',
+                significance: 'High LDL cholesterol is a major risk factor for heart disease and stroke. Lower levels reduce cardiovascular risk.',
+                tips: [
+                    'Reduce saturated fat intake',
+                    'Increase soluble fiber consumption',
+                    'Consider plant sterols and stanols',
+                    'Maintain regular physical activity'
+                ]
+            },
+            'triglycerides': {
+                name: 'Triglycerides',
+                description: 'A type of fat found in your blood that your body uses for energy. High levels may indicate increased risk of heart disease.',
+                normalRange: 'Less than 150 mg/dL (1.7 mmol/L)',
+                significance: 'High triglycerides often accompany low HDL and high blood sugar, forming part of metabolic syndrome.',
+                tips: [
+                    'Limit refined carbohydrates and sugar',
+                    'Reduce alcohol consumption',
+                    'Increase omega-3 fatty acids',
+                    'Maintain a healthy weight'
+                ]
+            },
+            'systolicBP': {
+                name: 'Systolic Blood Pressure',
+                description: 'The pressure in your arteries when your heart beats and pumps blood. It\'s the top number in a blood pressure reading.',
+                normalRange: 'Less than 120 mmHg',
+                significance: 'High systolic pressure indicates increased risk of heart disease, stroke, and kidney disease.',
+                tips: [
+                    'Reduce sodium intake to less than 2,300mg daily',
+                    'Increase potassium-rich foods',
+                    'Manage stress through meditation or yoga',
+                    'Maintain regular exercise routine'
+                ]
+            },
+            'diastolicBP': {
+                name: 'Diastolic Blood Pressure',
+                description: 'The pressure in your arteries when your heart rests between beats. It\'s the bottom number in a blood pressure reading.',
+                normalRange: 'Less than 80 mmHg',
+                significance: 'High diastolic pressure may indicate increased cardiovascular risk and potential organ damage.',
+                tips: [
+                    'Maintain a healthy weight',
+                    'Limit alcohol consumption',
+                    'Get adequate sleep (7-9 hours nightly)',
+                    'Practice stress reduction techniques'
+                ]
+            },
+            'heartRate': {
+                name: 'Resting Heart Rate',
+                description: 'The number of times your heart beats per minute when you\'re at rest. A lower resting heart rate generally indicates better cardiovascular fitness.',
+                normalRange: '60-100 beats per minute',
+                significance: 'A lower resting heart rate typically indicates good cardiovascular fitness. Very high rates may indicate poor fitness or medical conditions.',
+                tips: [
+                    'Engage in regular cardiovascular exercise',
+                    'Practice deep breathing exercises',
+                    'Maintain adequate hydration',
+                    'Get sufficient quality sleep'
+                ]
+            }
+        };
+
+        return helpDatabase[biomarkerName] || {
+            name: 'Biomarker Information',
+            description: 'This biomarker provides important health information. Please consult your healthcare provider for specific guidance.',
+            normalRange: 'Varies by individual and laboratory',
+            significance: 'Clinical significance depends on individual health factors and medical history.'
+        };
+    }
+
+    addBiomarkerSummary() {
+        // Find the biomarker section and add a summary panel
+        const biomarkerSection = document.querySelector('.form-section-card .form-section-title i.fa-vial')?.closest('.form-section-card');
+        if (!biomarkerSection) return;
+
+        const summaryHTML = `
+            <div id="biomarkerSummary" class="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="font-semibold text-gray-800 flex items-center">
+                        <i class="fas fa-chart-pie text-blue-600 mr-2"></i>
+                        Biomarker Status Summary
+                    </h5>
+                    <button type="button" id="refreshSummary" class="text-sm text-blue-600 hover:text-blue-800 transition">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div class="bg-white p-2 rounded border">
+                        <div class="font-medium text-gray-600">Total Entered</div>
+                        <div class="text-lg font-bold text-gray-800" id="totalEntered">0</div>
+                    </div>
+                    <div class="bg-white p-2 rounded border">
+                        <div class="font-medium text-green-600">Normal Range</div>
+                        <div class="text-lg font-bold text-green-700" id="normalCount">0</div>
+                    </div>
+                    <div class="bg-white p-2 rounded border">
+                        <div class="font-medium text-yellow-600">Outside Normal</div>
+                        <div class="text-lg font-bold text-yellow-700" id="abnormalCount">0</div>
+                    </div>
+                    <div class="bg-white p-2 rounded border">
+                        <div class="font-medium text-red-600">Invalid Values</div>
+                        <div class="text-lg font-bold text-red-700" id="invalidCount">0</div>
+                    </div>
+                </div>
+                <div class="mt-3 text-xs text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <span id="summaryMessage">Enter your biomarker values to see validation summary</span>
+                </div>
+            </div>
+        `;
+
+        biomarkerSection.insertAdjacentHTML('beforeend', summaryHTML);
+
+        // Add refresh functionality
+        document.getElementById('refreshSummary')?.addEventListener('click', () => {
+            this.updateBiomarkerSummary();
+        });
+    }
+
+    updateBiomarkerSummary() {
+        const biomarkerInputs = document.querySelectorAll('.biomarker-input');
+        let totalEntered = 0;
+        let normalCount = 0;
+        let abnormalCount = 0;
+        let invalidCount = 0;
+
+        biomarkerInputs.forEach(input => {
+            const value = input.value.trim();
+            if (value) {
+                totalEntered++;
+                
+                if (input.classList.contains('border-green-500')) {
+                    normalCount++;
+                } else if (input.classList.contains('border-yellow-500')) {
+                    abnormalCount++;
+                } else if (input.classList.contains('border-red-500')) {
+                    invalidCount++;
+                }
+            }
+        });
+
+        // Update the summary display
+        const totalElement = document.getElementById('totalEntered');
+        const normalElement = document.getElementById('normalCount');
+        const abnormalElement = document.getElementById('abnormalCount');
+        const invalidElement = document.getElementById('invalidCount');
+        const messageElement = document.getElementById('summaryMessage');
+
+        if (totalElement) totalElement.textContent = totalEntered;
+        if (normalElement) normalElement.textContent = normalCount;
+        if (abnormalElement) abnormalElement.textContent = abnormalCount;
+        if (invalidElement) invalidElement.textContent = invalidCount;
+
+        // Update summary message
+        if (messageElement) {
+            if (totalEntered === 0) {
+                messageElement.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Enter your biomarker values to see validation summary';
+            } else if (invalidCount > 0) {
+                messageElement.innerHTML = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>Please correct invalid values before proceeding';
+            } else if (abnormalCount > 0) {
+                messageElement.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500 mr-1"></i>Some values are outside normal range - review the guidance provided';
+            } else if (normalCount > 0) {
+                messageElement.innerHTML = '<i class="fas fa-check-circle text-green-500 mr-1"></i>All entered values are within normal ranges';
+            }
+        }
+    }
+
+    validateBiomarkerInput(input) {
+        const container = input.closest('.biomarker-input-container');
+        const validationStatus = container.querySelector('.validation-status');
+        const validationMessage = container.querySelector('.validation-message');
+        const validationIcons = container.querySelectorAll('.validation-icon i');
+        const guidanceMessage = container.querySelector('.guidance-message');
+        const guidanceText = container.querySelector('.guidance-text');
+        
+        const value = input.value.trim();
+        const normalMin = parseFloat(input.dataset.normalMin);
+        const normalMax = parseFloat(input.dataset.normalMax);
+        const absoluteMin = parseFloat(input.min);
+        const absoluteMax = parseFloat(input.max);
+        const biomarkerName = input.name;
+        const unit = input.dataset.unit;
+        
+        const validation = this.validateBiomarkerValue(
+            value, normalMin, normalMax, absoluteMin, absoluteMax, biomarkerName, unit
+        );
+        
+        // Reset all states
+        input.classList.remove('border-green-500', 'border-yellow-500', 'border-red-500');
+        validationIcons.forEach(icon => icon.classList.add('hidden'));
+        validationStatus.classList.add('hidden');
+        guidanceMessage.classList.add('hidden');
+        
+        if (validation.status === 'empty') {
+            // Show helpful guidance for empty values
+            if (guidanceText && validation.guidance) {
+                guidanceText.textContent = validation.guidance;
+                guidanceMessage.classList.remove('hidden');
+                guidanceMessage.className = 'guidance-message mt-2 p-2 bg-gray-50 border-l-4 border-gray-400 text-xs text-gray-600';
+            }
+            validationMessage.textContent = '';
+            return;
+        }
+        
+        // Apply validation styling and enhanced feedback
+        switch (validation.status) {
+            case 'normal':
+                input.classList.add('border-green-500');
+                validationIcons[0].classList.remove('hidden'); // check circle
+                validationStatus.innerHTML = '<i class="fas fa-check-circle text-green-500"></i> Normal';
+                validationStatus.classList.remove('hidden');
+                if (guidanceText && validation.guidance) {
+                    guidanceText.textContent = validation.guidance;
+                    guidanceMessage.classList.remove('hidden');
+                    guidanceMessage.className = 'guidance-message mt-2 p-2 bg-green-50 border-l-4 border-green-400 text-xs text-green-700';
+                }
+                break;
+                
+            case 'abnormal':
+                input.classList.add('border-yellow-500');
+                validationIcons[1].classList.remove('hidden'); // warning triangle
+                validationStatus.innerHTML = '<i class="fas fa-exclamation-triangle text-yellow-500"></i> Abnormal';
+                validationStatus.classList.remove('hidden');
+                if (guidanceText && validation.guidance) {
+                    guidanceText.textContent = validation.guidance;
+                    guidanceMessage.classList.remove('hidden');
+                    guidanceMessage.className = 'guidance-message mt-2 p-2 bg-yellow-50 border-l-4 border-yellow-400 text-xs text-yellow-700';
+                }
+                break;
+                
+            case 'invalid':
+                input.classList.add('border-red-500');
+                validationIcons[2].classList.remove('hidden'); // error circle
+                validationStatus.innerHTML = '<i class="fas fa-times-circle text-red-500"></i> Invalid';
+                validationStatus.classList.remove('hidden');
+                if (guidanceText && validation.guidance) {
+                    guidanceText.textContent = validation.guidance;
+                    guidanceMessage.classList.remove('hidden');
+                    guidanceMessage.className = 'guidance-message mt-2 p-2 bg-red-50 border-l-4 border-red-400 text-xs text-red-700';
+                }
+                break;
+                
+            default:
+                // Unknown status
+                if (guidanceText && validation.guidance) {
+                    guidanceText.textContent = validation.guidance;
+                    guidanceMessage.classList.remove('hidden');
+                    guidanceMessage.className = 'guidance-message mt-2 p-2 bg-gray-50 border-l-4 border-gray-400 text-xs text-gray-600';
+                }
+                break;
+        }
+        
+        validationMessage.textContent = validation.message;
+        
+        // Update summary after validation
+        setTimeout(() => this.updateBiomarkerSummary(), 100);
+        
+        // Trigger accessibility announcements for screen readers
+        this.announceValidationChange(validation, biomarkerName);
+    }
+
+    announceValidationChange(validation, biomarkerName) {
+        // Create or update ARIA live region for accessibility
+        let liveRegion = document.getElementById('validation-announcer');
+        if (!liveRegion) {
+            liveRegion = document.createElement('div');
+            liveRegion.id = 'validation-announcer';
+            liveRegion.setAttribute('aria-live', 'polite');
+            liveRegion.setAttribute('aria-atomic', 'true');
+            liveRegion.className = 'sr-only'; // Screen reader only
+            document.body.appendChild(liveRegion);
+        }
+        
+        if (validation.status !== 'empty') {
+            const biomarkerLabel = this.getBiomarkerLabel(biomarkerName);
+            liveRegion.textContent = `${biomarkerLabel}: ${validation.message}`;
+        }
+    }
+
+    getBiomarkerLabel(biomarkerName) {
+        const biomarkerLabels = {
+            'glucose': 'Fasting Glucose',
+            'hba1c': 'HbA1c',
+            'totalCholesterol': 'Total Cholesterol',
+            'hdlCholesterol': 'HDL Cholesterol',
+            'ldlCholesterol': 'LDL Cholesterol',
+            'triglycerides': 'Triglycerides',
+            'systolicBP': 'Systolic Blood Pressure',
+            'diastolicBP': 'Diastolic Blood Pressure',
+            'heartRate': 'Heart Rate',
+            'waistCircumference': 'Waist Circumference'
+        };
+        return biomarkerLabels[biomarkerName] || biomarkerName;
+    }
+
+    // Enhanced form validation before step progression
+    validateBiomarkerStep() {
+        const inputs = document.querySelectorAll('.biomarker-input');
+        const errors = [];
+        const warnings = [];
+        let validCount = 0;
+        let totalCount = 0;
+
+        inputs.forEach(input => {
+            if (input.value.trim()) {
+                totalCount++;
+                const container = input.closest('.biomarker-input-container');
+                const hasError = input.classList.contains('border-red-500');
+                const hasWarning = input.classList.contains('border-yellow-500');
+                const isValid = input.classList.contains('border-green-500');
+
+                if (hasError) {
+                    const biomarkerLabel = this.getBiomarkerLabel(input.name);
+                    errors.push({
+                        field: input.name,
+                        label: biomarkerLabel,
+                        message: container.querySelector('.validation-message').textContent
+                    });
+                } else if (hasWarning) {
+                    const biomarkerLabel = this.getBiomarkerLabel(input.name);
+                    warnings.push({
+                        field: input.name,
+                        label: biomarkerLabel,
+                        message: container.querySelector('.validation-message').textContent
+                    });
+                } else if (isValid) {
+                    validCount++;
+                }
+            }
+        });
+
+        return {
+            isValid: errors.length === 0,
+            errors,
+            warnings,
+            validCount,
+            totalCount,
+            hasData: totalCount > 0
+        };
+    }
+
+    // Enhanced error display for form submission
+    showBiomarkerValidationSummary(validation) {
+        // Remove existing summary
+        const existingSummary = document.getElementById('biomarker-validation-summary');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+
+        if (!validation.hasData || (validation.errors.length === 0 && validation.warnings.length === 0)) {
+            return;
+        }
+
+        const summary = document.createElement('div');
+        summary.id = 'biomarker-validation-summary';
+        summary.className = 'mb-6 p-4 rounded-lg border';
+
+        let summaryContent = '';
+
+        if (validation.errors.length > 0) {
+            summary.className += ' bg-red-50 border-red-300';
+            summaryContent += `
+                <div class="flex items-center mb-3">
+                    <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
+                    <h4 class="font-semibold text-red-800">Please correct the following errors:</h4>
+                </div>
+                <ul class="list-disc list-inside space-y-1 text-sm text-red-700 mb-3">
+                    ${validation.errors.map(error => `<li><strong>${error.label}:</strong> ${error.message}</li>`).join('')}
+                </ul>
+            `;
+        } else if (validation.warnings.length > 0) {
+            summary.className += ' bg-yellow-50 border-yellow-300';
+            summaryContent += `
+                <div class="flex items-center mb-3">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                    <h4 class="font-semibold text-yellow-800">Review the following items:</h4>
+                </div>
+                <ul class="list-disc list-inside space-y-1 text-sm text-yellow-700 mb-3">
+                    ${validation.warnings.map(warning => `<li><strong>${warning.label}:</strong> ${warning.message}</li>`).join('')}
+                </ul>
+                <p class="text-sm text-yellow-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    You can continue with these values, but consider consulting your healthcare provider about any abnormal results.
+                </p>
+            `;
+        }
+
+        // Add overall progress indicator
+        if (validation.totalCount > 0) {
+            summaryContent += `
+                <div class="mt-3 pt-3 border-t border-gray-200">
+                    <div class="flex items-center justify-between text-sm text-gray-600">
+                        <span>Lab values entered: ${validation.totalCount}</span>
+                        <span class="text-green-600">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            Valid: ${validation.validCount}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        summary.innerHTML = summaryContent;
+
+        // Insert before the navigation buttons
+        const formContent = document.getElementById('form-step-content');
+        const navigationDiv = formContent.querySelector('.flex.justify-between');
+        if (navigationDiv) {
+            formContent.insertBefore(summary, navigationDiv);
+            summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }
 
     renderStep2_FunctionalMedicine() {
@@ -1872,11 +2598,111 @@ class ComprehensiveAssessment {
             }
         });
 
-        if (!isValid) {
-            alert('Please fill in all required fields before proceeding.');
+        // Enhanced validation for Step 1 (Demographics with biomarkers)
+        if (this.currentStep === 1) {
+            const biomarkerValidation = this.validateBiomarkerStep();
+            
+            // Show validation summary
+            this.showBiomarkerValidationSummary(biomarkerValidation);
+            
+            // Block progression if there are critical errors
+            if (!biomarkerValidation.isValid) {
+                // Scroll to first error
+                const firstError = document.querySelector('.biomarker-input.border-red-500');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstError.focus();
+                }
+                
+                // Enhanced error message
+                this.showEnhancedErrorMessage(
+                    'Biomarker Validation Issues',
+                    'Please correct the highlighted biomarker values before proceeding. Invalid values could affect the accuracy of your health assessment.',
+                    biomarkerValidation.errors
+                );
+                
+                isValid = false;
+            }
+            // Allow progression with warnings but show confirmation
+            else if (biomarkerValidation.warnings.length > 0) {
+                const proceedWithWarnings = this.showWarningConfirmation(biomarkerValidation.warnings);
+                if (!proceedWithWarnings) {
+                    isValid = false;
+                }
+            }
+        }
+
+        // Show generic error for required fields
+        if (!isValid && requiredFields.some(field => !field.value.trim())) {
+            this.showEnhancedErrorMessage(
+                'Required Fields Missing',
+                'Please fill in all required fields marked with an asterisk (*) before proceeding.',
+                []
+            );
         }
 
         return isValid;
+    }
+
+    showEnhancedErrorMessage(title, description, errors = []) {
+        // Remove existing error modal
+        const existingModal = document.getElementById('enhanced-error-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'enhanced-error-modal';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <div class="flex items-center mb-4">
+                    <div class="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                        <i class="fas fa-exclamation-triangle text-red-600"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">${title}</h3>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600">${description}</p>
+                </div>
+                
+                ${errors.length > 0 ? `
+                    <div class="mb-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">Issues to address:</h4>
+                        <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
+                            ${errors.map(error => `<li>${error.label}: ${error.message}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                <div class="flex justify-end">
+                    <button class="close-error-modal bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition duration-300">
+                        <i class="fas fa-check mr-2"></i>I'll Fix These Issues
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add close functionality
+        modal.querySelector('.close-error-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    showWarningConfirmation(warnings) {
+        // For now, return true to allow progression with warnings
+        // In a more advanced implementation, you could show a confirmation dialog
+        console.log('Proceeding with warnings:', warnings);
+        return true;
     }
 
     saveFormData() {
