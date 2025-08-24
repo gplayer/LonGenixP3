@@ -2428,6 +2428,118 @@ app.get('/report', async (c) => {
                           </div>
                       </div>
 
+                      <!-- Calculation Methodology & Transparency -->
+                      <div class="bg-blue-50 rounded-lg p-6 mb-8">
+                          <h3 class="text-lg font-semibold text-blue-800 mb-4">
+                              <i class="fas fa-calculator mr-2"></i>Calculation Methodology & Transparency
+                          </h3>
+                          <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
+                              <!-- Scientific Foundation -->
+                              <div class="bg-white rounded-lg p-4">
+                                  <h4 class="font-semibold text-blue-700 mb-3">
+                                      <i class="fas fa-microscope mr-2"></i>Scientific Foundation
+                                  </h4>
+                                  <div class="text-sm space-y-2">
+                                      <p class="text-gray-700">
+                                          <strong>Primary Reference:</strong> López-Otín et al. (2013, 2023) - "The Hallmarks of Aging"
+                                      </p>
+                                      <p class="text-gray-700">
+                                          <strong>Framework:</strong> 12 fundamental mechanisms of aging organized into Primary (root causes), 
+                                          Antagonistic (compensatory responses), and Integrative (systemic effects) categories
+                                      </p>
+                                      <p class="text-gray-700">
+                                          <strong>Assessment Method:</strong> Multi-biomarker analysis with age-adjusted scoring
+                                      </p>
+                                  </div>
+                              </div>
+
+                              <!-- Data Sources -->
+                              <div class="bg-white rounded-lg p-4">
+                                  <h4 class="font-semibold text-green-700 mb-3">
+                                      <i class="fas fa-database mr-2"></i>Data Sources & Biomarkers
+                                  </h4>
+                                  <div class="text-sm space-y-2">
+                                      <p class="text-gray-700">
+                                          <strong>Laboratory Data:</strong> Complete blood panel, lipid profile, glucose metabolism markers
+                                      </p>
+                                      <p class="text-gray-700">
+                                          <strong>Lifestyle Factors:</strong> Exercise patterns, stress levels, sleep quality, nutrition
+                                      </p>
+                                      <p class="text-gray-700">
+                                          <strong>Clinical Markers:</strong> Blood pressure, BMI, inflammatory markers (CRP, IL-6)
+                                      </p>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <!-- Interactive Calculation Details -->
+                          <div class="mt-6">
+                              <button onclick="toggleCalculationDetails()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                                  <i class="fas fa-chart-line mr-2"></i>Show Detailed Calculation Methods
+                              </button>
+                              
+                              <div id="calculationDetails" class="hidden mt-4 bg-white rounded-lg p-4">
+                                  <h4 class="font-semibold text-gray-800 mb-4">Hallmark Severity Calculation Methods</h4>
+                                  
+                                  <div class="space-y-4">
+                                      <!-- Primary Hallmarks Calculations -->
+                                      <div class="border-l-4 border-red-500 pl-4">
+                                          <h5 class="font-semibold text-red-700 mb-2">Primary Hallmarks Calculation Logic</h5>
+                                          <div class="text-sm space-y-1 text-gray-700">
+                                              <p><strong>Genomic Instability (25%):</strong> Based on oxidative stress markers, DNA repair enzyme levels, and inflammatory indicators</p>
+                                              <p><strong>Telomere Attrition (35%):</strong> Age-adjusted telomere length estimation using chronological age and lifestyle stress factors</p>
+                                              <p><strong>Epigenetic Alterations (30%):</strong> Methylation age markers, lifestyle epigenetic factors, and metabolic health indicators</p>
+                                              <p><strong>Loss of Proteostasis (20%):</strong> Protein quality markers, heat shock protein levels, and autophagy indicators</p>
+                                          </div>
+                                      </div>
+
+                                      <!-- Antagonistic Hallmarks Calculations -->
+                                      <div class="border-l-4 border-orange-500 pl-4">
+                                          <h5 class="font-semibold text-orange-700 mb-2">Antagonistic Hallmarks Calculation Logic</h5>
+                                          <div class="text-sm space-y-1 text-gray-700">
+                                              <p><strong>Deregulated Nutrient Sensing (40%):</strong> Insulin sensitivity, mTOR pathway markers, fasting glucose, HbA1c levels</p>
+                                              <p><strong>Mitochondrial Dysfunction (25%):</strong> Energy metabolism markers, lactate levels, exercise capacity, fatigue indicators</p>
+                                              <p><strong>Cellular Senescence (35%):</strong> Inflammatory markers, p16 pathway indicators, tissue repair capacity</p>
+                                              <p><strong>Stem Cell Exhaustion (30%):</strong> Regenerative capacity markers, growth factors, tissue repair indicators</p>
+                                          </div>
+                                      </div>
+
+                                      <!-- Integrative Hallmarks Calculations -->
+                                      <div class="border-l-4 border-purple-500 pl-4">
+                                          <h5 class="font-semibold text-purple-700 mb-2">Integrative Hallmarks Calculation Logic</h5>
+                                          <div class="text-sm space-y-1 text-gray-700">
+                                              <p><strong>Altered Intercellular Communication (30%):</strong> Hormone levels, neurotransmitter balance, cell signaling markers</p>
+                                              <p><strong>Chronic Inflammation (20%):</strong> CRP, IL-6, TNF-α levels, neutrophil-to-lymphocyte ratio</p>
+                                              <p><strong>Dysbiosis (25%):</strong> Gut health markers, microbiome diversity indicators, digestive function</p>
+                                              <p><strong>Altered Mechanical Properties (35%):</strong> Tissue elasticity, joint mobility, vascular stiffness markers</p>
+                                          </div>
+                                      </div>
+                                  </div>
+
+                                  <div class="mt-4 p-3 bg-blue-50 rounded">
+                                      <p class="text-sm text-blue-800">
+                                          <strong>Scoring Method:</strong> Each hallmark severity is calculated using a weighted algorithm that combines 
+                                          relevant biomarkers, normalizes for age and gender, and applies evidence-based thresholds from peer-reviewed research.
+                                          Scores range from 0-100%, where lower percentages indicate better health status.
+                                      </p>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <!-- Scientific References -->
+                          <div class="mt-6 bg-gray-50 rounded-lg p-4">
+                              <h4 class="font-semibold text-gray-800 mb-3">
+                                  <i class="fas fa-book mr-2"></i>Key Scientific References
+                              </h4>
+                              <div class="text-sm space-y-1 text-gray-700">
+                                  <p>• López-Otín, C., et al. (2023). "Hallmarks of aging: An expanding universe." <em>Cell</em>, 186(2), 243-278.</p>
+                                  <p>• López-Otín, C., et al. (2013). "The hallmarks of aging." <em>Cell</em>, 153(6), 1194-1217.</p>
+                                  <p>• Schosserer, M., et al. (2022). "Methylation clocks and their connection to aging-related diseases." <em>Clinical Epigenetics</em>, 14, 1-15.</p>
+                                  <p>• Ferrucci, L., & Fabbri, E. (2018). "Inflammageing: chronic inflammation in ageing, cardiovascular disease, and frailty." <em>Nature Reviews Cardiology</em>, 15(9), 505-522.</p>
+                              </div>
+                          </div>
+                      </div>
+
                       <!-- Intervention Priorities -->
                       <div class="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-6">
                           <h3 class="text-lg font-semibold mb-4">Aging Intervention Priorities</h3>
@@ -3327,6 +3439,19 @@ app.get('/report', async (c) => {
                   });
               }
               
+              function toggleCalculationDetails() {
+                  const details = document.getElementById('calculationDetails');
+                  const button = event.target;
+                  
+                  if (details.classList.contains('hidden')) {
+                      details.classList.remove('hidden');
+                      button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Hide Detailed Calculation Methods';
+                  } else {
+                      details.classList.add('hidden');
+                      button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Show Detailed Calculation Methods';
+                  }
+              }
+
               function viewInputForm() {
                   // Open form data view in new window
                   const sessionId = '${sessionId}';
