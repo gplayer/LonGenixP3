@@ -1140,7 +1140,7 @@ app.get('/report', async (c) => {
                           <div>
                               <h3 class="text-lg font-semibold mb-4">Assessment Summary</h3>
                               <div class="space-y-2 text-sm">
-                                  <div><span class="font-medium">Assessment Date:</span> ${new Date(session.started_at).toLocaleDateString()}</div>
+                                  <div><span class="font-medium">Assessment Date:</span> ${session.created_at ? new Date(session.created_at).toLocaleDateString() : 'N/A'}</div>
                                   <div><span class="font-medium">Assessment Method:</span> ${isDemo ? 'Demo Data' : 'Manual Entry'}</div>
                                   <div><span class="font-medium">Report Version:</span> 3.0 Dynamic</div>
                                   <div><span class="font-medium">Practitioner:</span> Dr. Graham Player, Ph.D</div>
