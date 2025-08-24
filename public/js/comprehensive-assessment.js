@@ -62,41 +62,53 @@ class ComprehensiveAssessment {
         console.log('Container found, rendering content...');
 
         container.innerHTML = `
-            <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8">
-                <!-- Progress Header -->
-                <div class="mb-8">
+            <div class="max-w-6xl mx-auto form-section-card">
+                <!-- Enhanced Progress Header -->
+                <div class="form-section-header">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-gray-800">Comprehensive Health Assessment</h2>
-                        <span class="text-sm text-gray-600">Step ${this.currentStep} of ${this.totalSteps}</span>
+                        <h2 class="step-title">Comprehensive Health Assessment</h2>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium text-gray-600">Step ${this.currentStep} of ${this.totalSteps}</span>
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                                ${this.currentStep}
+                            </div>
+                        </div>
                     </div>
-                    <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                    <div class="enhanced-progress-bar">
+                        <div class="enhanced-progress-fill" 
                              style="width: ${(this.currentStep / this.totalSteps) * 100}%"></div>
                     </div>
-                    <div class="mt-2 text-sm text-gray-600">${this.getStepDescription()}</div>
+                    <div class="mt-3 step-description">${this.getStepDescription()}</div>
                 </div>
 
-                <!-- Form Content -->
-                <form id="comprehensive-assessment-form" class="space-y-6">
-                    <div id="form-step-content">
+                <!-- Enhanced Form Content -->
+                <form id="comprehensive-assessment-form" class="form-section-content">
+                    <div id="form-step-content" class="assessment-step">
                         ${this.renderStepContent()}
                     </div>
 
-                    <!-- Navigation -->
-                    <div class="flex justify-between pt-6 border-t border-gray-200">
-                        <button type="button" class="prev-step-btn px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 ${this.currentStep === 1 ? 'invisible' : ''}"">
+                    <!-- Enhanced Navigation -->
+                    <div class="flex justify-between items-center pt-8 mt-8 border-t-2 border-gray-100">
+                        <button type="button" class="prev-step-btn btn-enhanced btn-secondary-enhanced ${this.currentStep === 1 ? 'invisible' : ''}">
+                            <i class="fas fa-chevron-left mr-2"></i>
                             Previous
                         </button>
-                        <div class="flex space-x-4">
-                            <button type="button" class="px-4 py-2 text-gray-600 hover:text-gray-800">
+                        <div class="flex items-center space-x-4">
+                            <button type="button" class="btn-enhanced btn-secondary-enhanced">
+                                <i class="fas fa-save mr-2"></i>
                                 Save & Resume Later
                             </button>
                             ${this.currentStep === this.totalSteps ? 
-                                `<button type="button" class="download-form-pdf-btn px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 mr-3">
+                                `<button type="button" class="download-form-pdf-btn btn-enhanced" style="background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white; margin-right: 1rem;">
                                     <i class="fas fa-file-pdf mr-2"></i>Download Form PDF
                                  </button>
-                                 <button type="button" class="submit-assessment-btn px-8 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Complete Assessment</button>` :
-                                '<button type="button" class="next-step-btn px-8 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Next Step</button>'
+                                 <button type="button" class="submit-assessment-btn btn-enhanced" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                                    <i class="fas fa-check-circle mr-2"></i>Complete Assessment
+                                 </button>` :
+                                `<button type="button" class="next-step-btn btn-enhanced btn-primary-enhanced">
+                                    Next Step
+                                    <i class="fas fa-chevron-right ml-2"></i>
+                                 </button>`
                             }
                         </div>
                     </div>
@@ -141,50 +153,65 @@ class ComprehensiveAssessment {
 
     renderStep1_Demographics() {
         return `
+            <div class="step-header">
+                <h3 class="step-title">
+                    <i class="fas fa-user-circle text-blue-600 mr-3"></i>
+                    Personal Demographics
+                </h3>
+                <p class="step-description">Please provide your basic personal information to personalize your health assessment</p>
+            </div>
+            
             <div class="space-y-8">
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-                            <input type="text" name="fullName" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-                            <input type="email" name="email" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
-                            <input type="date" name="dateOfBirth" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
-                            <select name="gender" required class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select gender</option>
-                                <option value="female">Female</option>
-                                <option value="male">Male</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Ethnicity</label>
-                            <select name="ethnicity" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                <option value="">Select ethnicity</option>
-                                <option value="caucasian">Caucasian/White</option>
-                                <option value="african_american">African American/Black</option>
-                                <option value="hispanic">Hispanic/Latino</option>
-                                <option value="asian">Asian</option>
-                                <option value="native_american">Native American</option>
-                                <option value="pacific_islander">Pacific Islander</option>
-                                <option value="middle_eastern">Middle Eastern</option>
-                                <option value="mixed">Mixed/Multiracial</option>
-                                <option value="other">Other</option>
-                                <option value="prefer_not_to_say">Prefer not to say</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Education Level</label>
-                            <select name="education" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="form-section-card">
+                    <div class="form-section-header">
+                        <h4 class="form-section-title">
+                            <i class="fas fa-id-card text-blue-600"></i>
+                            Personal Information
+                        </h4>
+                        <p class="form-section-description">Basic identifying information for your health profile</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="form-grid-2">
+                            <div>
+                                <label class="enhanced-label required">Full Name</label>
+                                <input type="text" name="fullName" required class="enhanced-input enhanced-focus">
+                            </div>
+                            <div>
+                                <label class="enhanced-label required">Email Address</label>
+                                <input type="email" name="email" required class="enhanced-input enhanced-focus">
+                            </div>
+                            <div>
+                                <label class="enhanced-label required">Date of Birth</label>
+                                <input type="date" name="dateOfBirth" required class="enhanced-input enhanced-focus">
+                            </div>
+                            <div>
+                                <label class="enhanced-label required">Gender</label>
+                                <select name="gender" required class="enhanced-select enhanced-focus">
+                                    <option value="">Select gender</option>
+                                    <option value="female">Female</option>
+                                    <option value="male">Male</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="enhanced-label">Ethnicity</label>
+                                <select name="ethnicity" class="enhanced-select enhanced-focus">
+                                    <option value="">Select ethnicity</option>
+                                    <option value="caucasian">Caucasian/White</option>
+                                    <option value="african_american">African American/Black</option>
+                                    <option value="hispanic">Hispanic/Latino</option>
+                                    <option value="asian">Asian</option>
+                                    <option value="native_american">Native American</option>
+                                    <option value="pacific_islander">Pacific Islander</option>
+                                    <option value="middle_eastern">Middle Eastern</option>
+                                    <option value="mixed">Mixed/Multiracial</option>
+                                    <option value="other">Other</option>
+                                    <option value="prefer_not_to_say">Prefer not to say</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="enhanced-label">Education Level</label>
+                                <select name="education" class="enhanced-select enhanced-focus">
                                 <option value="">Select education level</option>
                                 <option value="less_than_high_school">Less than High School</option>
                                 <option value="high_school">High School Graduate</option>
@@ -195,81 +222,108 @@ class ComprehensiveAssessment {
                                 <option value="doctoral">Doctoral/Professional Degree</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Height (cm) *</label>
-                            <input type="number" name="height" required min="100" max="250" 
-                                   onchange="calculateBMI()" onkeyup="calculateBMI()"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Weight (kg) *</label>
-                            <input type="number" name="weight" required min="30" max="300" 
-                                   onchange="calculateBMI()" onkeyup="calculateBMI()"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-                    
-                    <!-- BMI Display -->
-                    <div class="mt-4 p-4 bg-blue-50 rounded-lg">
-                        <div class="flex items-center justify-between">
                             <div>
-                                <h4 class="text-sm font-semibold text-blue-800">Body Mass Index (BMI)</h4>
-                                <p class="text-xs text-blue-600">Automatically calculated from height and weight</p>
+                                <label class="enhanced-label required">Height (cm)</label>
+                                <input type="number" name="height" required min="100" max="250" 
+                                       onchange="calculateBMI()" onkeyup="calculateBMI()"
+                                       class="enhanced-input enhanced-focus">
                             </div>
-                            <div class="text-right">
-                                <div id="bmiValue" class="text-2xl font-bold text-blue-800">--</div>
-                                <div id="bmiCategory" class="text-sm text-blue-600">Enter height & weight</div>
+                            <div>
+                                <label class="enhanced-label required">Weight (kg)</label>
+                                <input type="number" name="weight" required min="30" max="300" 
+                                       onchange="calculateBMI()" onkeyup="calculateBMI()"
+                                       class="enhanced-input enhanced-focus">
                             </div>
                         </div>
-                        <div class="mt-2 text-xs text-gray-600">
-                            <span class="mr-4">Underweight: < 18.5</span>
-                            <span class="mr-4">Normal: 18.5-24.9</span>
-                            <span class="mr-4">Overweight: 25-29.9</span>
-                            <span>Obese: ≥ 30</span>
+                        
+                        <!-- Enhanced BMI Display -->
+                        <div class="bmi-display-enhanced mt-6">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="text-lg font-semibold text-blue-800 flex items-center">
+                                        <i class="fas fa-calculator text-blue-600 mr-2"></i>
+                                        Body Mass Index (BMI)
+                                    </h4>
+                                    <p class="text-sm text-blue-600 mt-1">Automatically calculated from height and weight</p>
+                                </div>
+                                <div class="text-right">
+                                    <div id="bmiValue" class="bmi-value-large">--</div>
+                                    <div id="bmiCategory" class="bmi-category-text">Enter height & weight</div>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex flex-wrap gap-2 text-sm">
+                                <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">Underweight: < 18.5</span>
+                                <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full">Normal: 18.5-24.9</span>
+                                <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full">Overweight: 25-29.9</span>
+                                <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full">Obese: ≥ 30</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Clinical Measurements</h3>
-                    <div class="grid md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Systolic Blood Pressure (mmHg)</label>
-                            <input type="number" name="systolicBP" min="80" max="250" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Diastolic Blood Pressure (mmHg)</label>
-                            <input type="number" name="diastolicBP" min="40" max="150" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Resting Heart Rate (bpm)</label>
-                            <input type="number" name="heartRate" min="40" max="120" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Waist Circumference (cm)</label>
-                            <input type="number" name="waistCircumference" min="50" max="200" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="form-section-card section-green-enhanced">
+                    <div class="form-section-header">
+                        <h4 class="form-section-title">
+                            <i class="fas fa-heartbeat text-red-600"></i>
+                            Clinical Measurements
+                        </h4>
+                        <p class="form-section-description">Current vital signs and physical measurements</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="form-grid-2">
+                            <div>
+                                <label class="enhanced-label">Systolic Blood Pressure (mmHg)</label>
+                                <input type="number" name="systolicBP" min="80" max="250" class="enhanced-input enhanced-focus">
+                            </div>
+                            <div>
+                                <label class="enhanced-label">Diastolic Blood Pressure (mmHg)</label>
+                                <input type="number" name="diastolicBP" min="40" max="150" class="enhanced-input enhanced-focus">
+                            </div>
+                            <div>
+                                <label class="enhanced-label">Resting Heart Rate (bpm)</label>
+                                <input type="number" name="heartRate" min="40" max="120" class="enhanced-input enhanced-focus">
+                            </div>
+                            <div>
+                                <label class="enhanced-label">Waist Circumference (cm)</label>
+                                <input type="number" name="waistCircumference" min="50" max="200" class="enhanced-input enhanced-focus">
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Laboratory Results</h3>
-                    <p class="text-sm text-gray-600 mb-4">Enter your most recent lab values (leave blank if not tested)</p>
-                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${this.renderBiomarkerInputs()}
+                <div class="form-section-card section-purple-enhanced">
+                    <div class="form-section-header">
+                        <h4 class="form-section-title">
+                            <i class="fas fa-vial text-purple-600"></i>
+                            Recent Laboratory Results
+                        </h4>
+                        <p class="form-section-description">Enter your most recent lab values (leave blank if not tested)</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="form-grid-3">
+                            ${this.renderBiomarkerInputs()}
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Medical History & Medications</h3>
-                    <div class="space-y-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Current Medications & Supplements</label>
-                            <textarea name="currentMedications" rows="3" placeholder="List all current medications, supplements, and dosages" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Personal Health Conditions</label>
-                            <textarea name="healthConditions" rows="3" placeholder="List any diagnosed health conditions, chronic issues, surgeries, or significant medical events" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                <div class="form-section-card section-yellow-enhanced">
+                    <div class="form-section-header">
+                        <h4 class="form-section-title">
+                            <i class="fas fa-pills text-orange-600"></i>
+                            Medical History & Medications
+                        </h4>
+                        <p class="form-section-description">Current treatments and health conditions</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="space-y-6">
+                            <div>
+                                <label class="enhanced-label">Current Medications & Supplements</label>
+                                <textarea name="currentMedications" rows="4" placeholder="List all current medications, supplements, and dosages" class="enhanced-textarea enhanced-focus"></textarea>
+                            </div>
+                            <div>
+                                <label class="enhanced-label">Personal Health Conditions</label>
+                                <textarea name="healthConditions" rows="4" placeholder="List any diagnosed health conditions, chronic issues, surgeries, or significant medical events" class="enhanced-textarea enhanced-focus"></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -491,12 +545,15 @@ class ComprehensiveAssessment {
 
     renderStep2_FunctionalMedicine() {
         return `
-            <div class="space-y-8">
-                <div class="text-center mb-6">
-                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Functional Medicine Systems Assessment</h3>
-                    <p class="text-gray-600">Rate your symptoms and experiences for each of the 7 core functional medicine systems</p>
-                </div>
-
+            <div class="step-header">
+                <h3 class="step-title">
+                    <i class="fas fa-cogs text-green-600 mr-3"></i>
+                    Functional Medicine Systems Assessment
+                </h3>
+                <p class="step-description">Rate your symptoms and experiences for each of the 7 core functional medicine systems</p>
+            </div>
+            
+            <div class="space-y-6">
                 ${this.renderFunctionalMedicineSystems()}
             </div>
         `;
@@ -597,17 +654,40 @@ class ComprehensiveAssessment {
             }
         ];
 
-        return systems.map(system => `
-            <div class="bg-gray-50 rounded-lg p-6">
-                <div class="mb-4">
-                    <h4 class="text-lg font-semibold text-gray-800">${system.name}</h4>
-                    <p class="text-sm text-gray-600">${system.description}</p>
+        return systems.map((system, idx) => {
+            const colors = ['blue', 'green', 'purple', 'orange', 'teal', 'pink', 'indigo'];
+            const color = colors[idx % colors.length];
+            
+            return `
+                <div class="form-section-card section-${color === 'orange' ? 'yellow' : color}-enhanced">
+                    <div class="form-section-header">
+                        <h4 class="form-section-title">
+                            <i class="fas fa-${this.getSystemIcon(system.id)} text-${color}-600"></i>
+                            ${system.name}
+                        </h4>
+                        <p class="form-section-description">${system.description}</p>
+                    </div>
+                    <div class="form-section-content">
+                        <div class="space-y-4">
+                            ${system.questions.map((questionObj, index) => this.renderFunctionalMedicineQuestion(questionObj, system.id, index + 1)).join('')}
+                        </div>
+                    </div>
                 </div>
-                <div class="space-y-4">
-                    ${system.questions.map((questionObj, index) => this.renderFunctionalMedicineQuestion(questionObj, system.id, index + 1)).join('')}
-                </div>
-            </div>
-        `).join('');
+            `;
+        }).join('');
+    }
+    
+    getSystemIcon(systemId) {
+        const icons = {
+            'assimilation': 'utensils',
+            'biotransformation': 'filter',
+            'defense': 'shield-alt',
+            'structural': 'bone',
+            'communication': 'brain',
+            'energy': 'bolt',
+            'transport': 'heart'
+        };
+        return icons[systemId] || 'cog';
     }
 
     renderFunctionalMedicineQuestion(questionObj, systemId, questionNum) {
