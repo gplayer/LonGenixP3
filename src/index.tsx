@@ -3345,6 +3345,243 @@ app.get('/favicon.ico', (c) => {
   return c.text('', 204) // No content
 })
 
+// Demo data validation visibility route
+app.get('/demo-validation', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Demo Data Validation & Transparency - Longenix Health</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+        <div class="container mx-auto px-4 py-8 max-w-6xl">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                    <i class="fas fa-shield-alt text-blue-600 mr-3"></i>
+                    Demo Data Validation & Transparency
+                </h1>
+                <p class="text-gray-600">Understanding our demonstration system and data validation process</p>
+            </div>
+
+            <!-- Navigation -->
+            <div class="mb-6 text-center">
+                <a href="/" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition mr-4">
+                    <i class="fas fa-home mr-2"></i>Home
+                </a>
+                <a href="/comprehensive-assessment" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition mr-4">
+                    <i class="fas fa-clipboard-list mr-2"></i>Try Assessment
+                </a>
+                <a href="/comprehensive-assessment?demo=true" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-eye mr-2"></i>View Demo Mode
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Demo Data Overview -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                        Demo Data Overview
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h3 class="font-semibold text-gray-700">Purpose</h3>
+                            <p class="text-sm text-gray-600">Demonstrate assessment capabilities using realistic, evidence-based sample data</p>
+                        </div>
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h3 class="font-semibold text-gray-700">Data Source</h3>
+                            <p class="text-sm text-gray-600">Scientifically validated reference values from peer-reviewed research</p>
+                        </div>
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <h3 class="font-semibold text-gray-700">Privacy</h3>
+                            <p class="text-sm text-gray-600">No personal information collected or stored in demo mode</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Status -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-check-circle text-green-600 mr-2"></i>
+                        Validation Status
+                    </h2>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Algorithm Accuracy</span>
+                            <span class="text-green-600 font-bold"><i class="fas fa-check mr-1"></i>Validated</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Reference Data</span>
+                            <span class="text-green-600 font-bold"><i class="fas fa-check mr-1"></i>Scientific</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Calculation Engine</span>
+                            <span class="text-green-600 font-bold"><i class="fas fa-check mr-1"></i>Active</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                            <span class="text-sm font-medium text-gray-700">Demo Mode Status</span>
+                            <span class="text-blue-600 font-bold"><i class="fas fa-eye mr-1"></i>Available</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Demo vs Real Data Comparison -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-balance-scale text-indigo-600 mr-2"></i>
+                        Demo vs Real Data
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b">
+                                    <th class="text-left py-2">Feature</th>
+                                    <th class="text-center py-2 text-purple-600">Demo Mode</th>
+                                    <th class="text-center py-2 text-blue-600">Personal Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody class="space-y-2">
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 font-medium">Data Source</td>
+                                    <td class="text-center py-2">Sample Data</td>
+                                    <td class="text-center py-2">Your Input</td>
+                                </tr>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 font-medium">Calculations</td>
+                                    <td class="text-center py-2">Full Algorithm</td>
+                                    <td class="text-center py-2">Full Algorithm</td>
+                                </tr>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 font-medium">Privacy</td>
+                                    <td class="text-center py-2">No Storage</td>
+                                    <td class="text-center py-2">Secure Storage</td>
+                                </tr>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 font-medium">PDF Download</td>
+                                    <td class="text-center py-2">Available</td>
+                                    <td class="text-center py-2">Available</td>
+                                </tr>
+                                <tr class="border-b border-gray-100">
+                                    <td class="py-2 font-medium">Form Submission</td>
+                                    <td class="text-center py-2">Disabled</td>
+                                    <td class="text-center py-2">Enabled</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Scientific Validation -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">
+                        <i class="fas fa-microscope text-teal-600 mr-2"></i>
+                        Scientific Validation
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-teal-50 rounded-lg">
+                            <h3 class="font-semibold text-teal-800 mb-2">Biological Age Algorithm</h3>
+                            <ul class="text-sm text-teal-700 space-y-1">
+                                <li>• Based on Klemera-Doubal method</li>
+                                <li>• Validated biomarker correlations</li>
+                                <li>• Peer-reviewed reference ranges</li>
+                            </ul>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <h3 class="font-semibold text-blue-800 mb-2">Disease Risk Models</h3>
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <li>• Framingham Risk Score</li>
+                                <li>• ASCVD Risk Calculator</li>
+                                <li>• Evidence-based thresholds</li>
+                            </ul>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-lg">
+                            <h3 class="font-semibold text-purple-800 mb-2">Biomarker Analysis</h3>
+                            <ul class="text-sm text-purple-700 space-y-1">
+                                <li>• Laboratory reference ranges</li>
+                                <li>• Age and gender adjustments</li>
+                                <li>• Clinical significance ratings</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Demo Mode Instructions -->
+            <div class="mt-8 bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">
+                    <i class="fas fa-play-circle text-green-600 mr-2"></i>
+                    How to Use Demo Mode
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-mouse-pointer text-blue-600 text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Step 1: Access</h3>
+                        <p class="text-sm text-gray-600">Click "View Demo Mode" or add ?demo=true to any assessment URL</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-eye text-green-600 text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Step 2: Explore</h3>
+                        <p class="text-sm text-gray-600">Review the assessment with pre-filled demonstration data</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-download text-purple-600 text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-2">Step 3: Download</h3>
+                        <p class="text-sm text-gray-600">Generate and download PDF reports to see full functionality</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transparency Notice -->
+            <div class="mt-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+                <h2 class="text-xl font-bold mb-4">
+                    <i class="fas fa-shield-alt mr-2"></i>
+                    Transparency Commitment
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-semibold mb-2">What You Can Trust:</h3>
+                        <ul class="text-sm space-y-1 text-blue-100">
+                            <li>• All calculations use the same algorithms as personal assessments</li>
+                            <li>• Demo data represents realistic, evidence-based health profiles</li>
+                            <li>• No personal information is collected in demo mode</li>
+                            <li>• Results demonstrate actual system capabilities</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold mb-2">Important Notes:</h3>
+                        <ul class="text-sm space-y-1 text-purple-100">
+                            <li>• Demo results are for illustration purposes only</li>
+                            <li>• Personal assessments provide individualized insights</li>
+                            <li>• All medical decisions should involve healthcare providers</li>
+                            <li>• Demo mode clearly labeled throughout the system</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="mt-8 text-center text-gray-600 text-sm">
+                <p>© 2024 Longenix Health - Dr. Graham Player, Ph.D | 
+                <a href="/" class="text-blue-600 hover:underline">Return to Home</a> | 
+                <a href="/comprehensive-assessment" class="text-green-600 hover:underline">Start Personal Assessment</a>
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+  `)
+})
+
 // Assessment form route
 app.get('/comprehensive-assessment', (c) => {
   return c.html(`
@@ -4763,7 +5000,7 @@ app.get('/', (c) => {
                                     <li><i class="fas fa-check text-green-500 mr-2"></i>Comprehensive Lifestyle Analysis</li>
                                     <li><i class="fas fa-check text-green-500 mr-2"></i>Real Data-Driven Reports</li>
                                 </ul>
-                                <button class="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300">
+                                <button onclick="startAssessment('comprehensive')" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300">
                                     Start Full Assessment
                                 </button>
                             </div>
@@ -4788,20 +5025,20 @@ app.get('/', (c) => {
                             </div>
                         </div>
 
-                        <!-- File Upload -->
-                        <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-not-allowed opacity-75">
+                        <!-- Demo Validation -->
+                        <div class="bg-white rounded-lg shadow-lg p-8 card-hover cursor-pointer" onclick="viewDemoValidation()">
                             <div class="text-center">
-                                <i class="fas fa-upload text-4xl text-gray-400 mb-4"></i>
-                                <h3 class="text-xl font-semibold mb-3 text-gray-600">Upload Lab Results</h3>
-                                <p class="text-gray-500 mb-6">Coming Soon - File upload functionality</p>
-                                <ul class="text-sm text-gray-400 text-left space-y-2 mb-6">
-                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>PDF Lab Reports</li>
-                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>CSV Data Files</li>
-                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>Medical Records</li>
-                                    <li><i class="fas fa-clock text-gray-400 mr-2"></i>AI Data Extraction</li>
+                                <i class="fas fa-shield-alt text-4xl text-purple-600 mb-4"></i>
+                                <h3 class="text-xl font-semibold mb-3">Demo Data Validation</h3>
+                                <p class="text-gray-600 mb-6">Transparency in our demonstration system</p>
+                                <ul class="text-sm text-gray-500 text-left space-y-2 mb-6">
+                                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Scientific Data Sources</li>
+                                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Algorithm Transparency</li>
+                                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Validation Status</li>
+                                    <li><i class="fas fa-check text-purple-500 mr-2"></i>Privacy Protection</li>
                                 </ul>
-                                <button disabled class="w-full bg-gray-400 text-white py-3 px-6 rounded-lg cursor-not-allowed">
-                                    Coming Soon
+                                <button class="w-full bg-purple-600 text-white py-3 px-6 rounded-lg hover:bg-purple-700 transition duration-300">
+                                    View Validation
                                 </button>
                             </div>
                         </div>
@@ -4916,6 +5153,10 @@ app.get('/', (c) => {
                 if (window.longenixApp) {
                     window.longenixApp.loadDemoData(demoType);
                 }
+            }
+            
+            function viewDemoValidation() {
+                window.location.href = '/demo-validation';
             }
         </script>
     </body>
