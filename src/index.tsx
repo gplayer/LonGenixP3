@@ -855,7 +855,7 @@ app.get('/report', async (c) => {
                     'Moving or speaking so slowly that other people could have noticed? Or the opposite — being so fidgety or restless that you have been moving around a lot more than usual',
                     'Thoughts that you would be better off dead or of hurting yourself in some way'
                   ].map((question, index) => {
-                    const response = comprehensiveData[\`phq9_q\${index + 1}\`];
+                    const response = comprehensiveData['phq9_q' + (index + 1)];
                     const responseText = response === '0' ? 'Not at all (0)' :
                                        response === '1' ? 'Several days (1)' :
                                        response === '2' ? 'More than half the days (2)' :
@@ -867,18 +867,18 @@ app.get('/report', async (c) => {
                                         response === '3' ? 'text-red-600' :
                                         'text-gray-400';
                     
-                    return \`
-                      <div class="bg-white rounded-md p-3 border-l-4 \${
+                    return `
+                      <div class="bg-white rounded-md p-3 border-l-4 ${
                         response === '0' ? 'border-green-500' :
                         response === '1' ? 'border-yellow-500' :
                         response === '2' ? 'border-orange-500' :
                         response === '3' ? 'border-red-500' :
                         'border-gray-300'
                       }">
-                        <p class="text-sm font-medium text-gray-800 mb-1">\${index + 1}. \${question}</p>
-                        <p class="text-sm \${responseColor} font-semibold">→ \${responseText}</p>
+                        <p class="text-sm font-medium text-gray-800 mb-1">${index + 1}. ${question}</p>
+                        <p class="text-sm ${responseColor} font-semibold">→ ${responseText}</p>
                       </div>
-                    \`;
+                    `;
                   }).join('')}
                 </div>
               </div>
@@ -898,7 +898,7 @@ app.get('/report', async (c) => {
                     'Becoming easily annoyed or irritable',
                     'Feeling afraid as if something awful might happen'
                   ].map((question, index) => {
-                    const response = comprehensiveData[\`gad7_q\${index + 1}\`];
+                    const response = comprehensiveData['gad7_q' + (index + 1)];
                     const responseText = response === '0' ? 'Not at all (0)' :
                                        response === '1' ? 'Several days (1)' :
                                        response === '2' ? 'More than half the days (2)' :
@@ -910,18 +910,18 @@ app.get('/report', async (c) => {
                                         response === '3' ? 'text-red-600' :
                                         'text-gray-400';
                     
-                    return \`
-                      <div class="bg-white rounded-md p-3 border-l-4 \${
+                    return `
+                      <div class="bg-white rounded-md p-3 border-l-4 ${
                         response === '0' ? 'border-green-500' :
                         response === '1' ? 'border-yellow-500' :
                         response === '2' ? 'border-orange-500' :
                         response === '3' ? 'border-red-500' :
                         'border-gray-300'
                       }">
-                        <p class="text-sm font-medium text-gray-800 mb-1">\${index + 1}. \${question}</p>
-                        <p class="text-sm \${responseColor} font-semibold">→ \${responseText}</p>
+                        <p class="text-sm font-medium text-gray-800 mb-1">${index + 1}. ${question}</p>
+                        <p class="text-sm ${responseColor} font-semibold">→ ${responseText}</p>
                       </div>
-                    \`;
+                    `;
                   }).join('')}
                 </div>
               </div>
