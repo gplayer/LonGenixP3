@@ -66,7 +66,7 @@ class LongenixAssessment {
         try {
             if (this.apiBase) {
                 // Server-side authentication (Cloudflare Pages)
-                const response = await fetch(`${this.apiBase}/auth/login`, {
+                const response = await fetch(`${this.apiBase}/api/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

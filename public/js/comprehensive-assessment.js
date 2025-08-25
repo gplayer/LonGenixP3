@@ -3017,7 +3017,7 @@ class ComprehensiveAssessment {
         }
 
         try {
-            const response = await fetch(`${this.apiBase}/assessment/comprehensive`, {
+            const response = await fetch(`${this.apiBase}/api/assessment/comprehensive`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

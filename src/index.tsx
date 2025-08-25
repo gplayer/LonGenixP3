@@ -4890,9 +4890,18 @@ app.post('/api/assessment/comprehensive', async (c) => {
 
   } catch (error) {
     console.error('Comprehensive assessment error:', error)
+    
+    // Handle specific database constraint errors
+    if (error.message && error.message.includes('UNIQUE constraint failed: patients.email')) {
+      return c.json({ 
+        success: false, 
+        error: 'An assessment with this email address already exists. Please use a different email or contact support to access your existing assessment.'
+      }, 400)
+    }
+    
     return c.json({ 
       success: false, 
-      error: 'Failed to process comprehensive assessment' 
+      error: 'Failed to process comprehensive assessment. Please try again or contact support if the issue persists.'
     }, 500)
   }
 })
