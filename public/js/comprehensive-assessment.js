@@ -1373,12 +1373,35 @@ class ComprehensiveAssessment {
 
         summary.innerHTML = summaryContent;
 
-        // Insert before the navigation buttons
-        const formContent = document.getElementById('form-step-content');
-        const navigationDiv = formContent.querySelector('.flex.justify-between');
-        if (navigationDiv) {
-            formContent.insertBefore(summary, navigationDiv);
-            summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // Insert before the navigation buttons with proper error handling
+        try {
+            const formContent = document.getElementById('form-step-content');
+            if (!formContent) {
+                console.error('Form content container not found');
+                return;
+            }
+
+            const navigationDiv = formContent.querySelector('.flex.justify-between');
+            if (navigationDiv && navigationDiv.parentNode === formContent) {
+                // Verify navigationDiv is a direct child before insertion
+                formContent.insertBefore(summary, navigationDiv);
+                summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                // Fallback: append to form content if navigation div not found or not direct child
+                formContent.appendChild(summary);
+                summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        } catch (error) {
+            console.error('Error inserting biomarker validation summary:', error);
+            // Fallback: try to append to form content
+            try {
+                const formContent = document.getElementById('form-step-content');
+                if (formContent) {
+                    formContent.appendChild(summary);
+                }
+            } catch (fallbackError) {
+                console.error('Fallback insertion also failed:', fallbackError);
+            }
         }
     }
 
@@ -2738,17 +2761,10 @@ class ComprehensiveAssessment {
             }
             // Allow progression with warnings but show confirmation
             else if (biomarkerValidation.warnings.length > 0) {
-                console.log('DEBUG: Found biomarker warnings:', biomarkerValidation.warnings.length, 'warnings');
-                console.log('DEBUG: Warning details:', biomarkerValidation.warnings);
-                
                 const proceedWithWarnings = this.showWarningConfirmation(biomarkerValidation.warnings);
-                console.log('DEBUG: showWarningConfirmation returned:', proceedWithWarnings, '(type:', typeof proceedWithWarnings, ')');
                 
                 if (!proceedWithWarnings) {
-                    console.log('DEBUG: BLOCKING progression due to warning confirmation failure');
                     isValid = false;
-                } else {
-                    console.log('DEBUG: ALLOWING progression with warnings');
                 }
             }
         }
@@ -2762,7 +2778,6 @@ class ComprehensiveAssessment {
             );
         }
 
-        console.log('DEBUG: validateCurrentStep final result:', isValid);
         return isValid;
     }
 
@@ -2823,11 +2838,7 @@ class ComprehensiveAssessment {
     showWarningConfirmation(warnings) {
         // For now, return true to allow progression with warnings
         // In a more advanced implementation, you could show a confirmation dialog
-        console.log('DEBUG: showWarningConfirmation called with:', warnings);
-        console.log('DEBUG: showWarningConfirmation about to return true');
-        const result = true;
-        console.log('DEBUG: showWarningConfirmation returning:', result);
-        return result;
+        return true;
     }
 
     saveFormData() {
