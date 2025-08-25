@@ -7,6 +7,62 @@ type Bindings = {
   DB: D1Database;
 }
 
+// Helper function to validate biomarker ranges with gender awareness
+const validateBiomarkerValue = (value: number, range: string, gender?: string) => {
+  if (isNaN(value)) return 'unknown';
+  
+  // Handle gender-specific ranges first
+  if (range.includes('(M)') && range.includes('(F)')) {
+    const parts = range.split(',').map(p => p.trim());
+    let targetRange = '';
+    
+    if (gender === 'male' || gender === 'm') {
+      // Find male range
+      targetRange = parts.find(p => p.includes('(M)')) || parts[0];
+    } else if (gender === 'female' || gender === 'f') {
+      // Find female range  
+      targetRange = parts.find(p => p.includes('(F)')) || parts[1];
+    } else {
+      // Unknown gender, use first range as fallback
+      targetRange = parts[0];
+    }
+    
+    // Remove gender markers and validate
+    targetRange = targetRange.replace(/\s*\([MF]\)/, '').trim();
+    return validateBiomarkerValue(value, targetRange); // Recursive call without gender
+  }
+  
+  // Handle "varies with cycle" cases - return unknown for complex cases
+  if (range.includes('varies with cycle')) {
+    return 'unknown';
+  }
+  
+  // Handle simple range formats
+  if (range.includes('-')) {
+    // Range format: "70-99"
+    const parts = range.split('-');
+    const min = parseFloat(parts[0].trim());
+    const max = parseFloat(parts[1].trim());
+    if (!isNaN(min) && !isNaN(max)) {
+      return (value >= min && value <= max) ? 'normal' : 'abnormal';
+    }
+  } else if (range.startsWith('<')) {
+    // Less than format: "<200"
+    const max = parseFloat(range.substring(1).trim());
+    if (!isNaN(max)) {
+      return (value < max) ? 'normal' : 'abnormal';
+    }
+  } else if (range.startsWith('>')) {
+    // Greater than format: ">40"
+    const min = parseFloat(range.substring(1).trim());
+    if (!isNaN(min)) {
+      return (value > min) ? 'normal' : 'abnormal';
+    }
+  }
+  
+  return 'unknown';
+}
+
 const app = new Hono<{ Bindings: Bindings }>()
 
 // Enable CORS for API routes
@@ -683,11 +739,49 @@ app.get('/report', async (c) => {
           const hasValue = value !== undefined && value !== null && String(value).trim() !== ''
           if (hasValue) enteredCount++
           
+          // Validate biomarker value against normal range
+          let validationStatus = 'unknown';
+          let statusIcon = '<i class="fas fa-circle text-gray-300 text-sm"></i>';
+          let statusLabel = 'NOT ENTERED';
+          let statusClass = 'bg-gray-100 text-gray-600';
+          let borderClass = 'border-gray-200';
+          
+          if (hasValue) {
+            const numericValue = parseFloat(value);
+            if (!isNaN(numericValue)) {
+              validationStatus = validateBiomarkerValue(numericValue, marker.range, comprehensiveData.gender);
+              
+              if (validationStatus === 'normal') {
+                statusIcon = '<i class="fas fa-check-circle text-green-500 text-sm"></i>';
+                statusLabel = 'NORMAL';
+                statusClass = 'bg-green-100 text-green-800';
+                borderClass = 'border-green-200';
+              } else if (validationStatus === 'abnormal') {
+                statusIcon = '<i class="fas fa-exclamation-triangle text-yellow-500 text-sm"></i>';
+                statusLabel = 'ABNORMAL';
+                statusClass = 'bg-yellow-100 text-yellow-800';
+                borderClass = 'border-yellow-200';
+              } else {
+                // Unknown status (entered but couldn't validate)
+                statusIcon = '<i class="fas fa-question-circle text-blue-500 text-sm"></i>';
+                statusLabel = 'ENTERED';
+                statusClass = 'bg-blue-100 text-blue-800';
+                borderClass = 'border-blue-200';
+              }
+            } else {
+              // Invalid numeric value
+              statusIcon = '<i class="fas fa-times-circle text-red-500 text-sm"></i>';
+              statusLabel = 'INVALID';
+              statusClass = 'bg-red-100 text-red-800';
+              borderClass = 'border-red-200';
+            }
+          }
+          
           return `
-            <div class="bg-white rounded-lg p-4 border ${hasValue ? 'border-green-200' : 'border-gray-200'}">
+            <div class="bg-white rounded-lg p-4 border ${borderClass}">
               <div class="flex justify-between items-start mb-2">
                 <h5 class="text-sm font-semibold text-gray-800">${marker.label}</h5>
-                ${hasValue ? '<i class="fas fa-check-circle text-green-500 text-sm"></i>' : '<i class="fas fa-circle text-gray-300 text-sm"></i>'}
+                ${statusIcon}
               </div>
               <div class="space-y-1">
                 <div class="flex justify-between items-center">
@@ -699,15 +793,9 @@ app.get('/report', async (c) => {
                 <div class="text-xs text-gray-600">
                   <span class="font-medium">Reference:</span> ${marker.range} ${marker.unit}
                 </div>
-                ${hasValue ? `
-                  <div class="text-xs mt-2">
-                    <span class="px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">ENTERED</span>
-                  </div>
-                ` : `
-                  <div class="text-xs mt-2">
-                    <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">NOT ENTERED</span>
-                  </div>
-                `}
+                <div class="text-xs mt-2">
+                  <span class="px-2 py-1 rounded text-xs font-medium ${statusClass}">${statusLabel}</span>
+                </div>
               </div>
             </div>
           `
@@ -4687,7 +4775,7 @@ app.post('/api/assessment/comprehensive', async (c) => {
       demo.dateOfBirth,
       demo.gender,
       demo.ethnicity || 'not_specified',
-      demo.email,
+      demo.email || '',
       demo.phone || '',
       'US' // Default country
     ).run()
