@@ -8,7 +8,134 @@ class ComprehensiveAssessment {
         this.formData = {};
         this.apiBase = this.getApiBase();
         
+        // Load existing data from localStorage
+        this.loadSavedData();
+        
         this.init();
+    }
+
+    loadSavedData() {
+        try {
+            const savedData = localStorage.getItem('comprehensive_assessment_data');
+            if (savedData) {
+                this.formData = JSON.parse(savedData);
+                console.log('Loaded saved form data:', Object.keys(this.formData).length, 'fields');
+            }
+        } catch (error) {
+            console.error('Error loading saved data:', error);
+            this.formData = {};
+        }
+    }
+
+    populateFormFields() {
+        const form = document.getElementById('comprehensive-assessment-form');
+        if (!form || !this.formData || Object.keys(this.formData).length === 0) {
+            return;
+        }
+
+        // Populate all form fields from saved data
+        Object.keys(this.formData).forEach(fieldName => {
+            const fieldValue = this.formData[fieldName];
+            
+            // Handle different input types
+            const input = form.querySelector(`[name="${fieldName}"]`);
+            if (input && fieldValue !== null && fieldValue !== undefined && fieldValue !== '') {
+                if (input.type === 'checkbox' || input.type === 'radio') {
+                    if (Array.isArray(fieldValue)) {
+                        // Multiple checkboxes with same name
+                        fieldValue.forEach(value => {
+                            const specificInput = form.querySelector(`[name="${fieldName}"][value="${value}"]`);
+                            if (specificInput) {
+                                specificInput.checked = true;
+                            }
+                        });
+                    } else {
+                        // Single checkbox or radio
+                        if (input.value === fieldValue || (input.type === 'checkbox' && fieldValue)) {
+                            input.checked = true;
+                        }
+                    }
+                } else {
+                    // Text, select, textarea, etc.
+                    input.value = fieldValue;
+                }
+            }
+        });
+
+        console.log('Populated form fields for step', this.currentStep);
+    }
+
+    validateRestoredBiomarkers() {
+        // Validate all biomarker inputs that have values
+        const biomarkerInputs = document.querySelectorAll('.biomarker-input');
+        biomarkerInputs.forEach(input => {
+            if (input.value && input.value.trim() !== '') {
+                // Trigger validation for this field
+                this.validateBiomarkerInput(input);
+            }
+        });
+    }
+
+    validateBiomarkerInput(input) {
+        if (!input) return;
+        
+        const value = parseFloat(input.value);
+        const normalMin = parseFloat(input.dataset.normalMin);
+        const normalMax = parseFloat(input.dataset.normalMax);
+        const container = input.closest('.biomarker-input-container');
+        const statusSpan = container?.querySelector('.validation-status');
+        
+        if (isNaN(value) || !statusSpan) return;
+
+        // Apply validation logic
+        let status = 'normal';
+        let message = 'Normal';
+        let className = 'text-green-600';
+
+        if (isNaN(normalMin) || isNaN(normalMax)) {
+            status = 'unknown';
+            message = 'Cannot validate range';
+            className = 'text-gray-500';
+        } else if (value < normalMin || value > normalMax) {
+            status = 'abnormal';
+            message = 'Abnormal';
+            className = 'text-yellow-600';
+            input.classList.add('border-yellow-400');
+            input.classList.remove('border-red-500', 'border-green-500');
+        } else {
+            status = 'normal';
+            message = 'Normal';
+            className = 'text-green-600';
+            input.classList.add('border-green-500');
+            input.classList.remove('border-red-500', 'border-yellow-400');
+        }
+
+        // Update status display
+        statusSpan.textContent = message;
+        statusSpan.className = `validation-status ml-2 ${className}`;
+        statusSpan.classList.remove('hidden');
+        
+        return status;
+    }
+
+    getSavedValue(fieldName, defaultValue = '') {
+        return this.formData[fieldName] || defaultValue;
+    }
+
+    getSavedSelected(fieldName, value) {
+        const savedValue = this.formData[fieldName];
+        return savedValue === value ? 'selected' : '';
+    }
+
+    getSavedChecked(fieldName, value = null) {
+        const savedValue = this.formData[fieldName];
+        if (value === null) {
+            // For single checkbox
+            return savedValue ? 'checked' : '';
+        } else {
+            // For radio buttons or checkboxes with specific values
+            return savedValue === value ? 'checked' : '';
+        }
     }
 
     getApiBase() {
@@ -116,12 +243,19 @@ class ComprehensiveAssessment {
             </div>
         `;
         
-        // Setup biomarker validation after DOM is updated
+        // Setup form after DOM is updated
         // Use setTimeout to ensure DOM elements are available
         setTimeout(() => {
+            // Restore form data for all steps
+            this.populateFormFields();
+            
+            // Step-specific setup
             if (this.currentStep === 1) {
                 this.setupBiomarkerValidation();
                 this.addBiomarkerSummary();
+                
+                // Trigger validation for restored biomarker values
+                this.validateRestoredBiomarkers();
             }
         }, 0);
     }
@@ -183,23 +317,23 @@ class ComprehensiveAssessment {
                         <div class="form-grid-2">
                             <div>
                                 <label class="enhanced-label required">Full Name</label>
-                                <input type="text" name="fullName" required class="enhanced-input enhanced-focus">
+                                <input type="text" name="fullName" value="${this.getSavedValue('fullName')}" required class="enhanced-input enhanced-focus">
                             </div>
                             <div>
                                 <label class="enhanced-label required">Email Address</label>
-                                <input type="email" name="email" required class="enhanced-input enhanced-focus">
+                                <input type="email" name="email" value="${this.getSavedValue('email')}" required class="enhanced-input enhanced-focus">
                             </div>
                             <div>
                                 <label class="enhanced-label required">Date of Birth</label>
-                                <input type="date" name="dateOfBirth" required class="enhanced-input enhanced-focus">
+                                <input type="date" name="dateOfBirth" value="${this.getSavedValue('dateOfBirth')}" required class="enhanced-input enhanced-focus">
                             </div>
                             <div>
                                 <label class="enhanced-label required">Gender</label>
                                 <select name="gender" required class="enhanced-select enhanced-focus">
                                     <option value="">Select gender</option>
-                                    <option value="female">Female</option>
-                                    <option value="male">Male</option>
-                                    <option value="other">Other</option>
+                                    <option value="female" ${this.getSavedSelected('gender', 'female')}>Female</option>
+                                    <option value="male" ${this.getSavedSelected('gender', 'male')}>Male</option>
+                                    <option value="other" ${this.getSavedSelected('gender', 'other')}>Other</option>
                                 </select>
                             </div>
                             <div>
@@ -543,6 +677,7 @@ class ComprehensiveAssessment {
                         <div class="relative">
                             <input type="number" 
                                    name="${bio.name}" 
+                                   value="${this.getSavedValue(bio.name)}"
                                    min="${bio.min}" 
                                    max="${bio.max}"
                                    ${bio.step ? `step="${bio.step}"` : ''}
