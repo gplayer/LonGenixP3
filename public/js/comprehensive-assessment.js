@@ -2738,9 +2738,17 @@ class ComprehensiveAssessment {
             }
             // Allow progression with warnings but show confirmation
             else if (biomarkerValidation.warnings.length > 0) {
+                console.log('DEBUG: Found biomarker warnings:', biomarkerValidation.warnings.length, 'warnings');
+                console.log('DEBUG: Warning details:', biomarkerValidation.warnings);
+                
                 const proceedWithWarnings = this.showWarningConfirmation(biomarkerValidation.warnings);
+                console.log('DEBUG: showWarningConfirmation returned:', proceedWithWarnings, '(type:', typeof proceedWithWarnings, ')');
+                
                 if (!proceedWithWarnings) {
+                    console.log('DEBUG: BLOCKING progression due to warning confirmation failure');
                     isValid = false;
+                } else {
+                    console.log('DEBUG: ALLOWING progression with warnings');
                 }
             }
         }
@@ -2754,6 +2762,7 @@ class ComprehensiveAssessment {
             );
         }
 
+        console.log('DEBUG: validateCurrentStep final result:', isValid);
         return isValid;
     }
 
@@ -2814,8 +2823,11 @@ class ComprehensiveAssessment {
     showWarningConfirmation(warnings) {
         // For now, return true to allow progression with warnings
         // In a more advanced implementation, you could show a confirmation dialog
-        console.log('Proceeding with warnings:', warnings);
-        return true;
+        console.log('DEBUG: showWarningConfirmation called with:', warnings);
+        console.log('DEBUG: showWarningConfirmation about to return true');
+        const result = true;
+        console.log('DEBUG: showWarningConfirmation returning:', result);
+        return result;
     }
 
     saveFormData() {
