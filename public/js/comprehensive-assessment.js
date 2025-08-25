@@ -645,6 +645,26 @@ class ComprehensiveAssessment {
             };
         }
         
+        // Defensive NaN handling - prevents validation failures when range parsing returns null
+        if (isNaN(normalMin) || isNaN(normalMax)) {
+            // Fallback: If normal ranges can't be determined, only validate against absolute limits
+            if (numValue < absoluteMin || numValue > absoluteMax) {
+                return { 
+                    status: 'invalid', 
+                    message: `Please enter a value between ${absoluteMin}-${absoluteMax} ${unit}`, 
+                    icon: 'error',
+                    guidance: 'This value appears to be outside the measurable range for this test'
+                };
+            }
+            // If within absolute limits but normal range unknown, treat as acceptable
+            return { 
+                status: 'normal', 
+                message: 'Value accepted - within measurable range', 
+                icon: 'success',
+                guidance: 'This value is within the acceptable measurement range for this test'
+            };
+        }
+        
         if (numValue < absoluteMin || numValue > absoluteMax) {
             return { 
                 status: 'invalid', 
@@ -1253,6 +1273,9 @@ class ComprehensiveAssessment {
                 const hasError = input.classList.contains('border-red-500');
                 const hasWarning = input.classList.contains('border-yellow-500');
                 const isValid = input.classList.contains('border-green-500');
+                
+                // Enhanced handling: Check for inputs without any validation class (unknown status)
+                const hasNoValidationClass = !hasError && !hasWarning && !isValid;
 
                 if (hasError) {
                     const biomarkerLabel = this.getBiomarkerLabel(input.name);
@@ -1268,7 +1291,8 @@ class ComprehensiveAssessment {
                         label: biomarkerLabel,
                         message: container.querySelector('.validation-message').textContent
                     });
-                } else if (isValid) {
+                } else if (isValid || hasNoValidationClass) {
+                    // Treat both valid inputs and unknown status inputs as acceptable
                     validCount++;
                 }
             }
