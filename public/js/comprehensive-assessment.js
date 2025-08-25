@@ -548,7 +548,7 @@ class ComprehensiveAssessment {
                                    ${bio.step ? `step="${bio.step}"` : ''}
                                    placeholder="Enter value"
                                    class="biomarker-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                   data-normal-min="${this.parseRangeMin(bio.range)}"
+                                   data-normal-min="${this.parseRangeMin(bio.range, bio.min)}"
                                    data-normal-max="${this.parseRangeMax(bio.range)}"
                                    data-unit="${bio.unit}">
                             <div class="validation-icon absolute right-3 top-1/2 transform -translate-y-1/2 hidden">
@@ -579,7 +579,7 @@ class ComprehensiveAssessment {
     }
 
     // Helper methods for biomarker validation - Enhanced to handle complex range formats
-    parseRangeMin(range) {
+    parseRangeMin(range, absoluteMin = null) {
         // Handle standard range format like "70-99" (backward compatibility)
         const standardMatch = range.match(/^([\d.]+)-/);
         if (standardMatch) {
@@ -592,10 +592,12 @@ class ComprehensiveAssessment {
             return parseFloat(gtMatch[1]);
         }
         
-        // Handle "less than" formats like "<200" - use 0 as reasonable minimum
+        // Handle "less than" formats like "<200" - use absoluteMin to prevent conflicts
         const ltMatch = range.match(/<([\d.]+)/);
         if (ltMatch) {
-            return 0;
+            // Use absoluteMin as floor to prevent normal/absolute range conflicts
+            // This ensures values between absoluteMin and the "less than" threshold get "abnormal" not "invalid"
+            return absoluteMin || 0;
         }
         
         // Handle single number at start (fallback for edge cases)
