@@ -578,15 +578,59 @@ class ComprehensiveAssessment {
         return html;
     }
 
-    // Helper methods for biomarker validation
+    // Helper methods for biomarker validation - Enhanced to handle complex range formats
     parseRangeMin(range) {
-        const match = range.match(/^([\d.]+)/);
-        return match ? parseFloat(match[1]) : null;
+        // Handle standard range format like "70-99" (backward compatibility)
+        const standardMatch = range.match(/^([\d.]+)-/);
+        if (standardMatch) {
+            return parseFloat(standardMatch[1]);
+        }
+        
+        // Handle "greater than" formats like ">40 (M), >50 (F)" or ">90"
+        const gtMatch = range.match(/>([\d.]+)/);
+        if (gtMatch) {
+            return parseFloat(gtMatch[1]);
+        }
+        
+        // Handle "less than" formats like "<200" - use 0 as reasonable minimum
+        const ltMatch = range.match(/<([\d.]+)/);
+        if (ltMatch) {
+            return 0;
+        }
+        
+        // Handle single number at start (fallback for edge cases)
+        const singleMatch = range.match(/^([\d.]+)/);
+        if (singleMatch) {
+            return parseFloat(singleMatch[1]);
+        }
+        
+        // If no pattern matches, return null (maintains existing behavior)
+        return null;
     }
 
     parseRangeMax(range) {
-        const match = range.match(/-([\d.]+)/);
-        return match ? parseFloat(match[1]) : null;
+        // Handle standard range format like "70-99" (backward compatibility)
+        const standardMatch = range.match(/-([\d.]+)/);
+        if (standardMatch) {
+            return parseFloat(standardMatch[1]);
+        }
+        
+        // Handle "less than" formats like "<200"
+        const ltMatch = range.match(/<([\d.]+)/);
+        if (ltMatch) {
+            return parseFloat(ltMatch[1]);
+        }
+        
+        // Handle "greater than" formats like ">40" or ">90" - return high value to allow abnormal classification
+        const gtMatch = range.match(/>([\d.]+)/);
+        if (gtMatch) {
+            // Return a reasonably high value that allows for abnormal classification
+            // This ensures values above the threshold get "abnormal" status, not "invalid"
+            return 9999;
+        }
+        
+        // If no pattern matches, return null (maintains existing behavior)
+        return null;
     }
 
     validateBiomarkerValue(value, normalMin, normalMax, absoluteMin, absoluteMax, biomarkerName, unit) {
@@ -2801,7 +2845,7 @@ class ComprehensiveAssessment {
 
             if (result.success) {
                 // Redirect to report
-                window.location.href = `/report?sessionId=${result.sessionId}`;
+                window.location.href = `/report?session=${result.sessionId}`;
             } else {
                 alert('Assessment submission failed: ' + (result.error || 'Unknown error'));
             }
