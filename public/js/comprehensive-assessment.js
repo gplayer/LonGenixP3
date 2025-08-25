@@ -489,6 +489,8 @@ class ComprehensiveAssessment {
                 { name: 'hemoglobin', label: 'Hemoglobin', unit: 'g/dL', range: '14-18 (M), 12-16 (F)', min: 6, max: 20, step: 0.1 },
                 { name: 'hematocrit', label: 'Hematocrit', unit: '%', range: '42-52 (M), 37-47 (F)', min: 20, max: 60, step: 0.1 },
                 { name: 'platelets', label: 'Platelets', unit: '10³/μL', range: '150-450', min: 50, max: 1000 },
+                { name: 'mcv', label: 'Mean Cell Volume (MCV)', unit: 'fL', range: '82-98', min: 70, max: 120, step: 0.1 },
+                { name: 'rdw', label: 'Red Cell Distribution Width (RDW)', unit: '%', range: '11.5-14.5', min: 10, max: 20, step: 0.1 },
                 { name: 'neutrophils', label: 'Neutrophils', unit: '%', range: '40-74', min: 10, max: 90, step: 0.1 },
                 { name: 'lymphocytes', label: 'Lymphocytes', unit: '%', range: '19-48', min: 5, max: 70, step: 0.1 },
                 { name: 'monocytes', label: 'Monocytes', unit: '%', range: '3.4-9', min: 1, max: 20, step: 0.1 }
@@ -688,6 +690,14 @@ class ComprehensiveAssessment {
             'heartRate': {
                 'above': 'High resting heart rate may indicate poor cardiovascular fitness.',
                 'below': 'Very low heart rate may indicate excellent fitness or potential issues.'
+            },
+            'mcv': {
+                'above': 'High MCV may suggest B12/folate deficiency or alcohol use. Consider nutritional assessment.',
+                'below': 'Low MCV may indicate iron deficiency or thalassemia. Consider iron studies.'
+            },
+            'rdw': {
+                'above': 'Elevated RDW may indicate nutritional deficiencies or chronic conditions. Consider comprehensive metabolic evaluation.',
+                'below': 'Low RDW is generally not concerning but may indicate homogeneous cell population.'
             }
         };
 
@@ -914,6 +924,30 @@ class ComprehensiveAssessment {
                     'Practice deep breathing exercises',
                     'Maintain adequate hydration',
                     'Get sufficient quality sleep'
+                ]
+            },
+            'mcv': {
+                name: 'Mean Cell Volume (MCV)',
+                description: 'Measures the average size of your red blood cells. This test helps diagnose different types of anemia and other blood disorders.',
+                normalRange: '82-98 femtoliters (fL)',
+                significance: 'Low MCV may indicate iron deficiency or thalassemia. High MCV may suggest B12/folate deficiency or alcohol use. Used in biological age calculations.',
+                tips: [
+                    'Maintain adequate iron intake through diet',
+                    'Ensure sufficient B12 and folate consumption', 
+                    'Limit excessive alcohol consumption',
+                    'Regular blood tests if you have anemia risk factors'
+                ]
+            },
+            'rdw': {
+                name: 'Red Cell Distribution Width (RDW)',
+                description: 'Measures the variation in size of your red blood cells. Higher values indicate more variation in cell size, which can indicate various health conditions.',
+                normalRange: '11.5-14.5%',
+                significance: 'Elevated RDW may indicate nutritional deficiencies, chronic diseases, or aging-related changes. Important component of biological age calculations.',
+                tips: [
+                    'Follow a balanced diet rich in iron, B12, and folate',
+                    'Address any underlying chronic conditions',
+                    'Regular exercise to improve overall health',
+                    'Discuss with your doctor if consistently elevated'
                 ]
             }
         };
@@ -1146,7 +1180,16 @@ class ComprehensiveAssessment {
             'systolicBP': 'Systolic Blood Pressure',
             'diastolicBP': 'Diastolic Blood Pressure',
             'heartRate': 'Heart Rate',
-            'waistCircumference': 'Waist Circumference'
+            'waistCircumference': 'Waist Circumference',
+            'creatinine': 'Creatinine',
+            'albumin': 'Albumin',
+            'crp': 'C-Reactive Protein',
+            'wbc': 'White Blood Cells',
+            'alp': 'Alkaline Phosphatase',
+            'lymphocytes': 'Lymphocytes',
+            'mcv': 'Mean Cell Volume',
+            'rdw': 'Red Cell Distribution Width',
+            'hemoglobin': 'Hemoglobin'
         };
         return biomarkerLabels[biomarkerName] || biomarkerName;
     }

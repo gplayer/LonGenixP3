@@ -4661,9 +4661,19 @@ app.post('/api/assessment/comprehensive', async (c) => {
   const assessmentData = await c.req.json()
   
   try {
-    // Create patient record from comprehensive data
-    const demo = assessmentData.demographics
-    const clinical = assessmentData.clinical
+    // Enhanced data validation and structure handling
+    const demo = assessmentData.demographics || assessmentData
+    const clinical = assessmentData.clinical || assessmentData
+    const biomarkers = assessmentData.biomarkers || assessmentData
+    
+    // Validate required demographics data
+    if (!demo.fullName || !demo.dateOfBirth || !demo.gender) {
+      return c.json({
+        success: false,
+        error: 'Missing required demographic data (fullName, dateOfBirth, gender)',
+        received: Object.keys(assessmentData)
+      }, 400)
+    }
     
     // Calculate age from date of birth (consistent with other endpoints)
     const birthDate = new Date(demo.dateOfBirth)
@@ -4701,19 +4711,23 @@ app.post('/api/assessment/comprehensive', async (c) => {
       systolic_bp: clinical.systolicBP || 120,
       diastolic_bp: clinical.diastolicBP || 80,
       biomarkers: {
-        glucose: assessmentData.biomarkers?.glucose || null,
-        hba1c: assessmentData.biomarkers?.hba1c || null,
-        total_cholesterol: assessmentData.biomarkers?.totalCholesterol || null,
-        hdl_cholesterol: assessmentData.biomarkers?.hdlCholesterol || null,
-        ldl_cholesterol: assessmentData.biomarkers?.ldlCholesterol || null,
-        triglycerides: assessmentData.biomarkers?.triglycerides || null,
-        creatinine: assessmentData.biomarkers?.creatinine || null,
-        albumin: assessmentData.biomarkers?.albumin || null,
-        c_reactive_protein: assessmentData.biomarkers?.crp || null,
-        // Add estimated values for missing biomarkers based on assessment data
-        white_blood_cells: 6.5,
-        hemoglobin: demo.gender === 'female' ? 13.8 : 15.2,
-        egfr: clinical.age < 60 ? 95 : Math.max(60, 120 - age)
+        glucose: biomarkers.glucose || null,
+        hba1c: biomarkers.hba1c || null,
+        total_cholesterol: biomarkers.totalCholesterol || null,
+        hdl_cholesterol: biomarkers.hdlCholesterol || null,
+        ldl_cholesterol: biomarkers.ldlCholesterol || null,
+        triglycerides: biomarkers.triglycerides || null,
+        creatinine: biomarkers.creatinine || null,
+        albumin: biomarkers.albumin || null,
+        c_reactive_protein: biomarkers.crp || null,
+        // Enhanced biomarker mapping for better algorithm accuracy
+        white_blood_cells: biomarkers.wbc || 6.5,
+        alkaline_phosphatase: biomarkers.alp || null,
+        lymphocyte_percent: biomarkers.lymphocytes || null,
+        mean_cell_volume: biomarkers.mcv || (demo.gender === 'female' ? 87 : 90), // Estimated if missing
+        red_cell_distribution_width: biomarkers.rdw || 13.5, // Estimated if missing
+        hemoglobin: biomarkers.hemoglobin || (demo.gender === 'female' ? 13.8 : 15.2),
+        egfr: biomarkers.egfr || (age < 60 ? 95 : Math.max(60, 120 - age))
       }
     }
 
