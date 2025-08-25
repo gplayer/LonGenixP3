@@ -4891,7 +4891,7 @@ app.post('/api/assessment/demo', async (c) => {
     // Create different demo patient data profiles
     const demoProfiles = {
       'usa_optimal': {
-        age: 46,
+        age: 47,
         gender: 'female' as const,
         height_cm: 165,
         weight_kg: 65,
@@ -4935,7 +4935,7 @@ app.post('/api/assessment/demo', async (c) => {
         }
       },
       'australia_balanced': {
-        age: 49,
+        age: 50,
         gender: 'female' as const,
         height_cm: 168,
         weight_kg: 72,
@@ -4957,7 +4957,7 @@ app.post('/api/assessment/demo', async (c) => {
         }
       },
       'philippines_young': {
-        age: 38,
+        age: 40,
         gender: 'female' as const,
         height_cm: 158,
         weight_kg: 52,
