@@ -1003,6 +1003,16 @@ function startAssessment(method) {
     window.longenixApp.startAssessment(method);
 }
 
+function startFreshAssessment() {
+    // Clear localStorage cache before starting assessment
+    console.log('🗑️ Clearing localStorage cache for fresh assessment...');
+    localStorage.removeItem('comprehensive_assessment_data');
+    console.log('✅ Cache cleared - starting fresh assessment');
+    
+    // Start comprehensive assessment
+    window.location.href = '/comprehensive-assessment';
+}
+
 function viewSampleReport() {
     window.longenixApp.viewSampleReport();
 }

@@ -139,12 +139,19 @@ class ComprehensiveAssessment {
     }
 
     getApiBase() {
-        if (window.location.hostname.includes('pages.dev')) {
-            return '/api';
-        } else if (window.location.hostname.includes('github.io')) {
+        const hostname = window.location.hostname;
+        const origin = window.location.origin;
+        console.log('🔗 getApiBase() - hostname:', hostname, 'origin:', origin);
+        
+        if (hostname.includes('pages.dev')) {
+            console.log('✅ Detected pages.dev - returning origin:', origin);
+            return origin;
+        } else if (hostname.includes('github.io')) {
+            console.log('🚫 Detected github.io - returning null (demo mode)');
             return null;
         } else {
-            return '/api';
+            console.log('🏠 Local development - returning origin:', origin);
+            return origin;
         }
     }
 
@@ -2853,24 +2860,38 @@ class ComprehensiveAssessment {
     }
 
     validateCurrentStep() {
+        console.log('🔍 Validating current step:', this.currentStep);
+        
         const form = document.getElementById('comprehensive-assessment-form');
-        if (!form) return false;
+        if (!form) {
+            console.error('❌ Form not found!');
+            return false;
+        }
 
         // Check required fields for current step
         const requiredFields = form.querySelectorAll('input[required], select[required]');
         let isValid = true;
+        let invalidFields = [];
 
         requiredFields.forEach(field => {
             if (!field.value.trim()) {
                 field.classList.add('border-red-500');
+                invalidFields.push(field.name || field.id || 'unnamed field');
                 isValid = false;
             } else {
                 field.classList.remove('border-red-500');
             }
         });
 
+        if (invalidFields.length > 0) {
+            console.warn('⚠️ Invalid required fields:', invalidFields);
+        } else {
+            console.log('✅ All required fields are valid');
+        }
+
         // Enhanced validation for Step 1 (Demographics with biomarkers)
         if (this.currentStep === 1) {
+            console.log('🧬 Validating biomarkers for step 1...');
             const biomarkerValidation = this.validateBiomarkerStep();
             
             // Show validation summary
@@ -2878,6 +2899,7 @@ class ComprehensiveAssessment {
             
             // Block progression if there are critical errors
             if (!biomarkerValidation.isValid) {
+                console.warn('⚠️ Biomarker validation failed:', biomarkerValidation.errors);
                 // Scroll to first error
                 const firstError = document.querySelector('.biomarker-input.border-red-500');
                 if (firstError) {
@@ -3005,18 +3027,39 @@ class ComprehensiveAssessment {
     }
 
     async submitAssessment() {
+        console.log('🚀 Starting assessment submission...');
+        
+        // Enhanced validation with logging
         if (!this.validateCurrentStep()) {
+            console.error('❌ Form validation failed - current step is invalid');
+            alert('Please complete all required fields before submitting.');
             return;
         }
+        console.log('✅ Form validation passed');
 
         this.saveFormData();
+        console.log('📋 Form data saved, total fields:', Object.keys(this.formData).length);
+        
+        // Log key demographic fields for debugging
+        const demographics = {
+            fullName: this.formData.fullName,
+            email: this.formData.email,
+            dateOfBirth: this.formData.dateOfBirth,
+            gender: this.formData.gender
+        };
+        console.log('👤 Demographics data:', demographics);
 
         if (!this.apiBase) {
+            console.error('❌ API base URL not available - demo mode detected');
             alert('Assessment submission is not available in demo mode.');
             return;
         }
+        console.log('🌐 API base URL:', this.apiBase);
 
         try {
+            console.log('📤 Sending POST request to:', `${this.apiBase}/api/assessment/comprehensive`);
+            console.log('📦 Request body keys:', Object.keys(this.formData));
+            
             const response = await fetch(`${this.apiBase}/api/assessment/comprehensive`, {
                 method: 'POST',
                 headers: {
@@ -3025,17 +3068,29 @@ class ComprehensiveAssessment {
                 body: JSON.stringify(this.formData)
             });
 
+            console.log('📨 Response status:', response.status);
+            console.log('📨 Response ok:', response.ok);
+
             const result = await response.json();
+            console.log('📄 Response data:', result);
 
             if (result.success) {
+                console.log('🎉 Assessment submitted successfully! Session ID:', result.sessionId);
                 // Redirect to report
                 window.location.href = `/report?session=${result.sessionId}`;
             } else {
+                console.error('❌ API returned error:', result.error);
+                console.error('📝 Received data keys:', result.received || 'Not provided');
                 alert('Assessment submission failed: ' + (result.error || 'Unknown error'));
             }
         } catch (error) {
-            console.error('Submission error:', error);
-            alert('Assessment submission failed. Please try again.');
+            console.error('💥 Network/fetch error:', error);
+            console.error('📊 Error details:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            alert('Assessment submission failed. Please check your internet connection and try again.');
         }
     }
 

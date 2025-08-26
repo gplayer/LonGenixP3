@@ -90,7 +90,10 @@
 - ✅ **Conservative risk-minimized approach used throughout - zero breaking changes**
 
 ## 🌐 URLs
-- **Production (Cloudflare Pages)**: https://8b8ffb9b.longenix-assessment.pages.dev ✅ **LIVE with Clean Biomarker System**
+- **Production (Cloudflare Pages)**: https://longenix-assessment.pages.dev ✅ **LIVE with Clean Biomarker System**
+- **Alternative URLs**: 
+  - https://8b8ffb9b.longenix-assessment.pages.dev (latest deployment)
+  - https://c72ddf13.longenix-assessment.pages.dev (previous deployment)
 - **Development Server**: http://localhost:3000 (PM2 managed)  
 - **Sandbox Access**: https://3000-iirurxsnx73vkdjkrpher.e2b.dev
 - **GitHub Repository**: https://github.com/gplayer/LonGenixP3
@@ -182,7 +185,7 @@ curl -X POST http://localhost:3000/api/auth/login -H "Content-Type: application/
 
 ## 📋 Deployment Status
 - **Platform**: Cloudflare Pages ✅ **FULLY DEPLOYED WITH CLEAN BIOMARKER SYSTEM**
-- **Production URL**: https://8b8ffb9b.longenix-assessment.pages.dev ✅ **LIVE - Clean Production Ready**
+- **Production URL**: https://longenix-assessment.pages.dev ✅ **LIVE - Clean Production Ready**
 - **Status**: 🚀 **Production Ready** - All biomarker issues resolved, clean dynamic system
 - **Database**: ✅ D1 production database active and operational
 - **Authentication**: ✅ Working password protection in production

@@ -5062,9 +5062,15 @@ app.get('/', (c) => {
                                     <li><i class="fas fa-check text-green-500 mr-2"></i>Comprehensive Lifestyle Analysis</li>
                                     <li><i class="fas fa-check text-green-500 mr-2"></i>Real Data-Driven Reports</li>
                                 </ul>
-                                <button onclick="startAssessment('comprehensive')" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300">
-                                    Start Full Assessment
-                                </button>
+                                <div class="space-y-3">
+                                    <button onclick="startFreshAssessment()" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                                        <i class="fas fa-plus mr-2"></i>Start Fresh Assessment
+                                    </button>
+                                    <button onclick="startAssessment('comprehensive')" class="w-full bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 transition duration-300">
+                                        <i class="fas fa-play mr-2"></i>Continue Assessment
+                                    </button>
+                                    <p class="text-xs text-gray-500 text-center">Use "Fresh" to clear any cached data, "Continue" to resume previous</p>
+                                </div>
                             </div>
                         </div>
 
@@ -5224,6 +5230,232 @@ app.get('/', (c) => {
     </body>
     </html>
   `)
+})
+
+// Debug API endpoint to test form submission format (temporary for debugging)
+app.post('/api/debug/test-submission', async (c) => {
+  const data = await c.req.json()
+  
+  return c.json({
+    success: true,
+    message: 'Debug endpoint - shows what data was received',
+    receivedData: data,
+    dataStructure: {
+      totalFields: Object.keys(data).length,
+      hasFullName: !!data.fullName,
+      hasEmail: !!data.email,
+      hasDateOfBirth: !!data.dateOfBirth,
+      hasGender: !!data.gender,
+      fieldsList: Object.keys(data).sort(),
+      demographics: {
+        fullName: data.fullName || 'MISSING',
+        email: data.email || 'MISSING',
+        dateOfBirth: data.dateOfBirth || 'MISSING',
+        gender: data.gender || 'MISSING'
+      }
+    }
+  })
+})
+
+// localStorage Inspector Route (temporary for debugging)
+app.get('/debug-localStorage', (c) => {
+  return c.html(`<!DOCTYPE html>
+<html>
+<head>
+    <title>localStorage Inspector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .data-block { background: #f9fafb; padding: 1rem; margin: 0.5rem 0; border-radius: 0.5rem; border: 1px solid #e5e7eb; }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        button { transition: all 0.2s; }
+        button:hover { transform: translateY(-1px); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">🔍 localStorage Inspector</h1>
+        <p class="text-gray-600 mb-6">Diagnostic tool for comprehensive assessment localStorage issues</p>
+        
+        <div class="data-block">
+            <h3 class="text-lg font-semibold mb-3">Quick Actions:</h3>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="showAllStorage()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+                    🔍 Show All localStorage
+                </button>
+                <button onclick="showAssessmentData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+                    📋 Show Assessment Data
+                </button>
+                <button onclick="clearAssessmentData()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg">
+                    🗑️ Clear Assessment Data
+                </button>
+                <button onclick="clearAllStorage()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                    💥 Clear All localStorage
+                </button>
+            </div>
+        </div>
+
+        <div id="results" class="mt-6"></div>
+        
+        <div class="data-block mt-6">
+            <h3 class="text-lg font-semibold mb-3">Manual localStorage Check:</h3>
+            <div class="flex gap-2">
+                <input type="text" id="keyInput" placeholder="Enter localStorage key" 
+                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <button onclick="getStorageValue()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
+                    Get Value
+                </button>
+            </div>
+        </div>
+
+        <div class="mt-8 p-4 bg-blue-50 rounded-lg">
+            <p class="text-sm text-blue-800">
+                <strong>Instructions:</strong> Use this tool to diagnose localStorage issues with the comprehensive assessment. 
+                If assessment data is pre-populated, you'll see it in the "Show Assessment Data" section.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function showResults(html, type) {
+            const results = document.getElementById('results');
+            let bgColor = 'bg-gray-50 border-gray-200';
+            if (type === 'error') bgColor = 'bg-red-50 border-red-200';
+            if (type === 'success') bgColor = 'bg-green-50 border-green-200';
+            results.innerHTML = '<div class="p-4 rounded-lg border ' + bgColor + '">' + html + '</div>';
+        }
+
+        function showAllStorage() {
+            let html = '<h3 class="text-lg font-semibold mb-3">📦 All localStorage Contents:</h3>';
+            
+            if (localStorage.length === 0) {
+                html += '<p class="text-gray-500"><em>localStorage is empty</em></p>';
+                showResults(html, 'success');
+                return;
+            }
+            
+            html += '<p class="mb-4"><strong>Found ' + localStorage.length + ' items in localStorage:</strong></p>';
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                
+                html += '<div class="mb-3 p-3 bg-white rounded border-l-4 border-blue-500">';
+                html += '<div class="font-semibold text-gray-800">Key: ' + key + '</div>';
+                html += '<div class="text-sm text-gray-600">Size: ' + value.length + ' characters</div>';
+                html += '<div class="text-sm text-gray-600 mt-1">Preview: <code class="bg-gray-100 px-1 rounded">' + value.substring(0, 100) + (value.length > 100 ? '...' : '') + '</code></div>';
+                html += '</div>';
+            }
+            
+            showResults(html);
+        }
+
+        function showAssessmentData() {
+            const key = 'comprehensive_assessment_data';
+            const data = localStorage.getItem(key);
+            
+            let html = '<h3 class="text-lg font-semibold mb-3">📋 Assessment Data Analysis:</h3>';
+            
+            if (!data) {
+                html += '<p class="text-green-600"><strong>✅ No assessment data found in localStorage</strong></p>';
+                html += '<p class="text-gray-600 mt-2">This means the form should start fresh without pre-populated fields.</p>';
+                showResults(html, 'success');
+                return;
+            }
+            
+            try {
+                const parsed = JSON.parse(data);
+                const fieldCount = Object.keys(parsed).length;
+                
+                html += '<p class="text-red-600 mb-2"><strong>⚠️ Assessment data found in localStorage!</strong></p>';
+                html += '<p><strong>Total fields:</strong> ' + fieldCount + '</p>';
+                html += '<p><strong>Data size:</strong> ' + data.length + ' characters</p>';
+                
+                html += '<h4 class="text-md font-semibold mt-4 mb-2">🔍 Key Demographic Fields:</h4>';
+                html += '<div class="bg-white p-3 rounded border">';
+                
+                const keyFields = ['fullName', 'email', 'dateOfBirth', 'gender'];
+                keyFields.forEach(field => {
+                    if (parsed[field]) {
+                        html += '<div class="mb-1"><strong>' + field + ':</strong> <code class="bg-yellow-100 px-1 rounded">' + parsed[field] + '</code></div>';
+                    } else {
+                        html += '<div class="mb-1 text-gray-500"><strong>' + field + ':</strong> <em>not set</em></div>';
+                    }
+                });
+                
+                html += '</div>';
+                
+                html += '<div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">';
+                html += '<p class="text-yellow-800"><strong>🔧 This explains the pre-populated form!</strong></p>';
+                html += '<p class="text-yellow-700 text-sm mt-1">The form is loading this cached data automatically. Use "Clear Assessment Data" to start fresh.</p>';
+                html += '</div>';
+                
+            } catch (error) {
+                html += '<p class="text-red-600"><strong>❌ Error parsing JSON:</strong> ' + error.message + '</p>';
+                html += '<pre class="bg-white p-3 rounded border mt-2 text-sm max-h-32 overflow-y-auto">' + data + '</pre>';
+            }
+            
+            showResults(html);
+        }
+
+        function clearAssessmentData() {
+            const key = 'comprehensive_assessment_data';
+            const hadData = localStorage.getItem(key) !== null;
+            
+            localStorage.removeItem(key);
+            
+            let html = '<h3 class="text-lg font-semibold mb-3">🗑️ Clear Assessment Data</h3>';
+            
+            if (hadData) {
+                html += '<p class="text-green-600"><strong>✅ Assessment data cleared successfully!</strong></p>';
+                html += '<p class="text-gray-600 mt-2">The comprehensive assessment form will now start fresh without pre-populated fields.</p>';
+            } else {
+                html += '<p class="text-blue-600"><strong>ℹ️ No assessment data was found to clear.</strong></p>';
+            }
+            
+            showResults(html, 'success');
+        }
+
+        function clearAllStorage() {
+            const itemCount = localStorage.length;
+            localStorage.clear();
+            
+            let html = '<h3 class="text-lg font-semibold mb-3">💥 Clear All localStorage</h3>';
+            html += '<p class="text-green-600"><strong>✅ Cleared ' + itemCount + ' items from localStorage.</strong></p>';
+            html += '<p class="text-gray-600 mt-2">All browser storage has been cleared. The site will behave as if you are visiting for the first time.</p>';
+            
+            showResults(html, 'success');
+        }
+
+        function getStorageValue() {
+            const key = document.getElementById('keyInput').value.trim();
+            if (!key) {
+                showResults('<p class="text-red-600">❌ Please enter a localStorage key</p>', 'error');
+                return;
+            }
+            
+            const value = localStorage.getItem(key);
+            
+            let html = '<h3 class="text-lg font-semibold mb-3">🔍 Manual Key Lookup</h3>';
+            html += '<p><strong>Key:</strong> <code class="bg-gray-100 px-1 rounded">' + key + '</code></p>';
+            
+            if (value === null) {
+                html += '<p class="text-red-600 mt-2">❌ Key not found in localStorage</p>';
+            } else {
+                html += '<p class="text-green-600 mt-2"><strong>✅ Value found!</strong></p>';
+                html += '<p><strong>Size:</strong> ' + value.length + ' characters</p>';
+                html += '<pre class="bg-white p-3 rounded border mt-2 text-sm max-h-64 overflow-y-auto">' + value + '</pre>';
+            }
+            
+            showResults(html);
+        }
+
+        // Auto-load on page load
+        window.addEventListener('load', function() {
+            showAllStorage();
+        });
+    </script>
+</body>
+</html>`)
 })
 
 export default app
