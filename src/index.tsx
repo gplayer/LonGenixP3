@@ -182,7 +182,9 @@ function calculateAgeAtEvent(eventDate: Date | null, birthDate: Date | null): nu
   const ageInMs = eventDate.getTime() - birthDate.getTime();
   const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25);
   
-  return Math.floor(ageInYears);
+  // Ensure age is never negative (for events at birth or before birth)
+  const calculatedAge = Math.floor(ageInYears);
+  return Math.max(0, calculatedAge);
 }
 
 /**
@@ -305,8 +307,29 @@ function processATMTimelineData(assessmentData: ATMAssessmentData): ATMTimelineE
   if (!assessmentData) return [];
   
   const events: ATMTimelineEvent[] = [];
-  const birthDate = assessmentData.dateOfBirth ? new Date(assessmentData.dateOfBirth) : null;
-  const birthYear = birthDate ? birthDate.getFullYear() : null;
+  
+  // Enhanced birth date parsing with validation
+  let birthDate: Date | null = null;
+  let birthYear: number | null = null;
+  
+  if (assessmentData.dateOfBirth) {
+    try {
+      birthDate = new Date(assessmentData.dateOfBirth);
+      // Validate that it's a valid date
+      if (!isNaN(birthDate.getTime())) {
+        birthYear = birthDate.getFullYear();
+        console.log(`📅 Birth date parsed successfully: ${assessmentData.dateOfBirth} -> ${birthYear}`);
+      } else {
+        console.warn(`⚠️ Invalid birth date format: ${assessmentData.dateOfBirth}`);
+        birthDate = null;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Error parsing birth date: ${assessmentData.dateOfBirth}`, error);
+      birthDate = null;
+    }
+  } else {
+    console.warn(`⚠️ No birth date provided in assessment data`);
+  }
   
   // Process Antecedents
   if (assessmentData.antecedentsDescription && Array.isArray(assessmentData.antecedentsDescription)) {
@@ -412,6 +435,74 @@ function processATMTimelineData(assessmentData: ATMAssessmentData): ATMTimelineE
               }
             });
           }
+        }
+      }
+    });
+  }
+  
+  // Process Family Timeline Events
+  if (assessmentData.familyRelation && Array.isArray(assessmentData.familyRelation)) {
+    assessmentData.familyRelation.forEach((relation, index) => {
+      if (relation && relation.trim()) {
+        const yourAge = assessmentData.familyEventAge?.[index];
+        const description = assessmentData.familyEventDescription?.[index];
+        const impact = assessmentData.familyEventImpact?.[index];
+        const memberAge = assessmentData.familyMemberAge?.[index];
+        
+        if (yourAge && description && description.trim() && birthDate) {
+          // Calculate event date based on your age at the time
+          const eventYear = birthDate.getFullYear() + parseInt(yourAge, 10);
+          const eventDate = new Date(eventYear, 5, 15); // Mid-year approximation
+          
+          // Determine impact score based on family event impact
+          let impactScore = 0;
+          switch (impact) {
+            case 'high_concern':
+              impactScore = -7; // Negative because it's concerning/stressful
+              break;
+            case 'moderate_concern':
+              impactScore = -4;
+              break;
+            case 'low_concern':
+              impactScore = -2;
+              break;
+            case 'lifestyle_change':
+              impactScore = 3; // Positive because it led to beneficial changes
+              break;
+            case 'screening_increase':
+              impactScore = 2; // Positive because it led to preventive action
+              break;
+            default:
+              impactScore = -3; // Default to moderate concern
+          }
+          
+          const age = calculateAgeAtEvent(eventDate, birthDate);
+          
+          // Format family member display
+          const relationDisplay = relation.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const memberAgeText = memberAge ? ` (age ${memberAge})` : '';
+          const familyDescription = `Family Health Event: ${relationDisplay}${memberAgeText} - ${description.trim()}`;
+          
+          events.push({
+            type: 'mediator', // Family events are mediators (can be protective or concerning)
+            date: eventDate,
+            dateString: `${String(eventDate.getMonth() + 1).padStart(2, '0')}/${String(eventYear).slice(-2)}`,
+            age: age,
+            description: familyDescription,
+            severity: impact || 'moderate',
+            impact: impactScore,
+            confidence: 'medium', // Family events have medium confidence for timeline
+            beneficial: impactScore > 0,
+            rawData: {
+              relation,
+              yourAge,
+              memberAge,
+              description,
+              impact
+            }
+          });
+          
+          console.log(`📋 Added family timeline event: ${relationDisplay} at your age ${yourAge}`);
         }
       }
     });
@@ -603,7 +694,7 @@ function generateATMTimelineHTML(comprehensiveData: any, fullName: string): stri
         <div class="flex-1">
           <div class="bg-white rounded-lg shadow-sm border p-4">
             <div class="flex justify-between items-start mb-2">
-              <h4 class="font-semibold ${textColor}">${eventMonth} ${eventYear} - Age ${event.age || 'Unknown'}</h4>
+              <h4 class="font-semibold ${textColor}">${eventMonth} ${eventYear} - Age ${event.age !== null ? event.age : 'unknown age'}</h4>
               <div class="text-right">
                 <span class="text-xs px-2 py-1 rounded-full ${bgColor} ${textColor} font-medium">${event.type.toUpperCase()}</span>
                 <div class="text-xs text-gray-500 mt-1">Impact: ${impactDisplay}</div>

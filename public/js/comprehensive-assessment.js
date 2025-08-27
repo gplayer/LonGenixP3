@@ -2799,6 +2799,72 @@ class ComprehensiveAssessment {
                             <label class="block text-sm font-medium text-gray-700 mb-2">Please provide details about family history (relationship, condition, age at diagnosis/death):</label>
                             <textarea name="familyHistoryDetails" rows="4" placeholder="e.g., Father - Heart attack at age 55, Mother - Breast cancer at age 62, Grandfather (paternal) - Diabetes..." class="w-full px-3 py-2 border border-gray-300 rounded-md"></textarea>
                         </div>
+
+                        <!-- Timeline-Specific Family History Events -->
+                        <div class="bg-white border-l-4 border-purple-400 p-4 mt-6">
+                            <h5 class="text-md font-semibold text-purple-800 mb-3">
+                                <i class="fas fa-timeline mr-2"></i>Timeline Family Events (Optional)
+                            </h5>
+                            <p class="text-sm text-gray-600 mb-4">Add specific family health events that may be relevant to your health timeline. These will be integrated with your personal health timeline.</p>
+                            
+                            <div id="familyTimelineEvents">
+                                <div class="family-timeline-event border rounded-lg p-4 mb-4">
+                                    <div class="grid md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Family Member</label>
+                                            <select name="familyRelation[]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                                <option value="">Select relationship</option>
+                                                <option value="father">Father</option>
+                                                <option value="mother">Mother</option>
+                                                <option value="brother">Brother</option>
+                                                <option value="sister">Sister</option>
+                                                <option value="grandfather_paternal">Grandfather (Paternal)</option>
+                                                <option value="grandmother_paternal">Grandmother (Paternal)</option>
+                                                <option value="grandfather_maternal">Grandfather (Maternal)</option>
+                                                <option value="grandmother_maternal">Grandmother (Maternal)</option>
+                                                <option value="uncle">Uncle</option>
+                                                <option value="aunt">Aunt</option>
+                                                <option value="cousin">Cousin</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Your Age When This Occurred</label>
+                                            <input type="number" name="familyEventAge[]" min="0" max="100" placeholder="Your age" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Their Age at Event</label>
+                                            <input type="number" name="familyMemberAge[]" min="0" max="120" placeholder="Their age" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Health Event Description</label>
+                                        <textarea name="familyEventDescription[]" rows="2" placeholder="e.g., Father diagnosed with Type 2 Diabetes, Mother had heart attack..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded"></textarea>
+                                    </div>
+                                    <div class="mt-2 grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">Impact on You</label>
+                                            <select name="familyEventImpact[]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                                                <option value="">Select impact</option>
+                                                <option value="high_concern">High Concern/Stress</option>
+                                                <option value="moderate_concern">Moderate Concern</option>
+                                                <option value="low_concern">Low Concern</option>
+                                                <option value="lifestyle_change">Led to Lifestyle Changes</option>
+                                                <option value="screening_increase">Increased Health Screening</option>
+                                            </select>
+                                        </div>
+                                        <div class="flex items-end">
+                                            <button type="button" onclick="removeFamilyTimelineEvent(this)" class="text-red-600 hover:text-red-800 text-sm">
+                                                <i class="fas fa-trash mr-1"></i>Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" onclick="addFamilyTimelineEvent()" class="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                                <i class="fas fa-plus mr-1"></i>Add Another Family Event
+                            </button>
+                        </div>
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Are there any other significant health patterns in your family?</label>
@@ -3480,3 +3546,85 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 });
+
+// Family Timeline Event Management Functions
+function addFamilyTimelineEvent() {
+    const container = document.getElementById('familyTimelineEvents');
+    if (!container) return;
+    
+    const eventCount = container.children.length;
+    const newEvent = document.createElement('div');
+    newEvent.className = 'family-timeline-event border rounded-lg p-4 mb-4';
+    newEvent.innerHTML = `
+        <div class="grid md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Family Member</label>
+                <select name="familyRelation[]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                    <option value="">Select relationship</option>
+                    <option value="father">Father</option>
+                    <option value="mother">Mother</option>
+                    <option value="brother">Brother</option>
+                    <option value="sister">Sister</option>
+                    <option value="grandfather_paternal">Grandfather (Paternal)</option>
+                    <option value="grandmother_paternal">Grandmother (Paternal)</option>
+                    <option value="grandfather_maternal">Grandfather (Maternal)</option>
+                    <option value="grandmother_maternal">Grandmother (Maternal)</option>
+                    <option value="uncle">Uncle</option>
+                    <option value="aunt">Aunt</option>
+                    <option value="cousin">Cousin</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Your Age When This Occurred</label>
+                <input type="number" name="familyEventAge[]" min="0" max="100" placeholder="Your age" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Their Age at Event</label>
+                <input type="number" name="familyMemberAge[]" min="0" max="120" placeholder="Their age" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="block text-xs font-medium text-gray-700 mb-1">Health Event Description</label>
+            <textarea name="familyEventDescription[]" rows="2" placeholder="e.g., Father diagnosed with Type 2 Diabetes, Mother had heart attack..." class="w-full px-2 py-1 text-sm border border-gray-300 rounded"></textarea>
+        </div>
+        <div class="mt-2 grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Impact on You</label>
+                <select name="familyEventImpact[]" class="w-full px-2 py-1 text-sm border border-gray-300 rounded">
+                    <option value="">Select impact</option>
+                    <option value="high_concern">High Concern/Stress</option>
+                    <option value="moderate_concern">Moderate Concern</option>
+                    <option value="low_concern">Low Concern</option>
+                    <option value="lifestyle_change">Led to Lifestyle Changes</option>
+                    <option value="screening_increase">Increased Health Screening</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="button" onclick="removeFamilyTimelineEvent(this)" class="text-red-600 hover:text-red-800 text-sm">
+                    <i class="fas fa-trash mr-1"></i>Remove
+                </button>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(newEvent);
+    console.log(`Added family timeline event #${eventCount + 1}`);
+}
+
+function removeFamilyTimelineEvent(button) {
+    const container = document.getElementById('familyTimelineEvents');
+    const eventElement = button.closest('.family-timeline-event');
+    
+    if (container && eventElement) {
+        // Don't remove if it's the only event
+        if (container.children.length <= 1) {
+            // Clear the fields instead
+            const inputs = eventElement.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => input.value = '');
+            console.log('Cleared family timeline event fields');
+        } else {
+            eventElement.remove();
+            console.log('Removed family timeline event');
+        }
+    }
+}
