@@ -63,6 +63,644 @@ const validateBiomarkerValue = (value: number, range: string, gender?: string) =
   return 'unknown';
 }
 
+// ==============================================================
+// PHASE 1: ATM Timeline Date Parsing Utility Functions
+// ==============================================================
+
+/**
+ * Parses MM/YY date format with intelligent century inference
+ * @param {string} dateString - Date in MM/YY format (e.g., "03/85")
+ * @param {number} personBirthYear - Person's birth year for context (e.g., 1960)
+ * @returns {Date|null} - Parsed date object or null if invalid
+ */
+function parseATMDate(dateString: string, personBirthYear?: number): Date | null {
+  // Validate input format
+  if (!dateString || typeof dateString !== 'string') {
+    return null;
+  }
+  
+  const trimmed = dateString.trim();
+  if (!/^\d{2}\/\d{2}$/.test(trimmed)) {
+    return null;
+  }
+  
+  const [monthStr, yearStr] = trimmed.split('/');
+  const month = parseInt(monthStr, 10);
+  const yearTwoDigit = parseInt(yearStr, 10);
+  
+  // Validate month range
+  if (month < 1 || month > 12) {
+    return null;
+  }
+  
+  // Century inference logic
+  const currentYear = new Date().getFullYear();
+  const currentYearTwoDigit = currentYear % 100;
+  
+  let fullYear: number;
+  
+  // Rule 1: If year is significantly in the future (>10 years), assume previous century
+  if (yearTwoDigit > (currentYearTwoDigit + 10)) {
+    fullYear = 1900 + yearTwoDigit;
+  }
+  // Rule 2: If person would have negative age with 20xx date, use 19xx
+  else if (personBirthYear && (2000 + yearTwoDigit) < personBirthYear) {
+    fullYear = 1900 + yearTwoDigit;
+  }
+  // Rule 3: Default to current century
+  else {
+    fullYear = 2000 + yearTwoDigit;
+  }
+  
+  // Additional validation: ensure date makes sense for person's age
+  if (personBirthYear && fullYear < personBirthYear) {
+    return null; // Event cannot occur before birth
+  }
+  
+  return new Date(fullYear, month - 1, 1);
+}
+
+/**
+ * Calculates age at the time of an event
+ * @param {Date} eventDate - Date of the event
+ * @param {Date} birthDate - Person's birth date
+ * @returns {number|null} - Age at event time or null if invalid
+ */
+function calculateAgeAtEvent(eventDate: Date | null, birthDate: Date | null): number | null {
+  if (!eventDate || !birthDate) {
+    return null;
+  }
+  
+  const ageInMs = eventDate.getTime() - birthDate.getTime();
+  const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25);
+  
+  return Math.floor(ageInYears);
+}
+
+/**
+ * Converts severity/impact ratings to numerical impact scores
+ * @param {string} type - 'antecedent', 'trigger', or 'mediator'
+ * @param {string} rating - Severity/impact rating
+ * @returns {number} - Impact score from -10 to +10
+ */
+function convertRatingToImpactScore(type: string, rating: string): number {
+  if (!rating) return 0;
+  
+  const normalizedRating = rating.toLowerCase();
+  
+  switch (type) {
+    case 'antecedent':
+      switch (normalizedRating) {
+        case 'mild': return 3;
+        case 'moderate': return 5;
+        case 'severe': return 7;
+        default: return 3;
+      }
+      
+    case 'trigger':
+      switch (normalizedRating) {
+        case 'low': return 3;
+        case 'moderate': return 6;
+        case 'high': return 8;
+        default: return 5;
+      }
+      
+    case 'mediator':
+      // Mediators can be positive (beneficial) or negative (harmful)
+      // We'll analyze the description content to determine this
+      switch (normalizedRating) {
+        case 'always': return 4;  // Assume positive until content analysis
+        case 'often': return 3;
+        case 'sometimes': return 2;
+        case 'rarely': return 1;
+        default: return 2;
+      }
+      
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Analyzes description content to determine if mediator is beneficial or harmful
+ * @param {string} description - Event description text
+ * @returns {boolean} - True if beneficial, false if harmful
+ */
+function isBeneficialMediator(description: string): boolean {
+  if (!description) return false;
+  
+  const beneficialKeywords = [
+    'therapy', 'counseling', 'meditation', 'yoga', 'exercise', 'diet', 'nutrition',
+    'treatment', 'recovery', 'healing', 'support', 'improvement', 'better',
+    'healthy', 'wellness', 'positive', 'beneficial', 'helpful', 'good'
+  ];
+  
+  const harmfulKeywords = [
+    'stress', 'pressure', 'pain', 'illness', 'disease', 'infection', 'injury',
+    'trauma', 'loss', 'death', 'divorce', 'financial', 'job loss', 'unemployment',
+    'conflict', 'abuse', 'addiction', 'smoking', 'drinking', 'poor', 'bad'
+  ];
+  
+  const lowerDescription = description.toLowerCase();
+  
+  const beneficialMatches = beneficialKeywords.filter(keyword => 
+    lowerDescription.includes(keyword)
+  ).length;
+  
+  const harmfulMatches = harmfulKeywords.filter(keyword => 
+    lowerDescription.includes(keyword)
+  ).length;
+  
+  // If more beneficial keywords, it's beneficial
+  // If equal or more harmful, it's harmful (conservative approach)
+  return beneficialMatches > harmfulMatches;
+}
+
+// ==============================================================
+// PHASE 2: ATM Timeline Data Processing Algorithm
+// ==============================================================
+
+interface ATMTimelineEvent {
+  type: 'antecedent' | 'trigger' | 'mediator';
+  date: Date;
+  dateString: string;
+  age: number | null;
+  description: string;
+  severity?: string;
+  impactLevel?: string;
+  frequency?: string;
+  impact: number;
+  beneficial?: boolean;
+  confidence: 'high' | 'medium' | 'low';
+  rawData: any;
+}
+
+interface ATMAssessmentData {
+  dateOfBirth?: string;
+  antecedentsDescription?: string[];
+  antecedentsDate?: string[];
+  antecedentsSeverity?: string[];
+  triggersDescription?: string[];
+  triggersDate?: string[];
+  triggersImpact?: string[];
+  mediatorsDescription?: string[];
+  mediatorsDate?: string[];
+  mediatorsFrequency?: string[];
+}
+
+/**
+ * Processes all ATM Framework data into chronological timeline events
+ * @param {Object} assessmentData - Assessment form data
+ * @returns {Array} - Array of timeline event objects sorted chronologically
+ */
+function processATMTimelineData(assessmentData: ATMAssessmentData): ATMTimelineEvent[] {
+  if (!assessmentData) return [];
+  
+  const events: ATMTimelineEvent[] = [];
+  const birthDate = assessmentData.dateOfBirth ? new Date(assessmentData.dateOfBirth) : null;
+  const birthYear = birthDate ? birthDate.getFullYear() : null;
+  
+  // Process Antecedents
+  if (assessmentData.antecedentsDescription && Array.isArray(assessmentData.antecedentsDescription)) {
+    assessmentData.antecedentsDescription.forEach((description, index) => {
+      if (description && description.trim()) {
+        const dateStr = assessmentData.antecedentsDate?.[index];
+        const severity = assessmentData.antecedentsSeverity?.[index];
+        
+        if (dateStr) {
+          const eventDate = parseATMDate(dateStr, birthYear);
+          if (eventDate) {
+            const age = calculateAgeAtEvent(eventDate, birthDate);
+            const impact = convertRatingToImpactScore('antecedent', severity || 'moderate');
+            
+            events.push({
+              type: 'antecedent',
+              date: eventDate,
+              dateString: dateStr,
+              age: age,
+              description: description.trim(),
+              severity: severity || 'moderate',
+              impact: impact,
+              confidence: 'high', // User provided specific date
+              rawData: {
+                description,
+                date: dateStr,
+                severity
+              }
+            });
+          }
+        }
+      }
+    });
+  }
+  
+  // Process Triggers
+  if (assessmentData.triggersDescription && Array.isArray(assessmentData.triggersDescription)) {
+    assessmentData.triggersDescription.forEach((description, index) => {
+      if (description && description.trim()) {
+        const dateStr = assessmentData.triggersDate?.[index];
+        const impactLevel = assessmentData.triggersImpact?.[index];
+        
+        if (dateStr) {
+          const eventDate = parseATMDate(dateStr, birthYear);
+          if (eventDate) {
+            const age = calculateAgeAtEvent(eventDate, birthDate);
+            const impact = convertRatingToImpactScore('trigger', impactLevel || 'moderate');
+            
+            events.push({
+              type: 'trigger',
+              date: eventDate,
+              dateString: dateStr,
+              age: age,
+              description: description.trim(),
+              impactLevel: impactLevel || 'moderate',
+              impact: impact,
+              confidence: 'high',
+              rawData: {
+                description,
+                date: dateStr,
+                impact: impactLevel
+              }
+            });
+          }
+        }
+      }
+    });
+  }
+  
+  // Process Mediators
+  if (assessmentData.mediatorsDescription && Array.isArray(assessmentData.mediatorsDescription)) {
+    assessmentData.mediatorsDescription.forEach((description, index) => {
+      if (description && description.trim()) {
+        const dateStr = assessmentData.mediatorsDate?.[index];
+        const frequency = assessmentData.mediatorsFrequency?.[index];
+        
+        if (dateStr) {
+          const eventDate = parseATMDate(dateStr, birthYear);
+          if (eventDate) {
+            const age = calculateAgeAtEvent(eventDate, birthDate);
+            let impact = convertRatingToImpactScore('mediator', frequency || 'sometimes');
+            
+            // Adjust impact based on content analysis
+            const beneficial = isBeneficialMediator(description);
+            if (beneficial) {
+              impact = -Math.abs(impact); // Negative impact = beneficial
+            }
+            
+            events.push({
+              type: 'mediator',
+              date: eventDate,
+              dateString: dateStr,
+              age: age,
+              description: description.trim(),
+              frequency: frequency || 'sometimes',
+              impact: impact,
+              beneficial: beneficial,
+              confidence: 'high',
+              rawData: {
+                description,
+                date: dateStr,
+                frequency
+              }
+            });
+          }
+        }
+      }
+    });
+  }
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  return events;
+}
+
+/**
+ * Groups timeline events by decades for organized display
+ * @param {Array} events - Array of timeline event objects
+ * @returns {Object} - Events grouped by decade (e.g., '1980s', '1990s')
+ */
+function groupEventsByDecade(events: ATMTimelineEvent[]): Record<string, ATMTimelineEvent[]> {
+  const decades: Record<string, ATMTimelineEvent[]> = {};
+  
+  events.forEach(event => {
+    const year = event.date.getFullYear();
+    const decade = Math.floor(year / 10) * 10;
+    const decadeKey = `${decade}s`;
+    
+    if (!decades[decadeKey]) {
+      decades[decadeKey] = [];
+    }
+    
+    decades[decadeKey].push(event);
+  });
+  
+  return decades;
+}
+
+interface ATMTimelineAnalysis {
+  totalEvents: number;
+  eventsByType: {
+    antecedents: number;
+    triggers: number;
+    mediators: number;
+  };
+  decades: string[];
+  events: ATMTimelineEvent[];
+  decadeGroups: Record<string, ATMTimelineEvent[]>;
+  averageImpact: number;
+}
+
+/**
+ * Generates chronological timeline summary for testing
+ * @param {Object} assessmentData - Assessment form data
+ * @returns {Object} - Timeline analysis results
+ */
+function generateTimelineAnalysis(assessmentData: ATMAssessmentData): ATMTimelineAnalysis {
+  const events = processATMTimelineData(assessmentData);
+  const decades = groupEventsByDecade(events);
+  
+  return {
+    totalEvents: events.length,
+    eventsByType: {
+      antecedents: events.filter(e => e.type === 'antecedent').length,
+      triggers: events.filter(e => e.type === 'trigger').length,
+      mediators: events.filter(e => e.type === 'mediator').length
+    },
+    decades: Object.keys(decades).sort(),
+    events: events,
+    decadeGroups: decades,
+    averageImpact: events.length > 0 ? 
+      events.reduce((sum, e) => sum + e.impact, 0) / events.length : 0
+  };
+}
+
+// ==============================================================
+// PHASE 3: ATM Timeline HTML Generation
+// ==============================================================
+
+/**
+ * Generates HTML for dynamic ATM Timeline based on user assessment data
+ * @param {Object} comprehensiveData - User's comprehensive assessment data
+ * @param {string} fullName - Patient's full name for personalization
+ * @returns {string} - Complete HTML for chronological timeline section
+ */
+function generateATMTimelineHTML(comprehensiveData: any, fullName: string): string {
+  // If no comprehensive data, show default message
+  if (!comprehensiveData) {
+    return `
+      <div class="bg-gray-50 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">
+          <i class="fas fa-timeline mr-2"></i>Chronological Health Timeline
+        </h3>
+        <div class="text-center py-8">
+          <i class="fas fa-clipboard-list text-4xl text-gray-400 mb-4"></i>
+          <p class="text-gray-600 italic">Complete the comprehensive assessment to see your personalized ATM Timeline.</p>
+          <p class="text-sm text-gray-500 mt-2">Your timeline will show Antecedents, Triggers, and Mediators chronologically based on your provided data.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Process timeline events from comprehensive data
+  const events = processATMTimelineData(comprehensiveData);
+  
+  // If no events found, show "no events" message
+  if (events.length === 0) {
+    return `
+      <div class="bg-gray-50 rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-semibold mb-4">
+          <i class="fas fa-timeline mr-2"></i>Chronological Health Timeline
+        </h3>
+        <div class="text-center py-8">
+          <i class="fas fa-calendar-times text-4xl text-gray-400 mb-4"></i>
+          <p class="text-gray-600">No timeline events found in your assessment data.</p>
+          <p class="text-sm text-gray-500 mt-2">ATM Framework events will appear here when you provide dates for significant health events.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  // Generate timeline HTML with events
+  let timelineHTML = `
+    <div class="bg-gray-50 rounded-lg p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-4">
+        <i class="fas fa-timeline mr-2"></i>Personalized Health Timeline - ${fullName}
+      </h3>
+      <div class="mb-4 text-sm text-gray-600">
+        <p>${events.length} significant health events identified spanning ${events[events.length-1].date.getFullYear() - events[0].date.getFullYear() + 1} years (${events[0].date.getFullYear()}-${events[events.length-1].date.getFullYear()})</p>
+      </div>
+      
+      <div class="relative">
+        <!-- Timeline Line -->
+        <div class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-300"></div>
+        
+        <!-- Timeline Events -->
+        <div class="space-y-6">
+  `;
+
+  // Generate each timeline event
+  events.forEach((event, index) => {
+    // Determine event colors and icons based on type
+    let bgColor, textColor, icon;
+    
+    switch (event.type) {
+      case 'antecedent':
+        bgColor = 'bg-blue-100';
+        textColor = 'text-blue-600';
+        icon = 'fas fa-seedling'; // Foundation/early events
+        break;
+      case 'trigger':
+        bgColor = 'bg-red-100';
+        textColor = 'text-red-600'; 
+        icon = 'fas fa-exclamation-triangle'; // Triggering events
+        break;
+      case 'mediator':
+        if (event.beneficial) {
+          bgColor = 'bg-green-100';
+          textColor = 'text-green-600';
+          icon = 'fas fa-leaf'; // Beneficial mediators
+        } else {
+          bgColor = 'bg-orange-100';
+          textColor = 'text-orange-600';
+          icon = 'fas fa-cog'; // Neutral/harmful mediators
+        }
+        break;
+      default:
+        bgColor = 'bg-gray-100';
+        textColor = 'text-gray-600';
+        icon = 'fas fa-circle';
+    }
+
+    // Format event description (truncate if too long)
+    const description = event.description.length > 150 
+      ? event.description.substring(0, 150) + '...'
+      : event.description;
+
+    // Determine impact display
+    const impactAbs = Math.abs(event.impact);
+    const impactDisplay = event.beneficial 
+      ? `+${impactAbs} (beneficial)` 
+      : `${event.impact} impact`;
+    
+    // Format date for display
+    const eventYear = event.date.getFullYear();
+    const eventMonth = event.date.toLocaleDateString('en-US', { month: 'short' });
+
+    timelineHTML += `
+      <div class="flex items-start">
+        <div class="${bgColor} rounded-full p-2 mr-4 relative z-10">
+          <i class="${icon} ${textColor}"></i>
+        </div>
+        <div class="flex-1">
+          <div class="bg-white rounded-lg shadow-sm border p-4">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-semibold ${textColor}">${eventMonth} ${eventYear} - Age ${event.age || 'Unknown'}</h4>
+              <div class="text-right">
+                <span class="text-xs px-2 py-1 rounded-full ${bgColor} ${textColor} font-medium">${event.type.toUpperCase()}</span>
+                <div class="text-xs text-gray-500 mt-1">Impact: ${impactDisplay}</div>
+              </div>
+            </div>
+            <p class="text-sm text-gray-700 leading-relaxed">${description}</p>
+            ${event.severity ? `<div class="mt-2 text-xs text-gray-500">Severity: <span class="font-medium">${event.severity}</span></div>` : ''}
+            ${event.frequency ? `<div class="mt-2 text-xs text-gray-500">Frequency: <span class="font-medium">${event.frequency}</span></div>` : ''}
+            ${event.impactLevel ? `<div class="mt-2 text-xs text-gray-500">Impact Level: <span class="font-medium">${event.impactLevel}</span></div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  // Close timeline events
+  timelineHTML += `
+        </div>
+      </div>
+    </div>
+  `;
+
+  return timelineHTML;
+}
+
+/**
+ * Generates HTML for ATM Timeline Insights based on processed events
+ * @param {Object} comprehensiveData - User's comprehensive assessment data
+ * @returns {string} - HTML for timeline insights and patterns
+ */
+function generateATMTimelineInsights(comprehensiveData: any): string {
+  if (!comprehensiveData) {
+    return `
+      <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4">Root Cause Connections & Interventions</h3>
+        <div class="text-center py-4">
+          <p class="text-gray-600 italic">Complete your comprehensive assessment to see personalized insights and recommendations.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const events = processATMTimelineData(comprehensiveData);
+  
+  if (events.length === 0) {
+    return `
+      <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
+        <h3 class="text-lg font-semibold mb-4">Root Cause Connections & Interventions</h3>
+        <div class="text-center py-4">
+          <p class="text-gray-600">No timeline events available for pattern analysis.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  const analysis = generateTimelineAnalysis(comprehensiveData);
+  
+  // Generate patterns analysis
+  const antecedents = events.filter(e => e.type === 'antecedent');
+  const triggers = events.filter(e => e.type === 'trigger');
+  const mediators = events.filter(e => e.type === 'mediator');
+  const beneficialMediators = mediators.filter(e => e.beneficial);
+  const harmfulMediators = mediators.filter(e => !e.beneficial);
+
+  // Calculate timeline span
+  const timelineSpan = events[events.length - 1].date.getFullYear() - events[0].date.getFullYear();
+  
+  // Identify patterns
+  const patterns = [];
+  const interventions = [];
+  
+  if (antecedents.length > 0) {
+    const avgAntecedentImpact = antecedents.reduce((sum, e) => sum + e.impact, 0) / antecedents.length;
+    if (avgAntecedentImpact > 5) {
+      patterns.push('Significant early life stressors identified as foundational factors');
+    } else {
+      patterns.push('Mild to moderate early life influences detected');
+    }
+  }
+  
+  if (triggers.length > 0) {
+    const recentTriggers = triggers.filter(e => e.date.getFullYear() >= new Date().getFullYear() - 10);
+    if (recentTriggers.length > 0) {
+      patterns.push(`${recentTriggers.length} triggering event(s) in the last 10 years require attention`);
+      interventions.push('Address recent triggering factors through targeted therapeutic approaches');
+    }
+  }
+  
+  if (beneficialMediators.length > 0) {
+    patterns.push(`${beneficialMediators.length} beneficial intervention(s) show positive health trajectory`);
+    interventions.push('Continue and expand current beneficial health practices');
+  }
+  
+  if (harmfulMediators.length > 0) {
+    patterns.push(`${harmfulMediators.length} ongoing factor(s) may be perpetuating health challenges`);
+    interventions.push('Identify and modify ongoing harmful mediating factors');
+  }
+  
+  if (timelineSpan > 20) {
+    patterns.push('Long-term health patterns suggest comprehensive lifestyle intervention approach');
+    interventions.push('Implement phased, long-term health optimization strategies');
+  }
+
+  // Generate default patterns if none identified
+  if (patterns.length === 0) {
+    patterns.push('Timeline analysis shows mixed health influences requiring individualized approach');
+  }
+  
+  if (interventions.length === 0) {
+    interventions.push('Develop personalized intervention plan based on timeline patterns');
+  }
+
+  return `
+    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
+      <h3 class="text-lg font-semibold mb-4">Root Cause Connections & Interventions</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <h4 class="font-semibold text-purple-700 mb-3">🔍 Key Patterns Identified</h4>
+          <ul class="space-y-2 text-sm text-gray-700">
+            ${patterns.map(pattern => `<li>• ${pattern}</li>`).join('')}
+            <li>• Timeline spans ${timelineSpan + 1} years with ${events.length} significant events</li>
+            <li>• Average impact score: ${analysis.averageImpact.toFixed(1)}/10</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-blue-700 mb-3">🎯 Targeted Interventions</h4>
+          <ul class="space-y-2 text-sm text-gray-700">
+            ${interventions.map(intervention => `<li>• ${intervention}</li>`).join('')}
+            <li>• Monitor and optimize current beneficial practices</li>
+            <li>• Regular reassessment of timeline factors and their evolution</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="mt-4 p-3 bg-white bg-opacity-50 rounded border-l-4 border-blue-400">
+        <p class="text-sm text-gray-700">
+          <strong>Timeline Summary:</strong> ${analysis.eventsByType.antecedents} antecedent(s), 
+          ${analysis.eventsByType.triggers} trigger(s), ${analysis.eventsByType.mediators} mediator(s)
+          ${beneficialMediators.length > 0 ? ` (${beneficialMediators.length} beneficial)` : ''}
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 const app = new Hono<{ Bindings: Bindings }>()
 
 // Enable CORS for API routes
@@ -529,6 +1167,8 @@ app.get('/report', async (c) => {
         </div>
       `
     }
+
+
 
     function generateLifestyleSection() {
       if (!comprehensiveData) {
@@ -1717,104 +2357,11 @@ app.get('/report', async (c) => {
                       
                       ${generateATMSection()}
 
-                      <!-- Chronological ATM Timeline -->
-                      <div class="bg-gray-50 rounded-lg p-6 mb-6">
-                          <h3 class="text-lg font-semibold mb-4">
-                              <i class="fas fa-timeline mr-2"></i>Chronological Health Timeline
-                          </h3>
-                          <div class="relative">
-                              <!-- Timeline Line -->
-                              <div class="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-300"></div>
-                              
-                              <!-- Timeline Events -->
-                              <div class="space-y-6">
-                                  <div class="flex items-start">
-                                      <div class="bg-blue-100 rounded-full p-2 mr-4 relative z-10">
-                                          <i class="fas fa-baby text-blue-600"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <div class="bg-white rounded-lg shadow-sm border p-4">
-                                              <div class="flex justify-between items-start mb-2">
-                                                  <h4 class="font-semibold text-blue-700">Early Life (0-18 years)</h4>
-                                                  <span class="text-xs text-gray-500">Antecedent</span>
-                                              </div>
-                                              <p class="text-sm text-gray-600">Good overall health foundation established during childhood and adolescence. No major health issues or interventions reported.</p>
-                                          </div>
-                                      </div>
-                                  </div>
+                      <!-- Dynamic ATM Timeline -->
+                      ${generateATMTimelineHTML(comprehensiveData, session.full_name)}
 
-                                  <div class="flex items-start">
-                                      <div class="bg-green-100 rounded-full p-2 mr-4 relative z-10">
-                                          <i class="fas fa-graduation-cap text-green-600"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <div class="bg-white rounded-lg shadow-sm border p-4">
-                                              <div class="flex justify-between items-start mb-2">
-                                                  <h4 class="font-semibold text-green-700">Young Adult (18-30 years)</h4>
-                                                  <span class="text-xs text-gray-500">Baseline</span>
-                                              </div>
-                                              <p class="text-sm text-gray-600">Established healthy lifestyle patterns including regular exercise and balanced nutrition. Optimal energy levels and physical performance.</p>
-                                          </div>
-                                      </div>
-                                  </div>
-
-                                  <div class="flex items-start">
-                                      <div class="bg-yellow-100 rounded-full p-2 mr-4 relative z-10">
-                                          <i class="fas fa-briefcase text-yellow-600"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <div class="bg-white rounded-lg shadow-sm border p-4">
-                                              <div class="flex justify-between items-start mb-2">
-                                                  <h4 class="font-semibold text-yellow-700">Career Development (30-40 years)</h4>
-                                                  <span class="text-xs text-gray-500">Mediator</span>
-                                              </div>
-                                              <p class="text-sm text-gray-600">Increased work responsibilities and stress levels. Some decline in exercise consistency due to time constraints. Beginning of optimization awareness.</p>
-                                          </div>
-                                      </div>
-                                  </div>
-
-                                  <div class="flex items-start">
-                                      <div class="bg-purple-100 rounded-full p-2 mr-4 relative z-10">
-                                          <i class="fas fa-chart-line text-purple-600"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <div class="bg-white rounded-lg shadow-sm border p-4">
-                                              <div class="flex justify-between items-start mb-2">
-                                                  <h4 class="font-semibold text-purple-700">Current Health Focus (40+ years)</h4>
-                                                  <span class="text-xs text-gray-500">Present</span>
-                                              </div>
-                                              <p class="text-sm text-gray-600">Proactive approach to health optimization. Current assessment shows excellent metabolic and cardiovascular health with opportunities for stress management enhancement.</p>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      <!-- Root Cause Connections -->
-                      <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6">
-                          <h3 class="text-lg font-semibold mb-4">Root Cause Connections & Interventions</h3>
-                          <div class="grid md:grid-cols-2 gap-6">
-                              <div>
-                                  <h4 class="font-semibold text-purple-700 mb-3">🔍 Key Patterns Identified</h4>
-                                  <ul class="space-y-2 text-sm text-gray-700">
-                                      <li>• Strong genetic foundation with good health practices</li>
-                                      <li>• Work-related stress as primary mediator requiring attention</li>
-                                      <li>• Excellent metabolic health suggests effective lifestyle choices</li>
-                                      <li>• Age-related changes beginning to emerge (focus area)</li>
-                                  </ul>
-                              </div>
-                              <div>
-                                  <h4 class="font-semibold text-blue-700 mb-3">🎯 Targeted Interventions</h4>
-                                  <ul class="space-y-2 text-sm text-gray-700">
-                                      <li>• Address stress mediators through mindfulness practices</li>
-                                      <li>• Optimize nutrition to support aging gracefully</li>
-                                      <li>• Enhance detoxification support for environmental exposures</li>
-                                      <li>• Implement preventive strategies for age-related changes</li>
-                                  </ul>
-                              </div>
-                          </div>
-                      </div>
+                      <!-- Dynamic Timeline Insights -->
+                      ${generateATMTimelineInsights(comprehensiveData)}
                   </div>
               </div>
 
@@ -4233,6 +4780,305 @@ app.post('/api/assessment/complete', async (c) => {
     }, 500)
   }
 })
+
+// TEMPORARY: Visual demonstration of Phase 3 Dynamic Timeline
+app.get('/test/timeline-demo', async (c) => {
+  try {
+    // Sample comprehensive data with ATM Framework
+    const testComprehensiveData = {
+      dateOfBirth: '1960-03-15',
+      fullName: 'Sarah Johnson',
+      
+      // ATM Framework data for timeline generation
+      antecedentsDescription: [
+        'Parents divorced when I was 25 - created long-lasting emotional stress patterns and trust issues',
+        'Started college in new city - major life transition with academic pressure and social adjustment challenges'
+      ],
+      antecedentsDate: ['03/85', '12/90'], 
+      antecedentsSeverity: ['severe', 'moderate'],
+      
+      triggersDescription: [
+        'First serious romantic relationship ended badly after 2 years - deepened trust and abandonment issues',
+        'Job promotion to management role significantly increased work pressure and responsibility beyond comfort zone',
+        'Long-term relationship ended after 8 years - major life change and emotional trauma requiring therapy'
+      ],
+      triggersDate: ['06/92', '01/02', '06/15'],
+      triggersImpact: ['moderate', 'high', 'high'],
+      
+      mediatorsDescription: [
+        'Started regular meditation and yoga practice for stress management - has been life-changing',
+        'Began working with nutritionist to improve diet and energy levels - feeling much better'
+      ],
+      mediatorsDate: ['03/18', '09/20'],
+      mediatorsFrequency: ['often', 'always'],
+      
+      // Additional lifestyle data
+      exerciseFrequency: 'regular',
+      sleepQuality: 'good'
+    };
+
+    // Generate the dynamic timeline HTML
+    const timelineHTML = generateATMTimelineHTML(testComprehensiveData, 'Sarah Johnson');
+    const insightsHTML = generateATMTimelineInsights(testComprehensiveData);
+    
+    // Return a complete HTML page showing the timeline
+    return c.html(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Phase 3 Dynamic Timeline Demo - Longenix Health</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <style>
+          .report-section { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); margin-bottom: 2rem; overflow: hidden; }
+          .report-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; display: flex; align-items: center; gap: 1rem; }
+          .report-header i { font-size: 1.5rem; }
+          .report-header h2 { font-size: 1.5rem; font-weight: bold; margin: 0; }
+          .report-content { padding: 2rem; }
+        </style>
+      </head>
+      <body class="bg-gray-50">
+        <div class="max-w-7xl mx-auto px-6 py-8">
+          <div class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🎉 Phase 3 Complete!</h1>
+            <h2 class="text-2xl font-semibold text-blue-600 mb-4">Dynamic ATM Timeline Demonstration</h2>
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+              <p class="font-semibold">✅ Successfully implemented dynamic timeline generation!</p>
+              <p class="text-sm">The static timeline in Section 5 has been replaced with personalized ATM Framework data processing.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-4 mb-6 text-sm">
+              <div class="bg-blue-50 p-3 rounded">
+                <div class="font-semibold text-blue-700">✅ Phase 1</div>
+                <div class="text-blue-600">Date parsing with century inference</div>
+              </div>
+              <div class="bg-green-50 p-3 rounded">
+                <div class="font-semibold text-green-700">✅ Phase 2</div>
+                <div class="text-green-600">Timeline data processing & analysis</div>
+              </div>
+              <div class="bg-purple-50 p-3 rounded">
+                <div class="font-semibold text-purple-700">✅ Phase 3</div>
+                <div class="text-purple-600">HTML timeline generation & insights</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Demo Timeline Section -->
+          <div class="report-section">
+            <div class="report-header">
+              <i class="fas fa-search"></i>
+              <h2>5. Functional Medicine Root-Cause Analysis (Dynamic Version)</h2>
+            </div>
+            <div class="report-content">
+              <div class="mb-6">
+                <p class="text-gray-700 mb-4">
+                  The ATM Framework identifies Antecedents (predisposing factors), Triggers (precipitating events), 
+                  and Mediators/Perpetuators (ongoing factors) that contribute to current health patterns and imbalances.
+                </p>
+                <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                  <p class="text-blue-800 font-semibold">Demo Data: Sarah Johnson (Born 1960-03-15)</p>
+                  <p class="text-blue-700 text-sm">This timeline shows how the system processes real ATM Framework data into personalized chronological health narratives.</p>
+                </div>
+              </div>
+              
+              ${timelineHTML}
+              
+              ${insightsHTML}
+              
+              <div class="mt-6 p-4 bg-gray-100 rounded-lg">
+                <h4 class="font-semibold text-gray-800 mb-2">🔧 Implementation Notes</h4>
+                <ul class="text-sm text-gray-700 space-y-1">
+                  <li>• <strong>Conservative approach:</strong> Successfully tested Phases 1 & 2 before implementing Phase 3</li>
+                  <li>• <strong>Date parsing:</strong> Intelligent century inference (03/85 → 1985, 03/18 → 2018)</li>
+                  <li>• <strong>Event processing:</strong> 7 events spanning 35+ years with impact scoring</li>
+                  <li>• <strong>Dynamic HTML:</strong> Replaces static timeline with user-specific health narrative</li>
+                  <li>• <strong>Integration ready:</strong> Functions are globally scoped and ready for production use</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Return Navigation -->
+          <div class="text-center mt-8">
+            <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-300">
+              <i class="fas fa-arrow-left mr-2"></i>Return to Main System
+            </a>
+          </div>
+        </div>
+      </body>
+      </html>
+    `);
+    
+  } catch (error) {
+    return c.html(`
+      <html>
+        <body>
+          <h1>Error Testing Dynamic Timeline</h1>
+          <p>Error: ${error.message}</p>
+          <pre>${error.stack}</pre>
+        </body>
+      </html>
+    `);
+  }
+});
+
+// TEMPORARY: Test endpoint for Phase 3 Dynamic Timeline (HTML generation test)
+app.get('/api/test/dynamic-timeline', async (c) => {
+  try {
+    // Sample comprehensive data with ATM Framework
+    const testComprehensiveData = {
+      dateOfBirth: '1960-03-15',
+      fullName: 'Sarah Johnson',
+      
+      // ATM Framework data for timeline generation
+      antecedentsDescription: [
+        'Parents divorced when I was 25 - created long-lasting emotional stress patterns',
+        'Started college in new city - major life transition with academic pressure'
+      ],
+      antecedentsDate: ['03/85', '12/90'], 
+      antecedentsSeverity: ['severe', 'moderate'],
+      
+      triggersDescription: [
+        'First serious romantic relationship ended badly after 2 years',
+        'Job promotion to management role significantly increased work pressure and responsibility',
+        'Long-term relationship ended after 8 years - major life change and emotional trauma'
+      ],
+      triggersDate: ['06/92', '01/02', '06/15'],
+      triggersImpact: ['moderate', 'high', 'high'],
+      
+      mediatorsDescription: [
+        'Started regular meditation and yoga practice for stress management',
+        'Began working with nutritionist to improve diet and energy levels'
+      ],
+      mediatorsDate: ['03/18', '09/20'],
+      mediatorsFrequency: ['often', 'always'],
+      
+      // Additional lifestyle data
+      exerciseFrequency: 'regular',
+      sleepQuality: 'good'
+    };
+
+    // Test the HTML generation functions
+    const timelineHTML = generateATMTimelineHTML(testComprehensiveData, 'Sarah Johnson');
+    const insightsHTML = generateATMTimelineInsights(testComprehensiveData);
+    
+    // Return formatted test results
+    return c.json({
+      success: true,
+      message: 'Phase 3 Dynamic Timeline HTML Generation Test',
+      testData: {
+        inputEvents: testComprehensiveData,
+        generatedTimeline: {
+          htmlLength: timelineHTML.length,
+          hasTimelineEvents: timelineHTML.includes('Timeline Events'),
+          hasPersonalization: timelineHTML.includes('Sarah Johnson'),
+          preview: timelineHTML.substring(0, 500) + '...'
+        },
+        generatedInsights: {
+          htmlLength: insightsHTML.length,
+          hasPatterns: insightsHTML.includes('Key Patterns'),
+          hasInterventions: insightsHTML.includes('Targeted Interventions'),
+          preview: insightsHTML.substring(0, 300) + '...'
+        }
+      }
+    });
+    
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    }, 500);
+  }
+});
+
+// TEMPORARY: Test endpoint for ATM Timeline functions (Phase 1 & 2 validation)
+app.get('/api/test/atm-timeline', async (c) => {
+  try {
+    // Sample test data based on Sarah Johnson example
+    const testData = {
+      dateOfBirth: '1960-03-15',
+      antecedentsDescription: [
+        'Parents divorced when I was young',
+        'Started college - new environment stress'
+      ],
+      antecedentsDate: ['03/85', '12/90'], 
+      antecedentsSeverity: ['severe', 'moderate'],
+      triggersDescription: [
+        'First romantic relationship ended badly',
+        'Job promotion increased work pressure significantly',
+        'Long-term relationship ended - major life change'
+      ],
+      triggersDate: ['06/92', '01/02', '06/15'],
+      triggersImpact: ['moderate', 'high', 'high'],
+      mediatorsDescription: [
+        'Started meditation and yoga practice',
+        'Began working with nutritionist'
+      ],
+      mediatorsDate: ['03/18', '09/20'],
+      mediatorsFrequency: ['often', 'always']
+    };
+
+    // Test individual date parsing
+    const birthYear = 1960;
+    const dateTests = [
+      { input: '03/85', expected: '1985-03-01' },
+      { input: '12/90', expected: '1990-12-01' },
+      { input: '06/92', expected: '1992-06-01' },
+      { input: '01/02', expected: '2002-01-01' },
+      { input: '03/18', expected: '2018-03-01' },
+      { input: '09/20', expected: '2020-09-01' }
+    ];
+
+    const dateParsingResults = dateTests.map(test => {
+      const parsed = parseATMDate(test.input, birthYear);
+      return {
+        input: test.input,
+        expected: test.expected,
+        parsed: parsed ? parsed.toISOString().split('T')[0] : null,
+        correct: parsed && parsed.toISOString().split('T')[0] === test.expected
+      };
+    });
+
+    // Test full timeline processing
+    const timelineAnalysis = generateTimelineAnalysis(testData);
+
+    const results = {
+      success: true,
+      testResults: {
+        dateParsingTests: dateParsingResults,
+        allDatesParsedCorrectly: dateParsingResults.every(test => test.correct),
+        timelineAnalysis: {
+          totalEvents: timelineAnalysis.totalEvents,
+          eventsByType: timelineAnalysis.eventsByType,
+          decades: timelineAnalysis.decades,
+          averageImpact: Math.round(timelineAnalysis.averageImpact * 100) / 100
+        },
+        sampleEvents: timelineAnalysis.events.map(event => ({
+          type: event.type,
+          age: event.age,
+          year: event.date.getFullYear(),
+          dateString: event.dateString,
+          description: event.description.substring(0, 50) + '...',
+          impact: event.impact,
+          beneficial: event.beneficial
+        }))
+      }
+    };
+
+    return c.json(results);
+
+  } catch (error) {
+    console.error('ATM Timeline test error:', error);
+    return c.json({ 
+      success: false, 
+      error: error.message,
+      stack: error.stack 
+    }, 500);
+  }
+});
 
 // API endpoint to process comprehensive assessment
 app.post('/api/assessment/comprehensive', async (c) => {
