@@ -121,6 +121,54 @@ function parseATMDate(dateString: string, personBirthYear?: number): Date | null
 }
 
 /**
+ * Normalizes ATM Framework data from form submission to proper format
+ * Fixes field names (removes [] notation) and ensures single entries become arrays
+ * @param {any} rawData - Raw form data with [] field names and mixed data types
+ * @returns {any} - Normalized data with clean field names and consistent array format
+ */
+function normalizeATMData(rawData: any): any {
+  if (!rawData || typeof rawData !== 'object') {
+    return rawData;
+  }
+
+  const normalized = { ...rawData };
+  
+  // Define ATM field mappings (from form field names to clean names)
+  const atmFieldMappings = {
+    'antecedentsDescription[]': 'antecedentsDescription',
+    'antecedentsDate[]': 'antecedentsDate', 
+    'antecedentsSeverity[]': 'antecedentsSeverity',
+    'triggersDescription[]': 'triggersDescription',
+    'triggersDate[]': 'triggersDate',
+    'triggersImpact[]': 'triggersImpact',
+    'mediatorsDescription[]': 'mediatorsDescription',
+    'mediatorsDate[]': 'mediatorsDate',
+    'mediatorsFrequency[]': 'mediatorsFrequency'
+  };
+
+  // Process ATM fields
+  Object.entries(atmFieldMappings).forEach(([formFieldName, cleanFieldName]) => {
+    if (normalized.hasOwnProperty(formFieldName)) {
+      const value = normalized[formFieldName];
+      
+      // Convert single string values to arrays
+      if (typeof value === 'string') {
+        normalized[cleanFieldName] = [value];
+      } 
+      // Keep arrays as-is
+      else if (Array.isArray(value)) {
+        normalized[cleanFieldName] = value;
+      }
+      
+      // Remove the original field with [] notation
+      delete normalized[formFieldName];
+    }
+  });
+
+  return normalized;
+}
+
+/**
  * Calculates age at the time of an event
  * @param {Date} eventDate - Date of the event
  * @param {Date} birthDate - Person's birth date
@@ -5239,12 +5287,15 @@ app.post('/api/assessment/comprehensive', async (c) => {
     const strokeRisk = DiseaseRiskCalculator.calculateStrokeRisk(patientData, {})
 
     // Store comprehensive assessment data as JSON
+    // Normalize ATM Framework data before storage
+    const normalizedAssessmentData = normalizeATMData(assessmentData)
+    
     await env.DB.prepare(`
       INSERT INTO assessment_data (session_id, data_type, json_data, created_at)
       VALUES (?, 'comprehensive_lifestyle', ?, datetime('now'))
     `).bind(
       sessionId,
-      JSON.stringify(assessmentData)
+      JSON.stringify(normalizedAssessmentData)
     ).run()
 
     // Save biological age results
