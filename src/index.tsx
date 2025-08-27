@@ -4781,6 +4781,78 @@ app.post('/api/assessment/complete', async (c) => {
   }
 })
 
+// TEMPORARY: Test endpoint to verify form field compatibility
+app.get('/test/form-compatibility', async (c) => {
+  try {
+    // Simulate exact data structure from comprehensive assessment form
+    const formSubmissionData = {
+      dateOfBirth: '1960-03-15',
+      fullName: 'Form Test User',
+      
+      // ATM data exactly as form would submit it
+      antecedentsDescription: [
+        'Parents divorced when I was young - created emotional instability',
+        'Started college with financial stress and family pressure'
+      ],
+      antecedentsDate: ['03/85', '12/90'], 
+      antecedentsSeverity: ['severe', 'moderate'],
+      
+      triggersDescription: [
+        'Lost job during economic downturn - financial crisis',
+        'Relationship breakup after 5 years together - emotional trauma'
+      ],
+      triggersDate: ['06/08', '03/15'],
+      triggersImpact: ['high', 'moderate'],
+      
+      mediatorsDescription: [
+        'Started therapy and counseling sessions',
+        'Chronic work stress continues - long hours and pressure'
+      ],
+      mediatorsDate: ['09/18', '01/10'],
+      mediatorsFrequency: ['often', 'always'], // Updated values
+      
+      // Other form fields
+      earlyStress: 'yes-moderate',
+      geneticPredispositions: 'Family history of anxiety and depression'
+    };
+
+    // Test the timeline processing
+    const events = processATMTimelineData(formSubmissionData);
+    const timelineHTML = generateATMTimelineHTML(formSubmissionData, 'Form Test User');
+    const insightsHTML = generateATMTimelineInsights(formSubmissionData);
+    
+    return c.json({
+      success: true,
+      message: 'Form compatibility test for ATM Timeline',
+      results: {
+        eventsProcessed: events.length,
+        eventTypes: {
+          antecedents: events.filter(e => e.type === 'antecedent').length,
+          triggers: events.filter(e => e.type === 'trigger').length,
+          mediators: events.filter(e => e.type === 'mediator').length
+        },
+        timelineGenerated: timelineHTML.length > 100,
+        insightsGenerated: insightsHTML.length > 100,
+        sampleEvents: events.slice(0, 3).map(e => ({
+          type: e.type,
+          date: e.dateString,
+          age: e.age,
+          description: e.description.substring(0, 60) + '...',
+          impact: e.impact,
+          beneficial: e.beneficial
+        }))
+      }
+    });
+    
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    }, 500);
+  }
+});
+
 // TEMPORARY: Visual demonstration of Phase 3 Dynamic Timeline
 app.get('/test/timeline-demo', async (c) => {
   try {

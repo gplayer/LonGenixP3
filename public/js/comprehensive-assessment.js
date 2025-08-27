@@ -2551,10 +2551,10 @@ class ComprehensiveAssessment {
                                         <label class="block text-xs text-gray-500 mb-1">Frequency</label>
                                         <select name="mediatorsFrequency[]" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
                                             <option value="">Select...</option>
-                                            <option value="daily">Daily</option>
-                                            <option value="weekly">Weekly</option>
-                                            <option value="monthly">Monthly</option>
-                                            <option value="occasional">Occasional</option>
+                                            <option value="always">Always (Daily)</option>
+                                            <option value="often">Often (Several times/week)</option>
+                                            <option value="sometimes">Sometimes (Occasionally)</option>
+                                            <option value="rarely">Rarely (Infrequent)</option>
                                         </select>
                                     </div>
                                 </div>
