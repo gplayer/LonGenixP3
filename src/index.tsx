@@ -143,7 +143,13 @@ function normalizeATMData(rawData: any): any {
     'triggersImpact[]': 'triggersImpact',
     'mediatorsDescription[]': 'mediatorsDescription',
     'mediatorsDate[]': 'mediatorsDate',
-    'mediatorsFrequency[]': 'mediatorsFrequency'
+    'mediatorsFrequency[]': 'mediatorsFrequency',
+    // Family Timeline Event mappings
+    'familyRelation[]': 'familyRelation',
+    'familyEventAge[]': 'familyEventAge',
+    'familyEventDescription[]': 'familyEventDescription',
+    'familyEventImpact[]': 'familyEventImpact',
+    'familyMemberAge[]': 'familyMemberAge'
   };
 
   // Process ATM fields
