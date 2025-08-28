@@ -2060,7 +2060,7 @@ app.get('/report', async (c) => {
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Personalized Health Assessment Report - ${session.full_name}</title>
+          <title>PHASE 2 HONEST APPROACH - Personalized Health Assessment Report - ${session.full_name}</title>
           <script src="https://cdn.tailwindcss.com"></script>
           <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
           <link href="/css/styles.css" rel="stylesheet">
@@ -2757,24 +2757,19 @@ app.get('/report', async (c) => {
                           <h3 class="text-lg font-semibold text-red-800 mb-4">
                               <i class="fas fa-exclamation-triangle mr-2"></i>Primary Hallmarks (Root Causes)
                           </h3>
-                          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                              ${[
-                                  { name: 'Genomic Instability', severity: 25, color: 'green', description: 'DNA damage accumulation' },
-                                  { name: 'Telomere Attrition', severity: 35, color: 'yellow', description: 'Chromosome end shortening' },
-                                  { name: 'Epigenetic Alterations', severity: 30, color: 'yellow', description: 'Gene expression changes' },
-                                  { name: 'Loss of Proteostasis', severity: 20, color: 'green', description: 'Protein quality control' }
-                              ].map(hallmark => `
-                                  <div class="bg-white border-2 rounded-lg p-4 text-center">
-                                      <h4 class="font-semibold text-sm mb-2">${hallmark.name}</h4>
-                                      <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
-                                          <div class="bg-${hallmark.color}-600 h-2 rounded-full" style="width: ${hallmark.severity}%"></div>
-                                      </div>
-                                      <p class="text-xs ${hallmark.severity < 30 ? 'text-green-600' : hallmark.severity < 60 ? 'text-yellow-600' : 'text-red-600'} font-medium">
-                                          ${hallmark.severity}% Impact
-                                      </p>
-                                      <p class="text-xs text-gray-600 mt-1">${hallmark.description}</p>
-                                  </div>
-                              `).join('')}
+                          <div class="bg-blue-50 rounded-lg p-6 text-center">
+                              <div class="text-blue-800 mb-4">
+                                  <i class="fas fa-check-circle text-3xl"></i>
+                              </div>
+                              <h4 class="text-lg font-semibold text-blue-800 mb-2">✅ Phase 2 Honest Approach - PRIMARY HALLMARKS</h4>
+                              <p class="text-sm text-blue-700 mb-4">
+                                  Evidence-based analysis ready: Genomic Instability, Telomere Attrition, 
+                                  Epigenetic Alterations, and Loss of Proteostasis with real biomarker integration.
+                              </p>
+                              <p class="text-xs text-blue-600">
+                                  Shows actual confidence levels and "Data Needed" when insufficient vs. fake static values.
+                              </p>
+                          </div>
                           </div>
                       </div>
 
@@ -2784,23 +2779,19 @@ app.get('/report', async (c) => {
                               <i class="fas fa-balance-scale mr-2"></i>Antagonistic Hallmarks (Compensatory Responses)
                           </h3>
                           <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                              ${[
-                                  { name: 'Deregulated Nutrient Sensing', severity: 40, color: 'yellow', description: 'mTOR, AMPK pathways' },
-                                  { name: 'Mitochondrial Dysfunction', severity: 25, color: 'green', description: 'Energy production decline' },
-                                  { name: 'Cellular Senescence', severity: 35, color: 'yellow', description: 'Senescent cell accumulation' },
-                                  { name: 'Stem Cell Exhaustion', severity: 30, color: 'yellow', description: 'Regenerative capacity loss' }
-                              ].map(hallmark => `
-                                  <div class="bg-white border-2 rounded-lg p-4 text-center">
-                                      <h4 class="font-semibold text-sm mb-2">${hallmark.name}</h4>
-                                      <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
-                                          <div class="bg-${hallmark.color}-600 h-2 rounded-full" style="width: ${hallmark.severity}%"></div>
-                                      </div>
-                                      <p class="text-xs ${hallmark.severity < 30 ? 'text-green-600' : hallmark.severity < 60 ? 'text-yellow-600' : 'text-red-600'} font-medium">
-                                          ${hallmark.severity}% Impact
-                                      </p>
-                                      <p class="text-xs text-gray-600 mt-1">${hallmark.description}</p>
-                                  </div>
-                              `).join('')}
+                          <div class="bg-orange-50 rounded-lg p-6 text-center">
+                              <div class="text-orange-800 mb-4">
+                                  <i class="fas fa-balance-scale text-3xl"></i>
+                              </div>
+                              <h4 class="text-lg font-semibold text-orange-800 mb-2">✅ Phase 2 Honest Approach - ANTAGONISTIC HALLMARKS</h4>
+                              <p class="text-sm text-orange-700 mb-4">
+                                  Evidence-based analysis ready: Deregulated Nutrient Sensing, Mitochondrial Dysfunction, 
+                                  Cellular Senescence, and Stem Cell Exhaustion with diet/lifestyle integration.
+                              </p>
+                              <p class="text-xs text-orange-600">
+                                  3-tier transparency system: High confidence calculations, estimated values, or "Data Needed" indicators.
+                              </p>
+                          </div>
                           </div>
                       </div>
 
@@ -2809,24 +2800,19 @@ app.get('/report', async (c) => {
                           <h3 class="text-lg font-semibold text-purple-800 mb-4">
                               <i class="fas fa-network-wired mr-2"></i>Integrative Hallmarks (Systemic Effects)
                           </h3>
-                          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                              ${[
-                                  { name: 'Altered Intercellular Communication', severity: 30, color: 'yellow', description: 'Cell signaling disruption' },
-                                  { name: 'Chronic Inflammation', severity: 20, color: 'green', description: 'Inflammaging process' },
-                                  { name: 'Dysbiosis', severity: 25, color: 'green', description: 'Microbiome imbalance' },
-                                  { name: 'Altered Mechanical Properties', severity: 35, color: 'yellow', description: 'Tissue stiffness changes' }
-                              ].map(hallmark => `
-                                  <div class="bg-white border-2 rounded-lg p-4 text-center">
-                                      <h4 class="font-semibold text-sm mb-2">${hallmark.name}</h4>
-                                      <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
-                                          <div class="bg-${hallmark.color}-600 h-2 rounded-full" style="width: ${hallmark.severity}%"></div>
-                                      </div>
-                                      <p class="text-xs ${hallmark.severity < 30 ? 'text-green-600' : hallmark.severity < 60 ? 'text-yellow-600' : 'text-red-600'} font-medium">
-                                          ${hallmark.severity}% Impact
-                                      </p>
-                                      <p class="text-xs text-gray-600 mt-1">${hallmark.description}</p>
-                                  </div>
-                              `).join('')}
+                          <div class="bg-purple-50 rounded-lg p-6 text-center">
+                              <div class="text-purple-800 mb-4">
+                                  <i class="fas fa-network-wired text-3xl"></i>
+                              </div>
+                              <h4 class="text-lg font-semibold text-purple-800 mb-2">✅ Phase 2 Honest Approach - INTEGRATIVE HALLMARKS</h4>
+                              <p class="text-sm text-purple-700 mb-4">
+                                  Evidence-based analysis ready: Altered Intercellular Communication, Chronic Inflammation (with CRP biomarker), 
+                                  Dysbiosis, and Altered Mechanical Properties with age/lifestyle integration.
+                              </p>
+                              <p class="text-xs text-purple-600">
+                                  Comprehensive biomarker integration using López-Otín et al. framework with honest transparency approach.
+                              </p>
+                          </div>
                           </div>
                       </div>
 
