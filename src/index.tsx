@@ -6685,6 +6685,259 @@ app.get('/', (c) => {
   `)
 })
 
+// FIXED VERSION: API endpoint to process comprehensive assessment with proper email extraction
+app.post('/api/assessment/comprehensive-v2', async (c) => {
+  const { env } = c
+  const assessmentData = await c.req.json()
+  
+  try {
+    // CRITICAL FIX: Handle flat data structure properly
+    // Frontend sends: {"email": "user@example.com", "fullName": "Name", ...}
+    // Backend was expecting: {"demographics": {"email": "user@example.com"}}
+    
+    // Extract email directly from flat structure first
+    let email = ''
+    if (assessmentData.email && assessmentData.email.trim() !== '') {
+      email = assessmentData.email.trim()
+    } else if (assessmentData.demographics && assessmentData.demographics.email) {
+      email = assessmentData.demographics.email.trim()
+    } else {
+      // Generate unique email to avoid duplicate constraint violations
+      email = `assessment-${Date.now()}-${Math.random().toString(36).substring(2)}@longenix.internal`
+    }
+    
+    // Use flat structure for demographic data
+    const demo = assessmentData.demographics || assessmentData
+    const clinical = assessmentData.clinical || assessmentData
+    const biomarkers = assessmentData.biomarkers || assessmentData
+    
+    // Validate required demographics data
+    if (!demo.fullName || !demo.dateOfBirth || !demo.gender) {
+      return c.json({
+        success: false,
+        error: 'Missing required demographic data (fullName, dateOfBirth, gender)',
+        received: Object.keys(assessmentData)
+      }, 400)
+    }
+    
+    // Calculate age from date of birth (consistent with other endpoints)
+    const birthDate = new Date(demo.dateOfBirth)
+    const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+    
+    const patientResult = await env.DB.prepare(`
+      INSERT INTO patients (full_name, date_of_birth, gender, ethnicity, email, phone, country)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      demo.fullName,
+      demo.dateOfBirth,
+      demo.gender,
+      demo.ethnicity || 'not_specified',
+      email, // Use the properly extracted/generated email
+      demo.phone || '',
+      'US' // Default country
+    ).run()
+
+    const patientId = patientResult.meta.last_row_id
+
+    // Create assessment session
+    const sessionResult = await env.DB.prepare(`
+      INSERT INTO assessment_sessions (patient_id, session_type, status)
+      VALUES (?, 'comprehensive', 'completed')
+    `).bind(patientId).run()
+
+    const sessionId = sessionResult.meta.last_row_id
+
+    // Prepare patient data for medical algorithms
+    const patientData = {
+      age: age,
+      gender: demo.gender as 'male' | 'female' | 'other',
+      height_cm: clinical.height || 170,
+      weight_kg: clinical.weight || 70,
+      systolic_bp: clinical.systolicBP || 120,
+      diastolic_bp: clinical.diastolicBP || 80,
+      biomarkers: {
+        glucose: biomarkers.glucose || null,
+        hba1c: biomarkers.hba1c || null,
+        total_cholesterol: biomarkers.totalCholesterol || null,
+        hdl_cholesterol: biomarkers.hdlCholesterol || null,
+        ldl_cholesterol: biomarkers.ldlCholesterol || null,
+        triglycerides: biomarkers.triglycerides || null,
+        creatinine: biomarkers.creatinine || null,
+        albumin: biomarkers.albumin || null,
+        c_reactive_protein: biomarkers.crp || null,
+        // Enhanced biomarker mapping for better algorithm accuracy
+        white_blood_cells: biomarkers.wbc || 6.5,
+        alkaline_phosphatase: biomarkers.alp || null,
+        lymphocyte_percent: biomarkers.lymphocytes || null,
+        mean_cell_volume: biomarkers.mcv || (demo.gender === 'female' ? 87 : 90), // Estimated if missing
+        red_cell_distribution_width: biomarkers.rdw || 13.5, // Estimated if missing
+        hemoglobin: biomarkers.hemoglobin || (demo.gender === 'female' ? 13.8 : 15.2),
+        egfr: biomarkers.egfr || (age < 60 ? 95 : Math.max(60, 120 - age))
+      }
+    }
+
+    // Calculate all medical results
+    const biologicalAge = BiologicalAgeCalculator.calculateBiologicalAge(patientData)
+    const ascvdRisk = DiseaseRiskCalculator.calculateASCVDRisk(patientData)
+    const diabetesRisk = DiseaseRiskCalculator.calculateDiabetesRisk(patientData, {})
+
+    // Store biological age results
+    if (biologicalAge) {
+      await env.DB.prepare(`
+        INSERT INTO biological_age (session_id, chronological_age, biological_age, age_acceleration, overall_health_score)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        age,
+        biologicalAge.biologicalAge,
+        biologicalAge.ageAcceleration,
+        biologicalAge.overallHealthScore
+      ).run()
+    }
+
+    // Store risk calculations
+    if (ascvdRisk) {
+      await env.DB.prepare(`
+        INSERT INTO risk_calculations (session_id, risk_type, risk_percentage, risk_category, details)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        'ASCVD_10_YEAR',
+        ascvdRisk.tenYearRisk,
+        ascvdRisk.riskCategory,
+        JSON.stringify(ascvdRisk)
+      ).run()
+    }
+
+    if (diabetesRisk) {
+      await env.DB.prepare(`
+        INSERT INTO risk_calculations (session_id, risk_type, risk_percentage, risk_category, details)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        'DIABETES_TYPE2',
+        diabetesRisk.riskPercentage || 0,
+        diabetesRisk.riskLevel || 'unknown',
+        JSON.stringify(diabetesRisk)
+      ).run()
+    }
+
+    // Store comprehensive assessment data (using normalized ATM data)
+    const normalizedData = normalizeATMData(assessmentData)
+    await env.DB.prepare(`
+      INSERT INTO assessment_data (session_id, data_type, json_data)
+      VALUES (?, ?, ?)
+    `).bind(
+      sessionId,
+      'comprehensive_lifestyle',
+      JSON.stringify(normalizedData)
+    ).run()
+
+    // Calculate aging assessment
+    const agingCalculator = new HallmarksOfAgingCalculator()
+    const agingAssessment = agingCalculator.calculateAgingAssessment(normalizedData)
+
+    // Store aging assessment
+    if (agingAssessment) {
+      const agingResult = await env.DB.prepare(`
+        INSERT INTO aging_assessments (session_id, overall_aging_score, biological_age_estimate, aging_trajectory, recommendations)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        agingAssessment.overallAgingScore,
+        agingAssessment.biologicalAgeEstimate,
+        agingAssessment.agingTrajectory,
+        JSON.stringify(agingAssessment.recommendations || [])
+      ).run()
+
+      const agingAssessmentId = agingResult.meta.last_row_id
+
+      // Store individual hallmarks
+      if (agingAssessment.hallmarks && agingAssessment.hallmarks.length > 0) {
+        for (const hallmark of agingAssessment.hallmarks) {
+          await env.DB.prepare(`
+            INSERT INTO aging_hallmarks (aging_assessment_id, hallmark_name, score, status, contributing_factors, recommendations)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).bind(
+            agingAssessmentId,
+            hallmark.name,
+            hallmark.score,
+            hallmark.status,
+            JSON.stringify(hallmark.contributingFactors || []),
+            JSON.stringify(hallmark.recommendations || [])
+          ).run()
+        }
+      }
+    }
+
+    // Calculate health optimization assessment
+    const healthCalculator = new HealthOptimizationCalculator()
+    const healthOptimization = healthCalculator.calculateHealthOptimization(normalizedData, patientData)
+
+    // Store health optimization assessment
+    if (healthOptimization) {
+      const healthResult = await env.DB.prepare(`
+        INSERT INTO health_optimization_assessments (session_id, overall_health_score, optimization_potential, priority_areas, recommendations)
+        VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        sessionId,
+        healthOptimization.overallHealthScore,
+        healthOptimization.optimizationPotential,
+        JSON.stringify(healthOptimization.priorityAreas || []),
+        JSON.stringify(healthOptimization.recommendations || [])
+      ).run()
+
+      const healthOptimizationId = healthResult.meta.last_row_id
+
+      // Store individual health domains
+      if (healthOptimization.domains && healthOptimization.domains.length > 0) {
+        for (const domain of healthOptimization.domains) {
+          await env.DB.prepare(`
+            INSERT INTO health_domains (health_optimization_assessment_id, domain_name, score, status, current_practices, recommendations)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).bind(
+            healthOptimizationId,
+            domain.name,
+            domain.score,
+            domain.status,
+            JSON.stringify(domain.currentPractices || []),
+            JSON.stringify(domain.recommendations || [])
+          ).run()
+        }
+      }
+    }
+
+    // Return success response
+    return c.json({
+      success: true,
+      sessionId: sessionId,
+      patientId: patientId,
+      email: email, // Return the email that was actually used
+      biologicalAge: biologicalAge,
+      ascvdRisk: ascvdRisk,
+      diabetesRisk: diabetesRisk,
+      agingAssessment: agingAssessment,
+      healthOptimization: healthOptimization,
+      message: 'Assessment completed successfully (V2 - Fixed Email Extraction)'
+    })
+
+  } catch (error) {
+    console.error('Comprehensive assessment V2 error:', error)
+    
+    // Enhanced error reporting with email extraction diagnostics
+    return c.json({
+      success: false,
+      error: 'Failed to process comprehensive assessment',
+      details: error.message,
+      emailDiagnostics: {
+        providedEmail: assessmentData.email || 'Not provided',
+        demographicsEmail: assessmentData.demographics?.email || 'Not provided',
+        emailPath: assessmentData.email ? 'Direct' : assessmentData.demographics?.email ? 'Nested' : 'Neither'
+      }
+    }, 500)
+  }
+})
+
 // Debug API endpoint to test form submission format (temporary for debugging)
 app.post('/api/debug/test-submission', async (c) => {
   const data = await c.req.json()

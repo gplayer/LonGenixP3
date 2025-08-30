@@ -3123,10 +3123,10 @@ class ComprehensiveAssessment {
         console.log('🌐 API base URL:', this.apiBase);
 
         try {
-            console.log('📤 Sending POST request to:', `${this.apiBase}/api/assessment/comprehensive`);
+            console.log('📤 Sending POST request to:', `${this.apiBase}/api/assessment/comprehensive-v2`);
             console.log('📦 Request body keys:', Object.keys(this.formData));
             
-            const response = await fetch(`${this.apiBase}/api/assessment/comprehensive`, {
+            const response = await fetch(`${this.apiBase}/api/assessment/comprehensive-v2`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
