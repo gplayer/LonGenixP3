@@ -8364,4 +8364,273 @@ app.get('/debug-localStorage', (c) => {
 </html>`)
 })
 
+// Admin Dashboard - List all clients and reports
+app.get('/admin', async (c) => {
+  const { env } = c
+  
+  try {
+    // Get all patients with their latest session info
+    const patients = await env.DB.prepare(`
+      SELECT 
+        p.id,
+        p.full_name,
+        p.email,
+        p.date_of_birth,
+        p.gender,
+        p.created_at as patient_created,
+        s.id as session_id,
+        s.session_type,
+        s.status,
+        s.created_at as session_created
+      FROM patients p
+      LEFT JOIN assessment_sessions s ON p.id = s.patient_id
+      ORDER BY p.created_at DESC
+    `).all()
+
+    // Get system statistics
+    const stats = {
+      totalPatients: (await env.DB.prepare(`SELECT COUNT(*) as count FROM patients`).first()).count,
+      totalSessions: (await env.DB.prepare(`SELECT COUNT(*) as count FROM assessment_sessions`).first()).count,
+      completedReports: (await env.DB.prepare(`SELECT COUNT(*) as count FROM assessment_sessions WHERE status = 'completed'`).first()).count,
+      riskCalculations: (await env.DB.prepare(`SELECT COUNT(*) as count FROM risk_calculations`).first()).count
+    }
+
+    return c.html(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>LongenixHealth Admin Dashboard</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+          <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+      </head>
+      <body class="bg-gray-100 min-h-screen">
+          <div class="container mx-auto px-4 py-8">
+              <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                  <div class="flex items-center justify-between mb-6">
+                      <div>
+                          <h1 class="text-3xl font-bold text-gray-800">
+                              <i class="fas fa-chart-line mr-3 text-blue-600"></i>
+                              LongenixHealth Admin Dashboard
+                          </h1>
+                          <p class="text-gray-600 mt-2">Manage clients, view reports, and monitor system health</p>
+                      </div>
+                      <div class="text-right">
+                          <a href="/" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                              <i class="fas fa-home mr-2"></i>Back to Home
+                          </a>
+                      </div>
+                  </div>
+
+                  <!-- System Statistics -->
+                  <div class="grid md:grid-cols-4 gap-6 mb-8">
+                      <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 text-center">
+                          <i class="fas fa-users text-3xl text-blue-600 mb-3"></i>
+                          <h3 class="font-semibold text-gray-800">Total Patients</h3>
+                          <p class="text-3xl font-bold text-blue-600">${stats.totalPatients}</p>
+                      </div>
+                      <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 text-center">
+                          <i class="fas fa-clipboard-list text-3xl text-green-600 mb-3"></i>
+                          <h3 class="font-semibold text-gray-800">Total Sessions</h3>
+                          <p class="text-3xl font-bold text-green-600">${stats.totalSessions}</p>
+                      </div>
+                      <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 text-center">
+                          <i class="fas fa-check-circle text-3xl text-purple-600 mb-3"></i>
+                          <h3 class="font-semibold text-gray-800">Completed Reports</h3>
+                          <p class="text-3xl font-bold text-purple-600">${stats.completedReports}</p>
+                      </div>
+                      <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-6 text-center">
+                          <i class="fas fa-exclamation-triangle text-3xl text-orange-600 mb-3"></i>
+                          <h3 class="font-semibold text-gray-800">Risk Assessments</h3>
+                          <p class="text-3xl font-bold text-orange-600">${stats.riskCalculations}</p>
+                      </div>
+                  </div>
+
+                  <!-- Quick Actions -->
+                  <div class="mb-8">
+                      <h2 class="text-xl font-semibold mb-4">
+                          <i class="fas fa-rocket mr-2 text-purple-600"></i>Quick Actions
+                      </h2>
+                      <div class="grid md:grid-cols-3 gap-4">
+                          <a href="/john-testuser" class="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded-lg hover:from-green-600 hover:to-green-700 transition text-center">
+                              <i class="fas fa-user-md text-2xl mb-2"></i>
+                              <div class="font-semibold">John TestUser Demo</div>
+                              <div class="text-sm opacity-90">Complete test client report</div>
+                          </a>
+                          <a href="/comprehensive-assessment" class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition text-center">
+                              <i class="fas fa-plus-circle text-2xl mb-2"></i>
+                              <div class="font-semibold">New Assessment</div>
+                              <div class="text-sm opacity-90">Start new patient assessment</div>
+                          </a>
+                          <a href="/functional-medicine-demo" class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition text-center">
+                              <i class="fas fa-flask text-2xl mb-2"></i>
+                              <div class="font-semibold">Demo Reports</div>
+                              <div class="text-sm opacity-90">View sample assessments</div>
+                          </a>
+                      </div>
+                  </div>
+
+                  <!-- Patients & Reports Table -->
+                  <div>
+                      <h2 class="text-xl font-semibold mb-4">
+                          <i class="fas fa-table mr-2 text-blue-600"></i>All Clients & Reports
+                      </h2>
+                      ${patients.results && patients.results.length > 0 ? `
+                          <div class="overflow-x-auto">
+                              <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                                  <thead class="bg-gray-50">
+                                      <tr>
+                                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Session</th>
+                                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody class="bg-white divide-y divide-gray-200">
+                                      ${patients.results.map(patient => `
+                                          <tr class="hover:bg-gray-50">
+                                              <td class="px-6 py-4 whitespace-nowrap">
+                                                  <div class="flex items-center">
+                                                      <div class="flex-shrink-0 h-10 w-10">
+                                                          <div class="h-10 w-10 rounded-full bg-${patient.gender === 'male' ? 'blue' : 'pink'}-100 flex items-center justify-center">
+                                                              <i class="fas fa-user text-${patient.gender === 'male' ? 'blue' : 'pink'}-600"></i>
+                                                          </div>
+                                                      </div>
+                                                      <div class="ml-4">
+                                                          <div class="text-sm font-medium text-gray-900">${patient.full_name}</div>
+                                                          <div class="text-sm text-gray-500">${patient.email || 'No email'}</div>
+                                                      </div>
+                                                  </div>
+                                              </td>
+                                              <td class="px-6 py-4 whitespace-nowrap">
+                                                  <div class="text-sm text-gray-900">Session #${patient.session_id || 'N/A'}</div>
+                                                  <div class="text-sm text-gray-500">${patient.session_type || 'No session'}</div>
+                                              </td>
+                                              <td class="px-6 py-4 whitespace-nowrap">
+                                                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                                    patient.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                                    patient.status === 'in_progress' ? 'bg-yellow-100 text-yellow-800' :
+                                                    'bg-gray-100 text-gray-800'
+                                                  }">
+                                                      ${patient.status || 'No session'}
+                                                  </span>
+                                              </td>
+                                              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                  ${new Date(patient.patient_created).toLocaleDateString()}
+                                              </td>
+                                              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                                                  ${patient.session_id ? `
+                                                      <a href="/report?session=${patient.session_id}" class="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded">
+                                                          <i class="fas fa-chart-line mr-1"></i>View Report
+                                                      </a>
+                                                  ` : ''}
+                                                  <span class="text-gray-400">
+                                                      <i class="fas fa-edit mr-1"></i>Edit
+                                                  </span>
+                                              </td>
+                                          </tr>
+                                      `).join('')}
+                                  </tbody>
+                              </table>
+                          </div>
+                      ` : `
+                          <div class="text-center py-12">
+                              <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                              <h3 class="text-lg font-medium text-gray-900 mb-2">No Patients Found</h3>
+                              <p class="text-gray-500 mb-4">Start by creating your first patient assessment</p>
+                              <a href="/comprehensive-assessment" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                                  <i class="fas fa-plus mr-2"></i>Create First Assessment
+                              </a>
+                          </div>
+                      `}
+                  </div>
+              </div>
+          </div>
+      </body>
+      </html>
+    `)
+  } catch (error) {
+    console.error('Admin dashboard error:', error)
+    return c.html('<h1>Error loading admin dashboard</h1>')
+  }
+})
+
+// Direct access to John TestUser
+app.get('/john-testuser', async (c) => {
+  const { env } = c
+  
+  try {
+    // Check if John TestUser exists
+    const johnUser = await env.DB.prepare(`
+      SELECT s.id as session_id, p.full_name 
+      FROM patients p 
+      JOIN assessment_sessions s ON p.id = s.patient_id 
+      WHERE p.full_name LIKE '%John%TestUser%' 
+      ORDER BY s.created_at DESC 
+      LIMIT 1
+    `).first()
+
+    if (johnUser) {
+      // Redirect to John's report
+      return c.redirect(`/report?session=${johnUser.session_id}`)
+    } else {
+      // John TestUser doesn't exist, show info page
+      return c.html(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>John TestUser - Demo Client</title>
+            <script src="https://cdn.tailwindcss.com"></script>
+            <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        </head>
+        <body class="bg-gray-100 min-h-screen">
+            <div class="container mx-auto px-4 py-8">
+                <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+                    <div class="text-center">
+                        <i class="fas fa-user-md text-6xl text-blue-600 mb-4"></i>
+                        <h1 class="text-3xl font-bold text-gray-800 mb-4">John TestUser</h1>
+                        <p class="text-gray-600 mb-6">Complete Test Client for LongenixHealth System</p>
+                        
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                            <h3 class="font-semibold text-yellow-800 mb-2">
+                                <i class="fas fa-info-circle mr-2"></i>John TestUser Not Found
+                            </h3>
+                            <p class="text-yellow-700">
+                                John TestUser hasn't been created in this environment yet. 
+                                He exists in the local development environment with complete biomarker data.
+                            </p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <a href="/admin" class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition">
+                                <i class="fas fa-arrow-left mr-2"></i>Back to Admin Dashboard
+                            </a>
+                            <div>
+                                <a href="/comprehensive-assessment" class="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition">
+                                    <i class="fas fa-plus mr-2"></i>Create New Assessment
+                                </a>
+                            </div>
+                            <div>
+                                <a href="/functional-medicine-demo" class="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition">
+                                    <i class="fas fa-flask mr-2"></i>View Demo Reports
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+      `)
+    }
+  } catch (error) {
+    console.error('John TestUser access error:', error)
+    return c.html('<h1>Error accessing John TestUser</h1>')
+  }
+})
+
 export default app
