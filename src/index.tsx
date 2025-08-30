@@ -7739,30 +7739,32 @@ app.post('/api/assessment/comprehensive-v2', async (c) => {
       ).run()
     }
 
-    // Store risk calculations
+    // Store risk calculations using correct schema
     if (ascvdRisk) {
       await env.DB.prepare(`
-        INSERT INTO risk_calculations (session_id, risk_type, risk_percentage, risk_category, details)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, ten_year_risk, algorithm_used)
+        VALUES (?, ?, ?, ?, ?, ?)
       `).bind(
         sessionId,
-        'ASCVD_10_YEAR',
-        ascvdRisk.tenYearRisk,
-        ascvdRisk.riskCategory,
-        JSON.stringify(ascvdRisk)
+        'cardiovascular',
+        ascvdRisk.tenYearRisk || 0,
+        ascvdRisk.riskCategory || 'low',
+        ascvdRisk.tenYearRisk || 0,
+        'ASCVD Risk Estimator Plus (AHA/ACC 2018)'
       ).run()
     }
 
     if (diabetesRisk) {
       await env.DB.prepare(`
-        INSERT INTO risk_calculations (session_id, risk_type, risk_percentage, risk_category, details)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, ten_year_risk, algorithm_used)
+        VALUES (?, ?, ?, ?, ?, ?)
       `).bind(
         sessionId,
-        'DIABETES_TYPE2',
+        'diabetes',
         diabetesRisk.riskPercentage || 0,
-        diabetesRisk.riskLevel || 'unknown',
-        JSON.stringify(diabetesRisk)
+        diabetesRisk.riskLevel || 'low',
+        diabetesRisk.riskPercentage || 0,
+        'FINDRISC (Finnish Diabetes Risk Score)'
       ).run()
     }
 
