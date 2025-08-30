@@ -82,56 +82,153 @@ const validateBiomarkerValue = (value: number, range: string, gender?: string) =
 // ==============================================================
 
 /**
- * Parses MM/YY date format with intelligent century inference
- * @param {string} dateString - Date in MM/YY format (e.g., "03/85")
+ * Enhanced smart date parser with intelligent century detection
+ * Supports multiple date formats and handles century inference
+ * @param {string} dateString - Date in various formats (MM/YY, MM/DD/YY, "January 2020", "2005 - 2020", etc.)
  * @param {number} personBirthYear - Person's birth year for context (e.g., 1960)
  * @returns {Date|null} - Parsed date object or null if invalid
  */
 function parseATMDate(dateString: string, personBirthYear?: number): Date | null {
-  // Validate input format
   if (!dateString || typeof dateString !== 'string') {
     return null;
   }
   
-  const trimmed = dateString.trim();
-  if (!/^\d{2}\/\d{2}$/.test(trimmed)) {
+  const trimmed = dateString.trim().toLowerCase();
+  
+  // Handle special cases
+  if (trimmed === 'birth' || trimmed.includes('birth')) {
+    if (personBirthYear) {
+      return new Date(personBirthYear, 0, 1); // January 1st of birth year
+    }
     return null;
   }
   
-  const [monthStr, yearStr] = trimmed.split('/');
-  const month = parseInt(monthStr, 10);
-  const yearTwoDigit = parseInt(yearStr, 10);
-  
-  // Validate month range
-  if (month < 1 || month > 12) {
-    return null;
+  // Extract year from ranges (e.g., "2005 - 2020", "1998-2015")
+  const rangeMatch = trimmed.match(/(\d{4})\s*[-–—]\s*(\d{4}|present|ongoing)/);
+  if (rangeMatch) {
+    const startYear = parseInt(rangeMatch[1], 10);
+    return new Date(startYear, 0, 1); // Use start of range
   }
   
-  // Century inference logic
-  const currentYear = new Date().getFullYear();
-  const currentYearTwoDigit = currentYear % 100;
-  
-  let fullYear: number;
-  
-  // Rule 1: If year is significantly in the future (>10 years), assume previous century
-  if (yearTwoDigit > (currentYearTwoDigit + 10)) {
-    fullYear = 1900 + yearTwoDigit;
-  }
-  // Rule 2: If person would have negative age with 20xx date, use 19xx
-  else if (personBirthYear && (2000 + yearTwoDigit) < personBirthYear) {
-    fullYear = 1900 + yearTwoDigit;
-  }
-  // Rule 3: Default to current century
-  else {
-    fullYear = 2000 + yearTwoDigit;
+  // Handle "Month YYYY" format (e.g., "January 2018", "March 2020")
+  const monthYearMatch = trimmed.match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})/);
+  if (monthYearMatch) {
+    const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 
+                       'july', 'august', 'september', 'october', 'november', 'december'];
+    const monthIndex = monthNames.indexOf(monthYearMatch[1]);
+    const year = parseInt(monthYearMatch[2], 10);
+    return new Date(year, monthIndex, 1);
   }
   
-  // Additional validation: ensure date makes sense for person's age
-  if (personBirthYear && fullYear < personBirthYear) {
-    return null; // Event cannot occur before birth
+  // Handle MM/YYYY format (e.g., "03/2020")
+  const mmyyyyMatch = trimmed.match(/^(\d{1,2})\/(\d{4})$/);
+  if (mmyyyyMatch) {
+    const month = parseInt(mmyyyyMatch[1], 10);
+    const year = parseInt(mmyyyyMatch[2], 10);
+    if (month >= 1 && month <= 12) {
+      return new Date(year, month - 1, 1);
+    }
   }
   
-  return new Date(fullYear, month - 1, 1);
+  // Handle MM/DD/YYYY format (e.g., "03/15/1985")
+  const mmddyyyyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mmddyyyyMatch) {
+    const month = parseInt(mmddyyyyMatch[1], 10);
+    const day = parseInt(mmddyyyyMatch[2], 10);
+    const year = parseInt(mmddyyyyMatch[3], 10);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return new Date(year, month - 1, day);
+    }
+  }
+  
+  // Handle MM/YY format with smart century detection (original functionality enhanced)
+  const mmyyMatch = trimmed.match(/^(\d{1,2})\/(\d{2})$/);
+  if (mmyyMatch) {
+    const month = parseInt(mmyyMatch[1], 10);
+    const yearTwoDigit = parseInt(mmyyMatch[2], 10);
+    
+    // Validate month range
+    if (month < 1 || month > 12) {
+      return null;
+    }
+    
+    // Smart century inference logic
+    const currentYear = new Date().getFullYear();
+    const currentYearTwoDigit = currentYear % 100;
+    
+    let fullYear: number;
+    
+    // Rule 1: Years 26-99 go to 1900s (1926-1999)
+    if (yearTwoDigit >= 26) {
+      fullYear = 1900 + yearTwoDigit;
+    }
+    // Rule 2: Years 00-25 go to 2000s (2000-2025)
+    else {
+      fullYear = 2000 + yearTwoDigit;
+    }
+    
+    // Rule 3: Context validation - if person would have negative age, adjust
+    if (personBirthYear && fullYear < personBirthYear) {
+      // If 20xx would be before birth, but 19xx makes sense, use 19xx
+      if (yearTwoDigit <= 99 && (1900 + yearTwoDigit) >= personBirthYear) {
+        fullYear = 1900 + yearTwoDigit;
+      } else {
+        return null; // Event cannot occur before birth
+      }
+    }
+    
+    return new Date(fullYear, month - 1, 1);
+  }
+  
+  // Handle MM/DD/YY format with smart century detection
+  const mmddyyMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (mmddyyMatch) {
+    const month = parseInt(mmddyyMatch[1], 10);
+    const day = parseInt(mmddyyMatch[2], 10);
+    const yearTwoDigit = parseInt(mmddyyMatch[3], 10);
+    
+    if (month < 1 || month > 12 || day < 1 || day > 31) {
+      return null;
+    }
+    
+    // Apply same century logic as MM/YY
+    let fullYear: number;
+    if (yearTwoDigit >= 26) {
+      fullYear = 1900 + yearTwoDigit;
+    } else {
+      fullYear = 2000 + yearTwoDigit;
+    }
+    
+    if (personBirthYear && fullYear < personBirthYear) {
+      if (yearTwoDigit <= 99 && (1900 + yearTwoDigit) >= personBirthYear) {
+        fullYear = 1900 + yearTwoDigit;
+      } else {
+        return null;
+      }
+    }
+    
+    return new Date(fullYear, month - 1, day);
+  }
+  
+  // Handle YYYY format (just year)
+  const yyyyMatch = trimmed.match(/^(\d{4})$/);
+  if (yyyyMatch) {
+    const year = parseInt(yyyyMatch[1], 10);
+    return new Date(year, 0, 1); // January 1st of that year
+  }
+  
+  // Try JavaScript's native Date parsing as fallback
+  try {
+    const nativeDate = new Date(dateString);
+    if (!isNaN(nativeDate.getTime())) {
+      return nativeDate;
+    }
+  } catch (error) {
+    // Fallback failed, continue to return null
+  }
+  
+  console.warn(`⚠️ Could not parse date: "${dateString}"`);
+  return null;
 }
 
 /**
@@ -1355,13 +1452,22 @@ app.get('/report', async (c) => {
     `).bind(sessionId).first()
 
     // Get risk assessments
-    const risks = await env.DB.prepare(`
+    const riskData = await env.DB.prepare(`
       SELECT * FROM risk_calculations WHERE session_id = ?
     `).bind(sessionId).all()
+    
+    const risks = { 
+      results: riskData.results || riskData || [] 
+    }
 
     // Get comprehensive assessment data
     const assessmentData = await env.DB.prepare(`
       SELECT json_data FROM assessment_data WHERE session_id = ? AND data_type = 'comprehensive_lifestyle'
+    `).bind(sessionId).first()
+
+    // Get complete assessment data including ATM framework for timeline
+    const completeAssessmentData = await env.DB.prepare(`
+      SELECT json_data FROM assessment_data WHERE session_id = ? ORDER BY created_at DESC LIMIT 1
     `).bind(sessionId).first()
 
     // Get aging assessment results
@@ -6589,10 +6695,10 @@ app.get('/report', async (c) => {
                       ${generateRootCausePrioritization()}
 
                       <!-- Dynamic ATM Timeline -->
-                      ${generateATMTimelineHTML(comprehensiveData, session.full_name)}
+                      ${generateATMTimelineHTML(completeAssessmentData?.json_data ? JSON.parse(completeAssessmentData.json_data) : comprehensiveData, session.full_name)}
 
                       <!-- Dynamic Timeline Insights -->
-                      ${generateATMTimelineInsights(comprehensiveData)}
+                      ${generateATMTimelineInsights(completeAssessmentData?.json_data ? JSON.parse(completeAssessmentData.json_data) : comprehensiveData)}
 
                       <!-- Clinical Decision Support -->
                       ${generateClinicalDecisionSupport()}
@@ -9051,14 +9157,113 @@ app.post('/api/assessment/complete', async (c) => {
     // Calculate biological age
     const biologicalAge = BiologicalAgeCalculator.calculateBiologicalAge(patientData)
 
-    // Calculate disease risks - All 7 categories
-    const ascvdRisk = DiseaseRiskCalculator.calculateASCVDRisk(patientData)
-    const diabetesRisk = DiseaseRiskCalculator.calculateDiabetesRisk(patientData, assessmentData.lifestyle || {})
-    const kidneyRisk = DiseaseRiskCalculator.calculateKidneyDiseaseRisk(patientData)
-    const cancerRisk = DiseaseRiskCalculator.calculateCancerRisk(patientData, assessmentData.lifestyle || {})
-    const cognitiveRisk = DiseaseRiskCalculator.calculateCognitiveDeclineRisk(patientData, assessmentData.lifestyle || {})
-    const metabolicSyndromeRisk = DiseaseRiskCalculator.calculateMetabolicSyndromeRisk(patientData)
-    const strokeRisk = DiseaseRiskCalculator.calculateStrokeRisk(patientData, assessmentData.lifestyle || {})
+    // Calculate disease risks - All 7 categories with error handling
+    const risks = []
+    
+    try {
+      const ascvdRisk = DiseaseRiskCalculator.calculateASCVDRisk(patientData)
+      risks.push(ascvdRisk)
+    } catch (error) {
+      console.error('ASCVD risk calculation failed:', error)
+      risks.push({
+        risk_category: 'cardiovascular',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
+    
+    try {
+      const diabetesRisk = DiseaseRiskCalculator.calculateDiabetesRisk(patientData, assessmentData.lifestyle || {})
+      risks.push(diabetesRisk)
+    } catch (error) {
+      console.error('Diabetes risk calculation failed:', error)
+      risks.push({
+        risk_category: 'diabetes',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
+    
+    try {
+      const kidneyRisk = DiseaseRiskCalculator.calculateKidneyDiseaseRisk(patientData)
+      risks.push(kidneyRisk)
+    } catch (error) {
+      console.error('Kidney risk calculation failed:', error)
+      risks.push({
+        risk_category: 'kidney_disease',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
+    
+    try {
+      const cancerRisk = DiseaseRiskCalculator.calculateCancerRisk(patientData, assessmentData.lifestyle || {})
+      risks.push(cancerRisk)
+    } catch (error) {
+      console.error('Cancer risk calculation failed:', error)
+      risks.push({
+        risk_category: 'cancer_risk',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
+    
+    try {
+      const cognitiveRisk = DiseaseRiskCalculator.calculateCognitiveDeclineRisk(patientData, assessmentData.lifestyle || {})
+      risks.push(cognitiveRisk)
+    } catch (error) {
+      console.error('Cognitive risk calculation failed:', error)
+      risks.push({
+        risk_category: 'cognitive_decline',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
+    
+    try {
+      const metabolicSyndromeRisk = DiseaseRiskCalculator.calculateMetabolicSyndromeRisk(patientData)
+      risks.push(metabolicSyndromeRisk)
+    } catch (error) {
+      console.error('Metabolic syndrome risk calculation failed:', error)
+      risks.push({
+        risk_category: 'metabolic_syndrome',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
+    
+    try {
+      const strokeRisk = DiseaseRiskCalculator.calculateStrokeRisk(patientData, assessmentData.lifestyle || {})
+      risks.push(strokeRisk)
+    } catch (error) {
+      console.error('Stroke risk calculation failed:', error)
+      risks.push({
+        risk_category: 'stroke_risk',
+        risk_score: 0,
+        risk_level: 'low',
+        ten_year_risk: 0,
+        algorithm_used: 'Error in calculation',
+        reference: 'Calculation failed'
+      })
+    }
 
     // Calculate aging assessment for real assessments
     let agingAssessment = null
@@ -9119,8 +9324,7 @@ app.post('/api/assessment/complete', async (c) => {
       'Phenotypic Age + KDM + Metabolic Age'
     ).run()
 
-    // Save risk assessments - All 7 disease categories
-    const risks = [ascvdRisk, diabetesRisk, kidneyRisk, cancerRisk, cognitiveRisk, metabolicSyndromeRisk, strokeRisk]
+    // Save risk assessments - All 7 disease categories (using risks array populated above)
     for (const risk of risks) {
       await env.DB.prepare(`
         INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, 
@@ -10348,7 +10552,73 @@ app.post('/api/assessment/demo', async (c) => {
         currentMedications: 'Lisinopril 10mg, Metformin 500mg, Atorvastatin 20mg',
         takingSupplements: 'no',
         familyHistory: ['family_heart_disease', 'family_diabetes'],
-        familyHistoryDetails: 'Multiple family members with heart disease and diabetes'
+        familyHistoryDetails: 'Multiple family members with heart disease and diabetes',
+        
+        // ATM Framework Data for Section 5 Functional Medicine Analysis
+        antecedentsDescription: [
+          'Strong family history of cardiovascular disease, diabetes, and hypertension creating genetic predisposition',
+          'Chronic work-related stress over 15+ years in high-pressure corporate environment',
+          'Sedentary lifestyle during 20s and 30s with minimal regular exercise',
+          'Poor sleep hygiene patterns established in early career leading to chronic sleep debt',
+          'Standard American Diet (SAD) consumption during formative adult years'
+        ],
+        antecedentsDate: [
+          'birth',
+          '01/05',
+          '06/88', 
+          '01/00',
+          '09/86'
+        ],
+        antecedentsSeverity: [
+          'High',
+          'Moderate-High',
+          'Moderate',
+          'Moderate',
+          'Moderate'
+        ],
+        
+        triggersDescription: [
+          'Major work promotion with increased responsibility and 60+ hour work weeks',
+          'Death of parent causing significant emotional stress and grief',
+          'COVID-19 pandemic disrupting exercise routines and increasing sedentary behavior'
+        ],
+        triggersDate: [
+          '01/18',
+          '03/20',
+          '03/20'
+        ],
+        triggersImpact: [
+          'High - initiated chronic stress response and poor work-life balance',
+          'High - triggered emotional eating and disrupted sleep patterns',
+          'Moderate-High - eliminated gym routine and increased home-based sedentary time'
+        ],
+        
+        mediatorsDescription: [
+          'Chronic stress with elevated cortisol patterns affecting multiple systems',
+          'Suboptimal sleep quality (5-6 hours/night) preventing adequate recovery',
+          'Irregular meal timing and frequent business meals high in processed foods',
+          'Limited social support system due to work demands and geographic isolation',
+          'Minimal mind-body stress management practices or relaxation techniques'
+        ],
+        mediatorsDate: [
+          '01/18',
+          '01/15',
+          '01/17',
+          '01/19',
+          'birth'
+        ],
+        mediatorsFrequency: [
+          'Daily',
+          'Nightly',
+          '5-6 days per week',
+          'Ongoing',
+          'Continuous'
+        ],
+        
+        // Additional ATM context data
+        geneticPredispositions: 'Strong familial clustering of metabolic syndrome components including cardiovascular disease, type 2 diabetes, and essential hypertension suggesting polygenic predisposition to cardiometabolic dysfunction',
+        earlyStress: 'moderate',
+        symptomOnset: 'Gradual onset of fatigue, digestive discomfort, and mood variability beginning around age 35-37, coinciding with increased work stress and lifestyle changes. Initial subtle symptoms progressed to more noticeable functional medicine system dysfunction over 5-7 year period.'
       },
       
       'australia_balanced': {
