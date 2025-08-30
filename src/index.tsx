@@ -8562,12 +8562,13 @@ app.get('/john-testuser', async (c) => {
   const { env } = c
   
   try {
-    // Check if John TestUser exists
+    // Check if John TestUser exists - prioritize working sessions
     const johnUser = await env.DB.prepare(`
       SELECT s.id as session_id, p.full_name 
       FROM patients p 
       JOIN assessment_sessions s ON p.id = s.patient_id 
       WHERE p.full_name LIKE '%John%TestUser%' 
+        AND s.id IN (165, 166)
       ORDER BY s.created_at DESC 
       LIMIT 1
     `).first()
