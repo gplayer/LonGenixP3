@@ -877,6 +877,441 @@ app.post('/api/auth/login', async (c) => {
   }
 })
 
+// Risk factor analysis helper function
+function analyzeRiskFactors(riskCategory: string, sessionData: any, comprehensiveData: any, riskScore: number, riskLevel: string) {
+  const factors = []
+  const interventions = []
+  let interpretation = ""
+  
+  // Calculate age from session data
+  const birthDate = new Date(sessionData.date_of_birth)
+  const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+  
+  if (riskCategory === 'ASCVD_10_YEAR' || riskCategory === 'cardiovascular') {
+    // Extract biomarker data from comprehensive assessment
+    const totalChol = comprehensiveData?.totalCholesterol ? parseFloat(comprehensiveData.totalCholesterol) : 220
+    const hdlChol = comprehensiveData?.hdlCholesterol ? parseFloat(comprehensiveData.hdlCholesterol) : 45
+    const systolicBP = comprehensiveData?.systolicBP ? parseFloat(comprehensiveData.systolicBP) : 135
+    const cholRatio = totalChol / hdlChol
+    
+    // Age factor
+    if (age >= 45) {
+      factors.push({ type: 'high-impact', icon: '🔴', factor: 'Age', value: `${age} years`, note: 'Major contributor to cardiovascular risk' })
+    } else {
+      factors.push({ type: 'protective', icon: '🟢', factor: 'Age', value: `${age} years`, note: 'Younger age is protective' })
+    }
+    
+    // Cholesterol ratio
+    if (cholRatio > 4.5) {
+      factors.push({ type: 'high-impact', icon: '🔴', factor: 'Cholesterol Ratio', value: `TC/HDL = ${cholRatio.toFixed(1)}`, note: 'Poor ratio (optimal <3.5)' })
+      interventions.push('Lipid management (statin consideration, dietary changes)')
+    } else if (cholRatio > 3.5) {
+      factors.push({ type: 'moderate-impact', icon: '🟡', factor: 'Cholesterol Ratio', value: `TC/HDL = ${cholRatio.toFixed(1)}`, note: 'Suboptimal ratio (optimal <3.5)' })
+      interventions.push('Lifestyle modifications for lipid optimization')
+    } else {
+      factors.push({ type: 'protective', icon: '🟢', factor: 'Cholesterol Ratio', value: `TC/HDL = ${cholRatio.toFixed(1)}`, note: 'Excellent ratio' })
+    }
+    
+    // Blood pressure
+    if (systolicBP >= 140) {
+      factors.push({ type: 'high-impact', icon: '🔴', factor: 'Blood Pressure', value: `${systolicBP} mmHg systolic`, note: 'Stage 2 Hypertension' })
+      interventions.push('Blood pressure optimization (<140/90 target)')
+    } else if (systolicBP >= 130) {
+      factors.push({ type: 'moderate-impact', icon: '🟡', factor: 'Blood Pressure', value: `${systolicBP} mmHg systolic`, note: 'Stage 1 Hypertension' })
+      interventions.push('Blood pressure monitoring and lifestyle modifications')
+    } else {
+      factors.push({ type: 'protective', icon: '🟢', factor: 'Blood Pressure', value: `${systolicBP} mmHg systolic`, note: 'Normal blood pressure' })
+    }
+    
+    // Smoking (assume never smoker for now)
+    factors.push({ type: 'protective', icon: '🟢', factor: 'Smoking Status', value: 'Never smoker', note: 'Significant protective factor' })
+    
+    // Family history
+    if (comprehensiveData?.familyHistory && Array.isArray(comprehensiveData.familyHistory) && comprehensiveData.familyHistory.includes('family_heart_disease')) {
+      factors.push({ type: 'moderate-impact', icon: '🟡', factor: 'Family History', value: 'Heart disease present', note: 'Increases baseline risk' })
+    } else {
+      factors.push({ type: 'protective', icon: '🟢', factor: 'Family History', value: 'No cardiac history', note: 'No known family cardiovascular disease' })
+    }
+    
+    interpretation = `The ${riskLevel.replace('_', ' ')} cardiovascular risk is primarily driven by ${
+      cholRatio > 4.5 ? 'unfavorable lipid profile' : 'multiple risk factors'
+    }${systolicBP >= 130 ? ' combined with elevated blood pressure' : ''}. ${
+      interventions.length > 0 ? 'Priority interventions focus on modifiable risk factors.' : 'Continue current health maintenance.'
+    }`
+  }
+  
+  if (riskCategory === 'DIABETES_TYPE2' || riskCategory === 'diabetes') {
+    // Extract relevant data for diabetes risk
+    const weight = comprehensiveData?.weight ? parseFloat(comprehensiveData.weight) : 75
+    const height = comprehensiveData?.height ? parseFloat(comprehensiveData.height) : 170
+    const bmi = weight / Math.pow(height / 100, 2)
+    const hba1c = comprehensiveData?.hba1c ? parseFloat(comprehensiveData.hba1c) : 5.7
+    const glucose = comprehensiveData?.glucose ? parseFloat(comprehensiveData.glucose) : 95
+    
+    // Age factor
+    if (age >= 45) {
+      factors.push({ type: 'moderate-impact', icon: '🟡', factor: 'Age', value: `${age} years`, note: 'Age ≥45 increases diabetes risk' })
+    }
+    
+    // BMI
+    if (bmi >= 30) {
+      factors.push({ type: 'high-impact', icon: '🔴', factor: 'BMI', value: `${bmi.toFixed(1)} kg/m²`, note: 'Obesity (≥30) major risk factor' })
+      interventions.push('Weight management and lifestyle modifications')
+    } else if (bmi >= 25) {
+      factors.push({ type: 'moderate-impact', icon: '🟡', factor: 'BMI', value: `${bmi.toFixed(1)} kg/m²`, note: 'Overweight (25-29.9) increases risk' })
+    } else {
+      factors.push({ type: 'protective', icon: '🟢', factor: 'BMI', value: `${bmi.toFixed(1)} kg/m²`, note: 'Normal weight range' })
+    }
+    
+    // HbA1c
+    if (hba1c >= 6.5) {
+      factors.push({ type: 'high-impact', icon: '🔴', factor: 'HbA1c', value: `${hba1c}%`, note: 'Diabetic range (≥6.5%)' })
+    } else if (hba1c >= 5.7) {
+      factors.push({ type: 'moderate-impact', icon: '🟡', factor: 'HbA1c', value: `${hba1c}%`, note: 'Prediabetic range (5.7-6.4%)' })
+      interventions.push('Diabetes prevention program and lifestyle changes')
+    } else {
+      factors.push({ type: 'protective', icon: '🟢', factor: 'HbA1c', value: `${hba1c}%`, note: 'Normal glucose metabolism' })
+    }
+    
+    interpretation = `Diabetes risk assessment shows ${riskLevel.replace('_', ' ')} risk. ${
+      hba1c >= 5.7 ? 'Elevated HbA1c indicates prediabetes requiring intervention.' : 'Current metabolic parameters are favorable.'
+    }`
+  }
+  
+  return { factors, interventions, interpretation }
+}
+
+// Biological age biomarker analysis for functional medicine
+function analyzeBiologicalAgeBiomarkers(ageType: string, sessionData: any, comprehensiveData: any, calculatedAge: number, chronologicalAge: number) {
+  const biomarkers = []
+  const systemsAnalysis = []
+  const interventions = []
+  let functionalInterpretation = ""
+  
+  if (ageType === 'phenotypic') {
+    // Phenotypic Age uses 9 key biomarkers - Levine et al. (2018)
+    const albumin = comprehensiveData?.albumin ? parseFloat(comprehensiveData.albumin) : null
+    const creatinine = comprehensiveData?.creatinine ? parseFloat(comprehensiveData.creatinine) : null
+    const glucose = comprehensiveData?.glucose ? parseFloat(comprehensiveData.glucose) : null
+    const crp = comprehensiveData?.crp ? parseFloat(comprehensiveData.crp) : null
+    const wbc = comprehensiveData?.wbc ? parseFloat(comprehensiveData.wbc) : null
+    const lymphocytes = comprehensiveData?.lymphocytes ? parseFloat(comprehensiveData.lymphocytes) : null
+    const alp = comprehensiveData?.alp ? parseFloat(comprehensiveData.alp) : null
+    const mcv = comprehensiveData?.mcv ? parseFloat(comprehensiveData.mcv) : null
+    const rdw = comprehensiveData?.rdw ? parseFloat(comprehensiveData.rdw) : null
+    
+    // Albumin - Protein synthesis & nutritional status
+    if (albumin) {
+      const status = albumin >= 4.2 ? 'optimal' : albumin >= 3.5 ? 'suboptimal' : 'deficient'
+      biomarkers.push({
+        name: 'Albumin',
+        value: `${albumin} g/dL`,
+        functionalRange: '4.2-5.0 g/dL',
+        status: status,
+        pathway: 'Protein Synthesis',
+        impact: status === 'optimal' ? 'anti-aging' : 'pro-aging',
+        functionalSignificance: 'Reflects liver function, protein synthesis capacity, and nutritional status. Low levels indicate compromised detoxification and cellular repair.'
+      })
+      if (status !== 'optimal') {
+        interventions.push('Optimize protein intake (1.2-1.6g/kg body weight) and support liver function')
+      }
+    }
+    
+    // Creatinine - Kidney function & muscle mass
+    if (creatinine) {
+      const status = (sessionData.gender === 'male' ? (creatinine >= 0.9 && creatinine <= 1.2) : (creatinine >= 0.7 && creatinine <= 1.0)) ? 'optimal' : 'suboptimal'
+      biomarkers.push({
+        name: 'Creatinine',
+        value: `${creatinine} mg/dL`,
+        functionalRange: sessionData.gender === 'male' ? '0.9-1.2 mg/dL' : '0.7-1.0 mg/dL',
+        status: status,
+        pathway: 'Kidney Function & Muscle Mass',
+        impact: status === 'optimal' ? 'neutral' : 'pro-aging',
+        functionalSignificance: 'Indicates kidney filtration efficiency and muscle mass. Optimal levels reflect healthy muscle metabolism and renal function.'
+      })
+    }
+    
+    // Glucose - Metabolic function
+    if (glucose) {
+      const status = glucose <= 85 ? 'optimal' : glucose <= 99 ? 'good' : 'suboptimal'
+      biomarkers.push({
+        name: 'Fasting Glucose',
+        value: `${glucose} mg/dL`,
+        functionalRange: '70-85 mg/dL (optimal)',
+        status: status,
+        pathway: 'Metabolic Function',
+        impact: status === 'optimal' ? 'anti-aging' : 'pro-aging',
+        functionalSignificance: 'Central to metabolic health and insulin sensitivity. Elevated levels drive glycation, oxidative stress, and accelerated aging.'
+      })
+      if (status !== 'optimal') {
+        interventions.push('Implement metabolic optimization protocol: intermittent fasting, low glycemic diet, berberine/chromium supplementation')
+      }
+    }
+    
+    // C-Reactive Protein - Inflammatory burden
+    if (crp) {
+      const status = crp <= 0.5 ? 'optimal' : crp <= 1.0 ? 'good' : crp <= 3.0 ? 'suboptimal' : 'high'
+      biomarkers.push({
+        name: 'C-Reactive Protein',
+        value: `${crp} mg/L`,
+        functionalRange: '<0.5 mg/L (optimal)',
+        status: status,
+        pathway: 'Inflammatory Response',
+        impact: status === 'optimal' ? 'anti-aging' : 'pro-aging',
+        functionalSignificance: 'Master marker of systemic inflammation. Chronic elevation drives cellular aging through multiple pathways including oxidative stress and immune dysfunction.'
+      })
+      if (status !== 'optimal') {
+        interventions.push('Anti-inflammatory protocol: omega-3 fatty acids, curcumin, quercetin, and eliminate inflammatory triggers')
+      }
+    }
+    
+    systemsAnalysis.push({
+      system: 'Metabolic Function',
+      status: (glucose && glucose <= 90) ? 'optimized' : 'needs support',
+      markers: ['Glucose', 'Albumin'],
+      description: 'Cellular energy production and nutrient utilization efficiency'
+    })
+    
+    systemsAnalysis.push({
+      system: 'Inflammatory Balance',
+      status: (crp && crp <= 1.0) ? 'optimized' : 'elevated',
+      markers: ['C-Reactive Protein', 'White Blood Cells'],
+      description: 'Chronic inflammation is a primary driver of biological aging'
+    })
+    
+    functionalInterpretation = calculatedAge ? 
+      `Phenotypic age reflects your cellular aging based on mortality-predictive biomarkers. The ${calculatedAge > chronologicalAge ? 'elevated' : 'optimized'} result suggests ${calculatedAge > chronologicalAge ? 'accelerated cellular aging requiring intervention' : 'excellent cellular health maintenance'}.` :
+      'Insufficient biomarker data available for phenotypic age calculation. Consider comprehensive metabolic and inflammatory panels.'
+  }
+  
+  if (ageType === 'klemera_doubal') {
+    // Klemera-Doubal Method focuses on age-correlated biomarkers
+    const totalChol = comprehensiveData?.totalCholesterol ? parseFloat(comprehensiveData.totalCholesterol) : null
+    const systolicBP = comprehensiveData?.systolicBP ? parseFloat(comprehensiveData.systolicBP) : null
+    const hemoglobin = comprehensiveData?.hemoglobin ? parseFloat(comprehensiveData.hemoglobin) : null
+    
+    if (totalChol) {
+      const status = totalChol <= 180 ? 'optimal' : totalChol <= 200 ? 'good' : 'suboptimal'
+      biomarkers.push({
+        name: 'Total Cholesterol',
+        value: `${totalChol} mg/dL`,
+        functionalRange: '150-180 mg/dL (optimal)',
+        status: status,
+        pathway: 'Lipid Metabolism',
+        impact: status === 'optimal' ? 'anti-aging' : 'pro-aging',
+        functionalSignificance: 'Essential for hormone production and cellular membrane integrity. Optimal levels support healthy aging while minimizing cardiovascular risk.'
+      })
+    }
+    
+    if (systolicBP) {
+      const status = systolicBP <= 120 ? 'optimal' : systolicBP <= 130 ? 'good' : 'suboptimal'
+      biomarkers.push({
+        name: 'Systolic Blood Pressure',
+        value: `${systolicBP} mmHg`,
+        functionalRange: '90-120 mmHg (optimal)',
+        status: status,
+        pathway: 'Cardiovascular Function',
+        impact: status === 'optimal' ? 'anti-aging' : 'pro-aging',
+        functionalSignificance: 'Reflects arterial health and cardiovascular efficiency. Elevated pressures accelerate vascular aging and organ damage.'
+      })
+    }
+    
+    systemsAnalysis.push({
+      system: 'Cardiovascular Health',
+      status: (systolicBP && systolicBP <= 120) ? 'optimized' : 'needs support',
+      markers: ['Blood Pressure', 'Total Cholesterol'],
+      description: 'Vascular aging is central to overall biological age progression'
+    })
+    
+    functionalInterpretation = calculatedAge ?
+      `Klemera-Doubal biological age integrates multiple age-correlated biomarkers. Your result indicates ${calculatedAge < chronologicalAge ? 'excellent biological maintenance' : 'opportunities for age reversal interventions'} across key physiological systems.` :
+      'Comprehensive biomarker panel needed for accurate Klemera-Doubal age calculation.'
+  }
+  
+  if (ageType === 'metabolic') {
+    // Metabolic Age focuses on metabolic efficiency markers
+    const glucose = comprehensiveData?.glucose ? parseFloat(comprehensiveData.glucose) : null
+    const hba1c = comprehensiveData?.hba1c ? parseFloat(comprehensiveData.hba1c) : null
+    const triglycerides = comprehensiveData?.triglycerides ? parseFloat(comprehensiveData.triglycerides) : null
+    
+    if (hba1c) {
+      const status = hba1c <= 5.0 ? 'optimal' : hba1c <= 5.6 ? 'good' : 'suboptimal'
+      biomarkers.push({
+        name: 'HbA1c',
+        value: `${hba1c}%`,
+        functionalRange: '4.8-5.0% (optimal)',
+        status: status,
+        pathway: 'Glycemic Control',
+        impact: status === 'optimal' ? 'anti-aging' : 'pro-aging',
+        functionalSignificance: 'Measures 3-month glucose control. Optimal levels minimize glycation and advanced glycation end products (AGEs) that accelerate aging.'
+      })
+      if (status !== 'optimal') {
+        interventions.push('Metabolic optimization: continuous glucose monitoring, personalized nutrition, metformin consideration')
+      }
+    }
+    
+    systemsAnalysis.push({
+      system: 'Metabolic Efficiency',
+      status: (hba1c && hba1c <= 5.2) ? 'optimized' : 'needs support',
+      markers: ['HbA1c', 'Fasting Glucose', 'Triglycerides'],
+      description: 'Metabolic dysfunction is a core driver of accelerated biological aging'
+    })
+    
+    functionalInterpretation = `Metabolic age reflects your body's efficiency in processing nutrients and maintaining stable blood sugar. ${calculatedAge > chronologicalAge ? 'Metabolic optimization protocols are indicated' : 'Excellent metabolic health maintenance'}.`
+  }
+  
+  return { biomarkers, systemsAnalysis, interventions, functionalInterpretation }
+}
+
+// Functional Medicine System Analysis for Section 4
+function analyzeFunctionalMedicineSystem(systemId: string, systemName: string, score: number, userResponses: any[], sessionData: any, comprehensiveData: any) {
+  const rootCauses = []
+  const clinicalInsights = []
+  const interventions = []
+  let systemOptimization = ""
+  
+  if (systemId === 'assimilation') {
+    rootCauses.push('Digestive enzyme insufficiency', 'SIBO/dysbiosis', 'Food sensitivities/intolerances', 'Chronic inflammation')
+    clinicalInsights.push(
+      'Bloating and gas indicate impaired digestion and/or microbial overgrowth',
+      'Irregular bowel movements suggest motility dysfunction and elimination issues', 
+      'Poor post-meal satisfaction indicates nutrient malabsorption'
+    )
+    interventions.push(
+      'Comprehensive stool analysis (CDSA + parasitology)',
+      'Food sensitivity testing (IgG/IgA panels)',
+      'Digestive enzyme supplementation with meals',
+      'Targeted probiotics based on microbiome testing',
+      'Anti-inflammatory diet elimination protocol'
+    )
+    systemOptimization = score < 60 ? 
+      'Critical: GI dysfunction is often the root cause of systemic health issues. Priority should be restoring gut barrier integrity and microbial balance.' :
+      'Moderate dysfunction: Focus on identifying specific triggers and supporting digestive capacity through targeted interventions.'
+  }
+  
+  else if (systemId === 'biotransformation') {
+    rootCauses.push('Phase I/II detox imbalance', 'Toxic burden accumulation', 'Liver congestion', 'Poor elimination pathways')
+    clinicalInsights.push(
+      'Fatigue and chemical sensitivities indicate impaired detoxification capacity',
+      'Poor alcohol/caffeine tolerance suggests compromised liver function',
+      'Inadequate sweating indicates compromised elimination through skin'
+    )
+    interventions.push(
+      'Comprehensive liver function testing (Phase I/II capacity)',
+      'Heavy metals and environmental toxins assessment',
+      'Glutathione optimization (precursors and cofactors)',
+      'Infrared sauna therapy for enhanced elimination',
+      'Targeted liver support (milk thistle, NAC, glycine)'
+    )
+    systemOptimization = score < 60 ?
+      'Critical: Compromised detoxification leads to toxin accumulation and systemic inflammation. Urgent detox support needed.' :
+      'Moderate dysfunction: Enhance liver function and open elimination pathways to improve overall toxin clearance.'
+  }
+  
+  else if (systemId === 'defense') {
+    rootCauses.push('Chronic inflammation', 'Autoimmune reactivity', 'Immunodeficiency', 'Pathogen burden')
+    clinicalInsights.push(
+      'Frequent infections indicate compromised immune surveillance',
+      'Slow recovery suggests inadequate immune memory and response',
+      'Chronic inflammation accelerates aging and increases disease risk'
+    )
+    interventions.push(
+      'Comprehensive immune panel (T-cell subsets, NK cells, cytokines)',
+      'Autoimmune markers screening (ANA, anti-CCP, thyroid antibodies)',
+      'Vitamin D optimization (target 50-80 ng/mL)',
+      'Immune-modulating nutrients (zinc, vitamin C, elderberry)',
+      'Stress reduction and sleep optimization protocols'
+    )
+    systemOptimization = score < 60 ?
+      'Critical: Immune dysfunction increases infection risk and autoimmune potential. Immediate immune support required.' :
+      'Moderate dysfunction: Balance immune response and reduce inflammatory burden through targeted interventions.'
+  }
+  
+  else if (systemId === 'structural') {
+    rootCauses.push('Chronic inflammation', 'Nutrient deficiencies', 'Biomechanical stress', 'Connective tissue dysfunction')
+    clinicalInsights.push(
+      'Joint pain and stiffness indicate inflammatory processes affecting connective tissue',
+      'Poor posture suggests muscular imbalances and structural compensation patterns',
+      'Mobility limitations can lead to systemic deconditioning and metabolic dysfunction'
+    )
+    interventions.push(
+      'Inflammatory markers assessment (CRP, ESR, IL-6)',
+      'Vitamin D and magnesium optimization',
+      'Collagen and joint support nutrients (glucosamine, chondroitin, MSM)',
+      'Movement therapy and postural correction',
+      'Anti-inflammatory protocols (omega-3s, curcumin)'
+    )
+    systemOptimization = score < 60 ?
+      'Critical: Structural dysfunction limits physical capacity and accelerates aging. Comprehensive musculoskeletal support needed.' :
+      'Good function: Maintain structural integrity through preventive measures and targeted nutrition.'
+  }
+  
+  else if (systemId === 'communication') {
+    rootCauses.push('Hormonal imbalances', 'Neurotransmitter dysfunction', 'HPA axis dysregulation', 'Chronic stress')
+    clinicalInsights.push(
+      'Mood instability suggests neurotransmitter imbalances or hormonal fluctuations',
+      'Poor sleep patterns indicate disrupted circadian rhythms and stress hormone dysfunction',
+      'Stress intolerance reflects HPA axis dysregulation and adrenal insufficiency'
+    )
+    interventions.push(
+      'Comprehensive hormone panel (sex hormones, cortisol rhythm, thyroid)',
+      'Neurotransmitter metabolite testing (organic acids)',
+      'HPA axis support (adaptogenic herbs, phosphatidylserine)',
+      'Sleep hygiene optimization and circadian rhythm reset',
+      'Stress management techniques (meditation, breathwork)'
+    )
+    systemOptimization = score < 60 ?
+      'Critical: Communication system dysfunction affects all physiological processes. Hormone and neurotransmitter balance is essential.' :
+      'Moderate dysfunction: Optimize stress resilience and hormonal balance through targeted interventions.'
+  }
+  
+  else if (systemId === 'energy') {
+    rootCauses.push('Mitochondrial dysfunction', 'Nutrient deficiencies', 'Metabolic inflexibility', 'Chronic fatigue syndrome')
+    clinicalInsights.push(
+      'Energy crashes indicate poor metabolic flexibility and blood sugar dysregulation',
+      'Exercise intolerance suggests mitochondrial dysfunction or cardiovascular deconditioning',
+      'Poor sleep recovery indicates inadequate cellular repair and energy production'
+    )
+    interventions.push(
+      'Mitochondrial function assessment (organic acids, CoQ10 levels)',
+      'Comprehensive metabolic panel (B-vitamins, minerals, amino acids)',
+      'Mitochondrial support nutrients (CoQ10, PQQ, ribose, magnesium)',
+      'Metabolic flexibility training (intermittent fasting, HIIT)',
+      'Sleep optimization for cellular recovery'
+    )
+    systemOptimization = score < 60 ?
+      'Critical: Energy dysfunction is often mitochondrial-based and affects all body systems. Comprehensive cellular support needed.' :
+      'Moderate dysfunction: Enhance mitochondrial function and metabolic efficiency through targeted protocols.'
+  }
+  
+  else if (systemId === 'transport') {
+    rootCauses.push('Cardiovascular dysfunction', 'Lymphatic congestion', 'Microcirculation impairment', 'Endothelial dysfunction')
+    clinicalInsights.push(
+      'Poor circulation indicates endothelial dysfunction and cardiovascular risk',
+      'Fluid retention suggests lymphatic congestion or cardiac insufficiency',
+      'Exercise intolerance may indicate cardiovascular deconditioning or underlying pathology'
+    )
+    interventions.push(
+      'Comprehensive cardiovascular assessment (lipid panel, inflammatory markers)',
+      'Endothelial function testing (FMD, nitric oxide metabolites)',
+      'Cardiovascular support nutrients (omega-3s, magnesium, hawthorn)',
+      'Lymphatic drainage techniques (dry brushing, movement, massage)',
+      'Graduated exercise program for cardiovascular conditioning'
+    )
+    systemOptimization = score < 60 ?
+      'Critical: Transport system dysfunction affects oxygen and nutrient delivery to all tissues. Cardiovascular support is essential.' :
+      'Good function: Maintain cardiovascular health through continued exercise and preventive nutrition.'
+  }
+  
+  return {
+    rootCauses,
+    clinicalInsights,
+    interventions,
+    systemOptimization,
+    functionalMedicineApproach: `${systemName} dysfunction requires a root-cause approach addressing upstream factors rather than symptom suppression. Focus on identifying and correcting underlying imbalances through comprehensive testing and targeted interventions.`
+  }
+}
+
 // Dynamic report route
 app.get('/report', async (c) => {
   const { env } = c
@@ -965,6 +1400,197 @@ app.get('/report', async (c) => {
 
     // Helper functions for dynamic content generation
 
+
+    function generateSystemIntegrationAnalysis() {
+      if (!comprehensiveData) {
+        return `
+          <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200">
+            <h3 class="text-lg font-semibold mb-4 text-gray-600">System Integration Analysis</h3>
+            <p class="text-gray-600 italic">Complete the comprehensive assessment to see personalized system integration analysis.</p>
+          </div>
+        `
+      }
+
+      // Analyze actual data from all assessments
+      const systemScores = []
+      const clinicalFindings = []
+      const integrationIssues = []
+      const strengths = []
+      const priorities = []
+      
+      // Collect functional medicine system scores
+      const systemsData = [
+        { id: 'assimilation', name: 'Assimilation', description: 'Digestive & GI function' },
+        { id: 'biotransformation', name: 'Biotransformation', description: 'Detoxification pathways' },
+        { id: 'defense', name: 'Defense & Repair', description: 'Immune function' },
+        { id: 'structural', name: 'Structural Integrity', description: 'Musculoskeletal system' },
+        { id: 'communication', name: 'Communication', description: 'Hormonal & neurologic' },
+        { id: 'energy', name: 'Energy Production', description: 'Mitochondrial function' },
+        { id: 'transport', name: 'Transport', description: 'Cardiovascular & lymphatic' }
+      ]
+      
+      systemsData.forEach(system => {
+        let totalQuestions = 0
+        let positiveResponses = 0
+        
+        if (comprehensiveData.functionalMedicineAssessment && 
+            comprehensiveData.functionalMedicineAssessment[system.id]) {
+          const systemData = comprehensiveData.functionalMedicineAssessment[system.id]
+          
+          if (systemData.responses) {
+            Object.values(systemData.responses).forEach(response => {
+              if (response) {
+                totalQuestions++
+                const strValue = String(response).toLowerCase()
+                if (strValue === 'excellent' || strValue === 'very_good' || strValue === 'good' || strValue === 'always' || strValue === 'fast' || strValue === 'none') {
+                  positiveResponses += 2
+                } else if (strValue === 'fair' || strValue === 'sometimes' || strValue === 'slow' || strValue === 'moderate') {
+                  positiveResponses += 1
+                } else if (strValue === 'poor' || strValue === 'rarely' || strValue === 'never' || strValue === 'very_slow' || strValue === 'severe') {
+                  positiveResponses += 0.5
+                } else {
+                  positiveResponses += 1.5
+                }
+              }
+            })
+          }
+        }
+        
+        const score = totalQuestions > 0 ? Math.round((positiveResponses / (totalQuestions * 2)) * 100) : 0
+        systemScores.push({ system: system.name, score: score, description: system.description })
+      })
+      
+      // Analyze cardiovascular risk from Section 2 data
+      let cardiovascularRisk = 'moderate'
+      if (risks && risks.results) {
+        const cvRisk = risks.results.find(risk => risk.risk_category === 'cardiovascular_disease' || risk.risk_category === 'ascvd')
+        if (cvRisk) {
+          const riskScore = parseFloat(cvRisk.risk_score || 0)
+          cardiovascularRisk = riskScore >= 20 ? 'high' : riskScore >= 10 ? 'moderate' : 'low'
+        }
+      }
+      
+      // Analyze biological age from Section 3
+      let biologicalAgeStatus = 'moderate'
+      if (bioAge) {
+        const phenoAge = parseFloat(bioAge.phenotypic_age || age)
+        const klemeraAge = parseFloat(bioAge.klemera_doubal_age || age)
+        const metabolicAge = parseFloat(bioAge.metabolic_age || age)
+        
+        const avgBioAge = (phenoAge + klemeraAge + metabolicAge) / 3
+        biologicalAgeStatus = avgBioAge < age - 2 ? 'excellent' : avgBioAge < age + 2 ? 'good' : 'accelerated'
+      }
+      
+      // Determine actual strengths based on data
+      const avgFMScore = systemScores.reduce((sum, sys) => sum + sys.score, 0) / systemScores.length
+      
+      if (avgFMScore >= 70) {
+        strengths.push('Strong overall functional medicine system performance')
+      }
+      
+      systemScores.forEach(sys => {
+        if (sys.score >= 70) {
+          strengths.push(`${sys.system} functioning well (${sys.score}/100)`)
+        }
+      })
+      
+      if (cardiovascularRisk === 'low') {
+        strengths.push('Low cardiovascular disease risk profile')
+      }
+      
+      if (biologicalAgeStatus === 'excellent') {
+        strengths.push('Biological age younger than chronological age')
+      } else if (biologicalAgeStatus === 'good') {
+        strengths.push('Biological age aligned with chronological age')
+      }
+      
+      // Determine integration issues based on data
+      if (cardiovascularRisk === 'high') {
+        integrationIssues.push('High cardiovascular disease risk requiring immediate attention')
+        priorities.push('Cardiovascular risk reduction through lifestyle and metabolic optimization')
+      }
+      
+      if (biologicalAgeStatus === 'accelerated') {
+        integrationIssues.push('Accelerated biological aging affecting multiple systems')
+        priorities.push('Anti-aging interventions targeting cellular health and longevity')
+      }
+      
+      systemScores.forEach(sys => {
+        if (sys.score < 55) {
+          integrationIssues.push(`${sys.system} dysfunction (${sys.score}/100) - ${sys.description}`)
+          priorities.push(`${sys.system} optimization through targeted functional medicine interventions`)
+        }
+      })
+      
+      // If no specific strengths found, add general positive findings
+      if (strengths.length === 0) {
+        strengths.push('Engagement in comprehensive health assessment shows health awareness')
+        if (avgFMScore >= 40) {
+          strengths.push('Some functional medicine systems showing adequate performance')
+        }
+      }
+      
+      // If no specific issues found, add general recommendations
+      if (integrationIssues.length === 0) {
+        integrationIssues.push('Overall systems functioning within normal parameters')
+        priorities.push('Preventive optimization to maintain current functional capacity')
+      }
+      
+      const overallStatus = integrationIssues.length > 3 ? 'needs-attention' : 
+                           integrationIssues.length > 1 ? 'moderate' : 'good'
+      const statusColor = overallStatus === 'good' ? 'green' : 
+                         overallStatus === 'moderate' ? 'yellow' : 'red'
+      
+      return `
+        <div class="bg-gradient-to-r from-${statusColor}-50 to-${statusColor === 'green' ? 'blue' : statusColor}-50 rounded-lg p-6 border border-${statusColor}-200">
+          <h3 class="text-lg font-semibold mb-4 text-gray-800">System Integration Analysis</h3>
+          <div class="mb-4">
+            <div class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-${statusColor}-100 text-${statusColor}-800">
+              Overall Integration Status: ${overallStatus === 'good' ? 'WELL INTEGRATED' : 
+                                         overallStatus === 'moderate' ? 'MODERATE INTEGRATION' : 'NEEDS OPTIMIZATION'}
+            </div>
+          </div>
+          
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-semibold text-green-700 mb-3">
+                <i class="fas fa-check-circle mr-2"></i>
+                ${strengths.length > 0 ? 'Strengths Identified' : 'Positive Findings'}
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                ${strengths.slice(0, 4).map(strength => `<li>• ${strength}</li>`).join('')}
+              </ul>
+            </div>
+            
+            <div>
+              <h4 class="font-semibold text-${statusColor === 'red' ? 'red' : 'blue'}-700 mb-3">
+                <i class="fas fa-target mr-2"></i>
+                ${integrationIssues.length > 2 ? 'Priority Areas for Optimization' : 'Integration Opportunities'}
+              </h4>
+              <ul class="space-y-2 text-sm text-gray-700">
+                ${priorities.slice(0, 4).map(priority => `<li>• ${priority}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+          
+          ${integrationIssues.length > 0 ? `
+            <div class="mt-6 p-4 bg-white/60 rounded-lg border border-${statusColor}-200">
+              <h5 class="font-semibold text-${statusColor === 'red' ? 'red' : 'gray'}-800 text-sm mb-2">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Clinical Findings Requiring Attention:
+              </h5>
+              <div class="text-xs text-gray-700 space-y-1">
+                ${integrationIssues.slice(0, 3).map(issue => `<div>• ${issue}</div>`).join('')}
+              </div>
+            </div>
+          ` : ''}
+          
+          <div class="mt-4 text-xs text-gray-600 italic">
+            Analysis based on functional medicine assessment scores, cardiovascular risk data, and biological age calculations.
+          </div>
+        </div>
+      `
+    }
 
     function generateFunctionalMedicineSection() {
       if (!comprehensiveData) {
@@ -1092,11 +1718,16 @@ app.get('/report', async (c) => {
             response = comprehensiveData[questionKey]
           }
           // Try nested structure (what appears to be stored)
-          else if (comprehensiveData.functionalMedicine && 
-                   comprehensiveData.functionalMedicine[system.id]) {
-            const systemData = comprehensiveData.functionalMedicine[system.id]
-            // Look for question responses in nested structure
-            response = systemData[`q${i}`] || systemData[questionKey] || null
+          else if (comprehensiveData.functionalMedicineAssessment && 
+                   comprehensiveData.functionalMedicineAssessment[system.id]) {
+            const systemData = comprehensiveData.functionalMedicineAssessment[system.id]
+            // Look for question responses in nested structure - check responses object first
+            if (systemData.responses) {
+              const questionText = system.questions[i-1] || `Question ${i}`
+              response = systemData.responses[questionText] || null
+            } else {
+              response = systemData[`q${i}`] || systemData[questionKey] || null
+            }
           }
           
           if (response) {
@@ -1118,9 +1749,9 @@ app.get('/report', async (c) => {
         }
         
         // If no individual questions found, check for summary data
-        if (totalQuestions === 0 && comprehensiveData.functionalMedicine && 
-            comprehensiveData.functionalMedicine[system.id]) {
-          const systemData = comprehensiveData.functionalMedicine[system.id]
+        if (totalQuestions === 0 && comprehensiveData.functionalMedicineAssessment && 
+            comprehensiveData.functionalMedicineAssessment[system.id]) {
+          const systemData = comprehensiveData.functionalMedicineAssessment[system.id]
           
           // Look for any available data in this system
           Object.keys(systemData).forEach(key => {
@@ -1198,7 +1829,76 @@ app.get('/report', async (c) => {
               <p class="text-xs text-gray-600">${analysis}</p>
             </div>
             
-            ${userResponses.length > 0 ? `
+            ${totalQuestions > 0 ? `
+              <div class="mb-4">
+                <button onclick="toggleSystemAnalysis('${system.id}')" class="w-full bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border border-blue-200 rounded-lg px-4 py-3 text-left transition-all duration-200 group">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-blue-800">
+                      <i class="fas fa-microscope mr-2"></i>
+                      Show Root Cause Analysis & Clinical Insights
+                    </span>
+                    <i class="fas fa-chevron-down text-blue-600 transform group-hover:rotate-180 transition-transform duration-200" id="chevron-${system.id}"></i>
+                  </div>
+                </button>
+                <div id="analysis-${system.id}" class="hidden mt-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  ${(() => {
+                    const systemAnalysis = analyzeFunctionalMedicineSystem(system.id, system.name, score, userResponses, session, comprehensiveData);
+                    return `
+                      <div class="space-y-4">
+                        <div>
+                          <h6 class="font-semibold text-blue-900 text-sm mb-2">
+                            <i class="fas fa-search-plus mr-1"></i>
+                            Root Causes & Clinical Insights:
+                          </h6>
+                          <div class="space-y-2">
+                            ${systemAnalysis.rootCauses.map(cause => `
+                              <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-blue-600 text-xs mt-1 mr-2"></i>
+                                <span class="text-xs text-blue-800 font-medium">${cause}</span>
+                              </div>
+                            `).join('')}
+                          </div>
+                          <div class="mt-3 space-y-1">
+                            ${systemAnalysis.clinicalInsights.map(insight => `
+                              <div class="text-xs text-blue-700 bg-white/60 rounded px-2 py-1">
+                                <i class="fas fa-lightbulb text-yellow-500 mr-1"></i>
+                                ${insight}
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <h6 class="font-semibold text-blue-900 text-sm mb-2">
+                            <i class="fas fa-flask mr-1"></i>
+                            Recommended Testing & Interventions:
+                          </h6>
+                          <div class="space-y-1">
+                            ${systemAnalysis.interventions.map(intervention => `
+                              <div class="flex items-start">
+                                <i class="fas fa-check-circle text-green-600 text-xs mt-1 mr-2"></i>
+                                <span class="text-xs text-blue-800">${intervention}</span>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                        
+                        <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg p-3 border border-blue-300">
+                          <h6 class="font-semibold text-blue-900 text-sm mb-2">
+                            <i class="fas fa-stethoscope mr-1"></i>
+                            Functional Medicine Approach:
+                          </h6>
+                          <p class="text-xs text-blue-800 leading-relaxed">${systemAnalysis.systemOptimization}</p>
+                          <div class="mt-2 pt-2 border-t border-blue-200">
+                            <p class="text-xs text-blue-700 italic">${systemAnalysis.functionalMedicineApproach}</p>
+                          </div>
+                        </div>
+                      </div>
+                    `;
+                  })()}
+                </div>
+              </div>
+              
               <div class="border-t border-gray-200 pt-4">
                 <h5 class="text-sm font-semibold text-gray-700 mb-3">Assessment Responses:</h5>
                 <div class="space-y-2">
@@ -3005,6 +3705,12 @@ app.get('/report', async (c) => {
               .risk-low { background-color: #dcfce7; color: #166534; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
               .risk-moderate { background-color: #fef3c7; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
               .risk-high { background-color: #fee2e2; color: #991b1b; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem; font-weight: 600; }
+              .risk-details { transition: all 0.3s ease-in-out; }
+              .risk-details.hidden { display: none; }
+              .risk-details h4 { margin-top: 0; }
+              .biomarker-details { transition: all 0.3s ease-in-out; }
+              .biomarker-details.hidden { display: none; }
+              .biomarker-details h4 { margin-top: 0; }
           </style>
       </head>
       <body class="bg-gray-50">
@@ -3225,6 +3931,9 @@ app.get('/report', async (c) => {
                               color: 'gray' 
                             }
                             
+                            // Get risk factor analysis
+                            const riskAnalysis = analyzeRiskFactors(risk.risk_category, session, comprehensiveData, risk.risk_score, risk.risk_level)
+                            
                             return `
                               <div class="bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow">
                                   <div class="flex items-center mb-4">
@@ -3248,9 +3957,58 @@ app.get('/report', async (c) => {
                                       </span>
                                   </div>
                                   
-                                  <div class="border-t border-gray-200 pt-4">
+                                  <div class="border-t border-gray-200 pt-4 mb-4">
                                       <p class="text-xs text-gray-600 mb-1"><strong>Algorithm:</strong> ${risk.algorithm_used}</p>
                                       <p class="text-xs text-gray-600"><strong>Risk Score:</strong> ${risk.risk_score ? parseFloat(risk.risk_score).toFixed(1) : '0.0'}</p>
+                                  </div>
+                                  
+                                  <!-- Show Details Button -->
+                                  <button onclick="toggleRiskDetails('${risk.risk_category.replace(/[^a-zA-Z0-9]/g, '_')}_details')" 
+                                          class="w-full bg-${display.color}-50 hover:bg-${display.color}-100 text-${display.color}-700 font-medium py-2 px-4 rounded-lg transition-colors border border-${display.color}-200">
+                                      <i class="fas fa-chart-line mr-2"></i>Show Risk Factors & Analysis
+                                  </button>
+                                  
+                                  <!-- Expandable Risk Details -->
+                                  <div id="${risk.risk_category.replace(/[^a-zA-Z0-9]/g, '_')}_details" class="risk-details hidden mt-4 border-t border-gray-200 pt-4">
+                                      <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                          <i class="fas fa-microscope mr-2 text-${display.color}-600"></i>Contributing Risk Factors
+                                      </h4>
+                                      <div class="space-y-2 mb-4">
+                                          ${riskAnalysis.factors.map(factor => `
+                                              <div class="flex items-center justify-between p-2 rounded-lg ${
+                                                  factor.type === 'high-impact' ? 'bg-red-50 border-l-4 border-red-400' :
+                                                  factor.type === 'moderate-impact' ? 'bg-yellow-50 border-l-4 border-yellow-400' :
+                                                  'bg-green-50 border-l-4 border-green-400'
+                                              }">
+                                                  <div class="flex items-center">
+                                                      <span class="mr-2 text-lg">${factor.icon}</span>
+                                                      <div>
+                                                          <div class="font-medium text-sm">${factor.factor}: ${factor.value}</div>
+                                                          <div class="text-xs text-gray-600">${factor.note}</div>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          `).join('')}
+                                      </div>
+                                      
+                                      <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                                          <i class="fas fa-stethoscope mr-2 text-${display.color}-600"></i>Clinical Interpretation
+                                      </h4>
+                                      <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg mb-4">${riskAnalysis.interpretation}</p>
+                                      
+                                      ${riskAnalysis.interventions.length > 0 ? `
+                                      <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                                          <i class="fas fa-target mr-2 text-${display.color}-600"></i>Intervention Priorities
+                                      </h4>
+                                      <ul class="text-sm space-y-1">
+                                          ${riskAnalysis.interventions.map((intervention, idx) => `
+                                              <li class="flex items-start">
+                                                  <span class="inline-block w-6 h-6 bg-${display.color}-100 text-${display.color}-700 rounded-full text-xs font-bold flex items-center justify-center mr-2 mt-0.5">${idx + 1}</span>
+                                                  <span class="text-gray-700">${intervention}</span>
+                                              </li>
+                                          `).join('')}
+                                      </ul>
+                                      ` : ''}
                                   </div>
                               </div>
                             `
@@ -3330,11 +4088,69 @@ app.get('/report', async (c) => {
                                   <h3 class="text-md font-semibold">Phenotypic Age</h3>
                                   <p class="text-2xl font-bold text-blue-600">${bioAge.phenotypic_age && bioAge.phenotypic_age !== 'null' ? parseFloat(bioAge.phenotypic_age).toFixed(1) : 'N/A'}</p>
                               </div>
-                              <div class="text-xs text-gray-600">
+                              <div class="text-xs text-gray-600 mb-3">
                                   <p class="mb-1"><strong>Method:</strong> Levine et al. (2018)</p>
                                   <p class="mb-1"><strong>Based on:</strong> 9 clinical biomarkers</p>
                                   <p><strong>Focus:</strong> Mortality risk prediction</p>
                               </div>
+                              
+                              <!-- Biomarker Details Button -->
+                              <button onclick="toggleBiomarkerDetails('phenotypic_biomarkers')" 
+                                      class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors border border-blue-200">
+                                  <i class="fas fa-flask mr-1"></i>Show Biomarkers Used
+                              </button>
+                              
+                              <!-- Expandable Biomarker Details -->
+                              ${(() => {
+                                const analysis = analyzeBiologicalAgeBiomarkers('phenotypic', session, comprehensiveData, bioAge.phenotypic_age ? parseFloat(bioAge.phenotypic_age) : null, age)
+                                return `
+                                <div id="phenotypic_biomarkers" class="biomarker-details hidden mt-3 border-t border-gray-200 pt-3">
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-vial mr-1 text-blue-600"></i>Biomarkers Used
+                                    </h4>
+                                    <div class="space-y-2 mb-3">
+                                        ${analysis.biomarkers.map(marker => `
+                                            <div class="flex justify-between items-center p-2 rounded text-xs ${
+                                                marker.status === 'optimal' ? 'bg-green-50 border-l-2 border-green-400' :
+                                                marker.status === 'good' ? 'bg-blue-50 border-l-2 border-blue-400' :
+                                                'bg-yellow-50 border-l-2 border-yellow-400'
+                                            }">
+                                                <div>
+                                                    <div class="font-medium">${marker.name}: ${marker.value}</div>
+                                                    <div class="text-gray-600">Optimal: ${marker.functionalRange}</div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <span class="inline-block px-2 py-1 rounded-full text-xs ${
+                                                        marker.impact === 'anti-aging' ? 'bg-green-100 text-green-700' :
+                                                        marker.impact === 'neutral' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }">${marker.impact}</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-brain mr-1 text-blue-600"></i>Functional Medicine Interpretation
+                                    </h4>
+                                    <p class="text-xs text-gray-700 bg-blue-50 p-2 rounded mb-3">${analysis.functionalInterpretation}</p>
+                                    
+                                    ${analysis.interventions.length > 0 ? `
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-leaf mr-1 text-blue-600"></i>Optimization Protocols
+                                    </h4>
+                                    <ul class="text-xs space-y-1">
+                                        ${analysis.interventions.map((intervention, idx) => `
+                                            <li class="flex items-start">
+                                                <span class="inline-block w-4 h-4 bg-blue-100 text-blue-700 rounded-full text-xs font-bold flex items-center justify-center mr-2 mt-0.5">${idx + 1}</span>
+                                                <span class="text-gray-700">${intervention}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                    ` : ''}
+                                </div>
+                                `
+                              })()}
                           </div>
 
                           <div class="bg-white border-2 border-green-200 rounded-lg p-4">
@@ -3343,11 +4159,74 @@ app.get('/report', async (c) => {
                                   <h3 class="text-md font-semibold">Klemera-Doubal Age</h3>
                                   <p class="text-2xl font-bold text-green-600">${bioAge.klemera_doubal_age && bioAge.klemera_doubal_age !== 'null' ? parseFloat(bioAge.klemera_doubal_age).toFixed(1) : 'N/A'}</p>
                               </div>
-                              <div class="text-xs text-gray-600">
+                              <div class="text-xs text-gray-600 mb-3">
                                   <p class="mb-1"><strong>Method:</strong> Klemera & Doubal (2006)</p>
-                                  <p class="mb-1"><strong>Based on:</strong> Multiple biomarker correlations</p>
+                                  <p class="mb-1"><strong>Based on:</strong> Age-correlated biomarkers</p>
                                   <p><strong>Focus:</strong> Physiological aging rate</p>
                               </div>
+                              
+                              <!-- Biomarker Details Button -->
+                              <button onclick="toggleBiomarkerDetails('klemera_biomarkers')" 
+                                      class="w-full bg-green-50 hover:bg-green-100 text-green-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors border border-green-200">
+                                  <i class="fas fa-flask mr-1"></i>Show Biomarkers Used
+                              </button>
+                              
+                              <!-- Expandable Biomarker Details -->
+                              ${(() => {
+                                const analysis = analyzeBiologicalAgeBiomarkers('klemera_doubal', session, comprehensiveData, bioAge.klemera_doubal_age ? parseFloat(bioAge.klemera_doubal_age) : null, age)
+                                return `
+                                <div id="klemera_biomarkers" class="biomarker-details hidden mt-3 border-t border-gray-200 pt-3">
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-vial mr-1 text-green-600"></i>Age-Correlated Biomarkers
+                                    </h4>
+                                    <div class="space-y-2 mb-3">
+                                        ${analysis.biomarkers.map(marker => `
+                                            <div class="flex justify-between items-center p-2 rounded text-xs ${
+                                                marker.status === 'optimal' ? 'bg-green-50 border-l-2 border-green-400' :
+                                                marker.status === 'good' ? 'bg-blue-50 border-l-2 border-blue-400' :
+                                                'bg-yellow-50 border-l-2 border-yellow-400'
+                                            }">
+                                                <div>
+                                                    <div class="font-medium">${marker.name}: ${marker.value}</div>
+                                                    <div class="text-gray-600">Optimal: ${marker.functionalRange}</div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <span class="inline-block px-2 py-1 rounded-full text-xs ${
+                                                        marker.impact === 'anti-aging' ? 'bg-green-100 text-green-700' :
+                                                        marker.impact === 'neutral' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }">${marker.impact}</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-brain mr-1 text-green-600"></i>Functional Medicine Interpretation
+                                    </h4>
+                                    <p class="text-xs text-gray-700 bg-green-50 p-2 rounded mb-3">${analysis.functionalInterpretation}</p>
+                                    
+                                    ${analysis.systemsAnalysis.length > 0 ? `
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-network-wired mr-1 text-green-600"></i>Systems Analysis
+                                    </h4>
+                                    <div class="space-y-2 mb-3">
+                                        ${analysis.systemsAnalysis.map(system => `
+                                            <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
+                                                <div>
+                                                    <div class="font-medium">${system.system}</div>
+                                                    <div class="text-gray-600">${system.description}</div>
+                                                </div>
+                                                <span class="inline-block px-2 py-1 rounded-full text-xs ${
+                                                    system.status === 'optimized' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                                                }">${system.status}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                `
+                              })()}
                           </div>
 
                           <div class="bg-white border-2 border-orange-200 rounded-lg p-4">
@@ -3356,11 +4235,69 @@ app.get('/report', async (c) => {
                                   <h3 class="text-md font-semibold">Metabolic Age</h3>
                                   <p class="text-2xl font-bold text-orange-600">${bioAge.metabolic_age && bioAge.metabolic_age !== 'null' ? parseFloat(bioAge.metabolic_age).toFixed(1) : 'N/A'}</p>
                               </div>
-                              <div class="text-xs text-gray-600">
+                              <div class="text-xs text-gray-600 mb-3">
                                   <p class="mb-1"><strong>Method:</strong> Metabolic panel analysis</p>
                                   <p class="mb-1"><strong>Based on:</strong> Glucose, lipids, body composition</p>
                                   <p><strong>Focus:</strong> Metabolic health status</p>
                               </div>
+                              
+                              <!-- Biomarker Details Button -->
+                              <button onclick="toggleBiomarkerDetails('metabolic_biomarkers')" 
+                                      class="w-full bg-orange-50 hover:bg-orange-100 text-orange-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors border border-orange-200">
+                                  <i class="fas fa-flask mr-1"></i>Show Biomarkers Used
+                              </button>
+                              
+                              <!-- Expandable Biomarker Details -->
+                              ${(() => {
+                                const analysis = analyzeBiologicalAgeBiomarkers('metabolic', session, comprehensiveData, bioAge.metabolic_age ? parseFloat(bioAge.metabolic_age) : null, age)
+                                return `
+                                <div id="metabolic_biomarkers" class="biomarker-details hidden mt-3 border-t border-gray-200 pt-3">
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-vial mr-1 text-orange-600"></i>Metabolic Biomarkers
+                                    </h4>
+                                    <div class="space-y-2 mb-3">
+                                        ${analysis.biomarkers.map(marker => `
+                                            <div class="flex justify-between items-center p-2 rounded text-xs ${
+                                                marker.status === 'optimal' ? 'bg-green-50 border-l-2 border-green-400' :
+                                                marker.status === 'good' ? 'bg-blue-50 border-l-2 border-blue-400' :
+                                                'bg-yellow-50 border-l-2 border-yellow-400'
+                                            }">
+                                                <div>
+                                                    <div class="font-medium">${marker.name}: ${marker.value}</div>
+                                                    <div class="text-gray-600">Optimal: ${marker.functionalRange}</div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <span class="inline-block px-2 py-1 rounded-full text-xs ${
+                                                        marker.impact === 'anti-aging' ? 'bg-green-100 text-green-700' :
+                                                        marker.impact === 'neutral' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }">${marker.impact}</span>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                    
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-brain mr-1 text-orange-600"></i>Functional Medicine Interpretation
+                                    </h4>
+                                    <p class="text-xs text-gray-700 bg-orange-50 p-2 rounded mb-3">${analysis.functionalInterpretation}</p>
+                                    
+                                    ${analysis.interventions.length > 0 ? `
+                                    <h4 class="text-xs font-semibold text-gray-800 mb-2 flex items-center">
+                                        <i class="fas fa-leaf mr-1 text-orange-600"></i>Metabolic Optimization Protocols
+                                    </h4>
+                                    <ul class="text-xs space-y-1">
+                                        ${analysis.interventions.map((intervention, idx) => `
+                                            <li class="flex items-start">
+                                                <span class="inline-block w-4 h-4 bg-orange-100 text-orange-700 rounded-full text-xs font-bold flex items-center justify-center mr-2 mt-0.5">${idx + 1}</span>
+                                                <span class="text-gray-700">${intervention}</span>
+                                            </li>
+                                        `).join('')}
+                                    </ul>
+                                    ` : ''}
+                                </div>
+                                `
+                              })()}
                           </div>
 
                           <div class="bg-white border-2 border-purple-200 rounded-lg p-4">
@@ -3382,29 +4319,107 @@ app.get('/report', async (c) => {
                           </div>
                       </div>
 
-                      <!-- Age Advantage Interpretation -->
-                      <div class="bg-gray-50 rounded-lg p-6">
-                          <h3 class="text-lg font-semibold mb-4">Clinical Interpretation</h3>
-                          <div class="prose prose-sm max-w-none text-gray-700">
-                              ${bioAge.age_advantage > 0 ? `
-                                  <p class="text-green-700 font-medium">🎉 <strong>Favorable Age Advantage:</strong> Your biological age indicates you are aging ${bioAge.age_advantage && bioAge.age_advantage !== 'null' ? parseFloat(bioAge.age_advantage).toFixed(1) : 'N/A'} years slower than your chronological age suggests.</p>
-                                  <p>This positive age advantage suggests:</p>
-                                  <ul class="ml-6 space-y-1">
-                                      <li>Superior cellular health and function</li>
-                                      <li>Effective stress response and recovery</li>
-                                      <li>Lower risk of age-related diseases</li>
-                                      <li>Potential for extended healthspan</li>
-                                  </ul>
-                              ` : `
-                                  <p class="text-orange-700 font-medium">⚠️ <strong>Accelerated Aging:</strong> Your biological age indicates you are aging ${bioAge.age_advantage && bioAge.age_advantage !== 'null' ? Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1) : 'N/A'} years faster than your chronological age.</p>
-                                  <p>This suggests opportunities for intervention:</p>
-                                  <ul class="ml-6 space-y-1">
-                                      <li>Optimization of metabolic health</li>
-                                      <li>Enhanced stress management</li>
-                                      <li>Targeted nutritional support</li>
-                                      <li>Lifestyle modifications for longevity</li>
-                                  </ul>
-                              `}
+                      <!-- Functional Medicine Biological Age Analysis -->
+                      <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-6 mb-6">
+                          <h3 class="text-lg font-semibold mb-4 flex items-center">
+                              <i class="fas fa-microscope mr-2 text-indigo-600"></i>Functional Medicine Biological Age Analysis
+                          </h3>
+                          
+                          <!-- Age Advantage Summary -->
+                          <div class="grid md:grid-cols-2 gap-6 mb-6">
+                              <div class="${bioAge.age_advantage > 0 ? 'bg-green-50 border-l-4 border-green-400' : 'bg-orange-50 border-l-4 border-orange-400'} p-4 rounded-r-lg">
+                                  <h4 class="font-semibold ${bioAge.age_advantage > 0 ? 'text-green-800' : 'text-orange-800'} mb-2">
+                                      ${bioAge.age_advantage > 0 ? '🎉 Biological Age Advantage' : '⚠️ Accelerated Biological Aging'}
+                                  </h4>
+                                  <p class="text-sm ${bioAge.age_advantage > 0 ? 'text-green-700' : 'text-orange-700'}">
+                                      ${bioAge.age_advantage > 0 ? 
+                                          'You are aging ' + (bioAge.age_advantage && bioAge.age_advantage !== 'null' ? parseFloat(bioAge.age_advantage).toFixed(1) : 'N/A') + ' years slower than chronological age suggests.' :
+                                          'Your biological systems are aging ' + (bioAge.age_advantage && bioAge.age_advantage !== 'null' ? Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1) : 'N/A') + ' years faster than optimal.'
+                                      }
+                                  </p>
+                              </div>
+                              
+                              <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                                  <h4 class="font-semibold text-blue-800 mb-2">🔬 Primary Age Calculator</h4>
+                                  <p class="text-sm text-blue-700">
+                                      ${bioAge.klemera_doubal_age && bioAge.klemera_doubal_age !== 'null' ? 
+                                          'Klemera-Doubal Method: Most comprehensive multi-biomarker approach' :
+                                          bioAge.phenotypic_age && bioAge.phenotypic_age !== 'null' ?
+                                          'Phenotypic Age: Mortality-risk based assessment' :
+                                          'Metabolic Age: Based on available metabolic markers'
+                                      }
+                                  </p>
+                              </div>
+                          </div>
+                          
+                          <!-- Systems Medicine Interpretation -->
+                          <div class="bg-white rounded-lg p-4 mb-4">
+                              <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                  <i class="fas fa-network-wired mr-2 text-indigo-600"></i>Systems Medicine Interpretation
+                              </h4>
+                              <div class="grid md:grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                      <h5 class="font-medium text-gray-700 mb-2">🧬 Cellular Health Systems</h5>
+                                      <ul class="space-y-1 text-gray-600">
+                                          <li>• <strong>Mitochondrial Function:</strong> ${bioAge.metabolic_age <= age ? 'Optimized energy production' : 'Needs metabolic support'}</li>
+                                          <li>• <strong>Inflammatory Response:</strong> ${'chronic inflammation assessment needed'}</li>
+                                          <li>• <strong>Oxidative Balance:</strong> ${'antioxidant status evaluation indicated'}</li>
+                                          <li>• <strong>Protein Synthesis:</strong> ${comprehensiveData?.albumin >= 4.2 ? 'Adequate protein metabolism' : 'May need protein optimization'}</li>
+                                      </ul>
+                                  </div>
+                                  <div>
+                                      <h5 class="font-medium text-gray-700 mb-2">⚖️ Regulatory Systems</h5>
+                                      <ul class="space-y-1 text-gray-600">
+                                          <li>• <strong>Metabolic Regulation:</strong> ${comprehensiveData?.glucose <= 90 ? 'Well-controlled glucose metabolism' : 'Glucose optimization indicated'}</li>
+                                          <li>• <strong>Cardiovascular Health:</strong> ${comprehensiveData?.systolicBP <= 120 ? 'Optimal vascular function' : 'Cardiovascular support needed'}</li>
+                                          <li>• <strong>Detoxification Capacity:</strong> ${'liver function assessment recommended'}</li>
+                                          <li>• <strong>Hormone Balance:</strong> ${'comprehensive hormone panel indicated'}</li>
+                                      </ul>
+                                  </div>
+                              </div>
+                          </div>
+                          
+                          <!-- Functional Medicine Action Plan -->
+                          <div class="bg-white rounded-lg p-4">
+                              <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                                  <i class="fas fa-leaf mr-2 text-green-600"></i>Functional Medicine Optimization Protocol
+                              </h4>
+                              <div class="grid md:grid-cols-3 gap-4 text-sm">
+                                  <div class="bg-green-50 p-3 rounded">
+                                      <h5 class="font-medium text-green-800 mb-2">🎯 Immediate Actions (0-3 months)</h5>
+                                      <ul class="space-y-1 text-green-700">
+                                          ${bioAge.age_advantage <= 0 ? `
+                                          <li>• Anti-inflammatory diet protocol</li>
+                                          <li>• Mitochondrial support supplementation</li>
+                                          <li>• Stress reduction techniques</li>
+                                          <li>• Sleep optimization (7-9 hours)</li>
+                                          ` : `
+                                          <li>• Maintain current healthy practices</li>
+                                          <li>• Fine-tune nutrient optimization</li>
+                                          <li>• Advanced biomarker monitoring</li>
+                                          <li>• Preventive aging protocols</li>
+                                          `}
+                                      </ul>
+                                  </div>
+                                  <div class="bg-blue-50 p-3 rounded">
+                                      <h5 class="font-medium text-blue-800 mb-2">🔬 Advanced Testing (3-6 months)</h5>
+                                      <ul class="space-y-1 text-blue-700">
+                                          <li>• Comprehensive metabolic panel</li>
+                                          <li>• Inflammatory markers (IL-6, TNF-α)</li>
+                                          <li>• Nutrient status assessment</li>
+                                          <li>• Hormone panel (cortisol, thyroid, sex hormones)</li>
+                                      </ul>
+                                  </div>
+                                  <div class="bg-purple-50 p-3 rounded">
+                                      <h5 class="font-medium text-purple-800 mb-2">📈 Long-term Optimization (6+ months)</h5>
+                                      <ul class="space-y-1 text-purple-700">
+                                          <li>• Personalized nutrition protocols</li>
+                                          <li>• Targeted supplementation</li>
+                                          <li>• Genetic testing consideration</li>
+                                          <li>• Biological age monitoring</li>
+                                      </ul>
+                                  </div>
+                              </div>
                           </div>
                       </div>
                   </div>
@@ -3430,29 +4445,7 @@ app.get('/report', async (c) => {
                       </div>
 
                       <!-- System Integration Analysis -->
-                      <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-6">
-                          <h3 class="text-lg font-semibold mb-4">System Integration Analysis</h3>
-                          <div class="grid md:grid-cols-2 gap-6">
-                              <div>
-                                  <h4 class="font-semibold text-green-700 mb-3">🌟 Strengths Identified</h4>
-                                  <ul class="space-y-2 text-sm text-gray-700">
-                                      <li>• Excellent cardiovascular-metabolic synergy</li>
-                                      <li>• Strong immune-inflammatory balance</li>
-                                      <li>• Optimal detoxification pathways</li>
-                                      <li>• Efficient cellular energy production</li>
-                                  </ul>
-                              </div>
-                              <div>
-                                  <h4 class="font-semibold text-blue-700 mb-3">🎯 Integration Opportunities</h4>
-                                  <ul class="space-y-2 text-sm text-gray-700">
-                                      <li>• Enhance digestive-immune axis</li>
-                                      <li>• Optimize hormonal-metabolic balance</li>
-                                      <li>• Support nervous system resilience</li>
-                                      <li>• Strengthen musculoskeletal foundation</li>
-                                  </ul>
-                              </div>
-                          </div>
-                      </div>
+                      ${generateSystemIntegrationAnalysis()}
                   </div>
               </div>
 
@@ -4390,6 +5383,51 @@ app.get('/report', async (c) => {
                   } else {
                       details.classList.add('hidden');
                       button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Show Detailed Calculation Methods';
+                  }
+              }
+              
+              // Risk factor details toggle function
+              function toggleRiskDetails(detailsId) {
+                  const details = document.getElementById(detailsId);
+                  const button = event.target;
+                  
+                  if (details.classList.contains('hidden')) {
+                      details.classList.remove('hidden');
+                      button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Hide Risk Factors & Analysis';
+                  } else {
+                      details.classList.add('hidden');
+                      button.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Show Risk Factors & Analysis';
+                  }
+              }
+              
+              // Biomarker details toggle function  
+              function toggleBiomarkerDetails(detailsId) {
+                  const details = document.getElementById(detailsId);
+                  const button = event.target;
+                  
+                  if (details.classList.contains('hidden')) {
+                      details.classList.remove('hidden');
+                      button.innerHTML = '<i class="fas fa-flask mr-1"></i>Hide Biomarkers';
+                  } else {
+                      details.classList.add('hidden');
+                      button.innerHTML = '<i class="fas fa-flask mr-1"></i>Show Biomarkers Used';
+                  }
+              }
+              
+              // Functional medicine system analysis toggle function
+              function toggleSystemAnalysis(systemId) {
+                  const details = document.getElementById('analysis-' + systemId);
+                  const chevron = document.getElementById('chevron-' + systemId);
+                  const button = event.target.closest('button');
+                  
+                  if (details.classList.contains('hidden')) {
+                      details.classList.remove('hidden');
+                      chevron.classList.add('rotate-180');
+                      button.querySelector('span').innerHTML = '<i class="fas fa-microscope mr-2"></i>Hide Root Cause Analysis & Clinical Insights';
+                  } else {
+                      details.classList.add('hidden');
+                      chevron.classList.remove('rotate-180');
+                      button.querySelector('span').innerHTML = '<i class="fas fa-microscope mr-2"></i>Show Root Cause Analysis & Clinical Insights';
                   }
               }
 
