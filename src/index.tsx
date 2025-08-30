@@ -7,6 +7,20 @@ type Bindings = {
   DB: D1Database;
 }
 
+// Helper function to calculate age from date of birth
+function calculateAge(dateOfBirth: string): number {
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+}
+
 // Helper function to validate biomarker ranges with gender awareness
 const validateBiomarkerValue = (value: number, range: string, gender?: string) => {
   if (isNaN(value)) return 'unknown';
@@ -2050,6 +2064,2112 @@ app.get('/report', async (c) => {
     }
 
 
+
+    // Root-Cause Prioritization Analysis for Section 5
+    function generateRootCausePrioritization() {
+      if (!comprehensiveData) {
+        return ''
+      }
+
+      // Analyze ATM factors and cross-reference with functional medicine systems
+      const atmFactors = []
+      const systemImpacts = []
+      
+      // Process antecedents
+      if (comprehensiveData.antecedentsDescription) {
+        comprehensiveData.antecedentsDescription.forEach((desc, index) => {
+          const severity = comprehensiveData.antecedentsSeverity?.[index] || 'Unknown'
+          const date = comprehensiveData.antecedentsDate?.[index] || ''
+          
+          let priority = 'Medium'
+          let systemsAffected = []
+          let interventionComplexity = 'Moderate'
+          
+          if (desc.toLowerCase().includes('genetic') || desc.toLowerCase().includes('family history')) {
+            priority = 'High'
+            systemsAffected = ['All Systems - Genetic Foundation']
+            interventionComplexity = 'High - Requires lifelong management'
+          } else if (desc.toLowerCase().includes('stress')) {
+            priority = 'High'
+            systemsAffected = ['Communication (HPA Axis)', 'Energy (Adrenal)', 'Defense (Immune)']
+            interventionComplexity = 'Moderate - Stress management protocols'
+          } else if (desc.toLowerCase().includes('sedentary') || desc.toLowerCase().includes('lifestyle')) {
+            priority = 'Medium-High' 
+            systemsAffected = ['Energy (Mitochondrial)', 'Transport (Cardiovascular)', 'Structural']
+            interventionComplexity = 'Low-Moderate - Lifestyle modification'
+          }
+          
+          atmFactors.push({
+            type: 'Antecedent',
+            description: desc,
+            date: date,
+            severity: severity,
+            priority: priority,
+            systemsAffected: systemsAffected,
+            interventionComplexity: interventionComplexity,
+            modifiable: !desc.toLowerCase().includes('genetic')
+          })
+        })
+      }
+      
+      // Process triggers  
+      if (comprehensiveData.triggersDescription) {
+        comprehensiveData.triggersDescription.forEach((desc, index) => {
+          const impact = comprehensiveData.triggersImpact?.[index] || 'Unknown'
+          const date = comprehensiveData.triggersDate?.[index] || ''
+          
+          let priority = 'Medium'
+          let systemsAffected = []
+          
+          if (desc.toLowerCase().includes('stress') || desc.toLowerCase().includes('promotion')) {
+            priority = 'High'
+            systemsAffected = ['Communication', 'Energy', 'Assimilation']
+          } else if (desc.toLowerCase().includes('death') || desc.toLowerCase().includes('grief')) {
+            priority = 'High'
+            systemsAffected = ['Communication', 'Defense', 'Energy']
+          } else if (desc.toLowerCase().includes('pandemic') || desc.toLowerCase().includes('covid')) {
+            priority = 'Medium-High'
+            systemsAffected = ['Structural', 'Energy', 'Communication']
+          }
+          
+          atmFactors.push({
+            type: 'Trigger',
+            description: desc,
+            date: date,
+            impact: impact,
+            priority: priority,
+            systemsAffected: systemsAffected,
+            interventionComplexity: 'Low-Moderate - Trauma/stress processing',
+            modifiable: true
+          })
+        })
+      }
+      
+      // Process mediators
+      if (comprehensiveData.mediatorsDescription) {
+        comprehensiveData.mediatorsDescription.forEach((desc, index) => {
+          const frequency = comprehensiveData.mediatorsFrequency?.[index] || 'Unknown'
+          
+          let priority = 'High' // Mediators are ongoing, so high priority
+          let systemsAffected = []
+          
+          if (desc.toLowerCase().includes('stress') || desc.toLowerCase().includes('cortisol')) {
+            systemsAffected = ['Communication', 'Energy', 'Defense', 'Assimilation']
+          } else if (desc.toLowerCase().includes('sleep')) {
+            systemsAffected = ['Energy', 'Communication', 'Defense']
+          } else if (desc.toLowerCase().includes('meal') || desc.toLowerCase().includes('food')) {
+            systemsAffected = ['Assimilation', 'Energy', 'Transport']
+          }
+          
+          atmFactors.push({
+            type: 'Mediator',
+            description: desc,
+            frequency: frequency,
+            priority: priority,
+            systemsAffected: systemsAffected,
+            interventionComplexity: 'Low-Moderate - Behavior change',
+            modifiable: true
+          })
+        })
+      }
+      
+      // Sort by priority and modifiability
+      const priorityOrder = { 'High': 4, 'Medium-High': 3, 'Medium': 2, 'Low': 1 }
+      atmFactors.sort((a, b) => {
+        if (a.modifiable !== b.modifiable) return b.modifiable ? 1 : -1
+        return priorityOrder[b.priority] - priorityOrder[a.priority]
+      })
+      
+      return `
+        <div class="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-6 mb-8 border border-purple-200">
+          <h3 class="text-lg font-semibold text-purple-800 mb-4">
+            <i class="fas fa-chart-line mr-2"></i>
+            Root-Cause Prioritization Analysis
+          </h3>
+          <p class="text-sm text-gray-700 mb-6">
+            Clinical decision support for intervention prioritization based on modifiability, impact, and systems affected.
+          </p>
+          
+          <div class="grid lg:grid-cols-2 gap-6">
+            <!-- Priority Factors -->
+            <div>
+              <h4 class="font-semibold text-purple-700 mb-4">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Intervention Priority Ranking
+              </h4>
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                ${atmFactors.slice(0, 6).map((factor, index) => {
+                  const priorityColor = factor.priority === 'High' ? 'red' : 
+                                       factor.priority === 'Medium-High' ? 'orange' : 'yellow'
+                  const modifiableIcon = factor.modifiable ? 'fas fa-edit text-green-600' : 'fas fa-lock text-gray-500'
+                  
+                  return `
+                    <div class="bg-white rounded-lg p-4 border border-${priorityColor}-200">
+                      <div class="flex justify-between items-start mb-2">
+                        <span class="inline-block px-2 py-1 rounded text-xs font-medium bg-${priorityColor}-100 text-${priorityColor}-800">
+                          #${index + 1} - ${factor.priority} Priority
+                        </span>
+                        <i class="${modifiableIcon}" title="${factor.modifiable ? 'Modifiable' : 'Non-modifiable'}"></i>
+                      </div>
+                      
+                      <h5 class="font-semibold text-gray-800 text-sm mb-2">
+                        ${factor.type}: ${factor.description.substring(0, 80)}${factor.description.length > 80 ? '...' : ''}
+                      </h5>
+                      
+                      <div class="space-y-1 text-xs">
+                        <div><strong>Systems Affected:</strong> ${factor.systemsAffected.join(', ')}</div>
+                        <div><strong>Intervention Complexity:</strong> ${factor.interventionComplexity}</div>
+                        ${factor.date ? `<div><strong>Timeline:</strong> ${factor.date}</div>` : ''}
+                      </div>
+                    </div>
+                  `
+                }).join('')}
+              </div>
+            </div>
+            
+            <!-- Systems Impact Matrix -->
+            <div>
+              <h4 class="font-semibold text-purple-700 mb-4">
+                <i class="fas fa-network-wired mr-2"></i>
+                Cross-System Impact Analysis
+              </h4>
+              <div class="bg-white rounded-lg p-4 border border-purple-200">
+                <div class="space-y-3">
+                  ${['Communication', 'Energy', 'Assimilation', 'Defense', 'Transport', 'Biotransformation', 'Structural'].map(system => {
+                    const affectingFactors = atmFactors.filter(factor => 
+                      factor.systemsAffected.some(affected => affected.includes(system))
+                    )
+                    const impactLevel = affectingFactors.length >= 3 ? 'High' : 
+                                      affectingFactors.length >= 2 ? 'Moderate' : 'Low'
+                    const impactColor = impactLevel === 'High' ? 'red' : 
+                                       impactLevel === 'Moderate' ? 'yellow' : 'green'
+                    
+                    return `
+                      <div class="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        <span class="text-sm font-medium text-gray-700">${system} System</span>
+                        <div class="flex items-center">
+                          <span class="text-xs text-gray-600 mr-2">${affectingFactors.length} factors</span>
+                          <span class="inline-block px-2 py-1 rounded text-xs font-medium bg-${impactColor}-100 text-${impactColor}-800">
+                            ${impactLevel} Impact
+                          </span>
+                        </div>
+                      </div>
+                    `
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    // Clinical Decision Support for Section 5
+    function generateClinicalDecisionSupport() {
+      if (!comprehensiveData) {
+        return ''
+      }
+
+      const clinicalRecommendations = []
+      const testingPriorities = []
+      const interventionProtocols = []
+      const redFlags = []
+      
+      // Analyze patterns for clinical recommendations
+      if (comprehensiveData.antecedentsDescription) {
+        comprehensiveData.antecedentsDescription.forEach(desc => {
+          if (desc.toLowerCase().includes('family history')) {
+            testingPriorities.push({
+              category: 'Genetic Risk Assessment',
+              tests: ['Comprehensive lipid panel with particle size', 'Advanced glycemic markers (HbA1c, fasting insulin)', 'Inflammatory markers (hsCRP, IL-6)', 'Genetic testing for APOE, MTHFR variants'],
+              urgency: 'High',
+              rationale: 'Strong family history indicates need for early detection and prevention'
+            })
+          }
+          if (desc.toLowerCase().includes('stress')) {
+            testingPriorities.push({
+              category: 'HPA Axis Assessment', 
+              tests: ['4-point salivary cortisol', 'DHEA-S', 'Pregnenolone', 'Neurotransmitter metabolites'],
+              urgency: 'Medium-High',
+              rationale: 'Chronic stress requires comprehensive neuroendocrine evaluation'
+            })
+          }
+        })
+      }
+      
+      if (comprehensiveData.mediatorsDescription) {
+        comprehensiveData.mediatorsDescription.forEach(desc => {
+          if (desc.toLowerCase().includes('sleep')) {
+            interventionProtocols.push({
+              category: 'Sleep Optimization Protocol',
+              interventions: ['Sleep hygiene assessment', 'Melatonin optimization', 'Magnesium glycinate supplementation', 'Blue light exposure management'],
+              evidence: 'Level A - Multiple RCTs support sleep interventions for metabolic and cognitive health',
+              timeframe: '4-8 weeks for initial improvements'
+            })
+          }
+          if (desc.toLowerCase().includes('stress')) {
+            interventionProtocols.push({
+              category: 'Stress Management Protocol',
+              interventions: ['Adaptogenic herbs (ashwagandha, rhodiola)', 'Mindfulness-based stress reduction', 'HRV training', 'Phosphatidylserine supplementation'],
+              evidence: 'Level A-B - Strong evidence for multi-modal stress interventions',
+              timeframe: '6-12 weeks for measurable HPA axis improvements'
+            })
+          }
+        })
+      }
+      
+      // Check for red flags based on ATM patterns
+      if (comprehensiveData.triggersDescription) {
+        comprehensiveData.triggersDescription.forEach(desc => {
+          if (desc.toLowerCase().includes('death') || desc.toLowerCase().includes('grief')) {
+            redFlags.push({
+              warning: 'Unresolved Grief/Trauma',
+              implication: 'May require psychological support before physiological interventions',
+              action: 'Consider referral to trauma-informed therapist or grief counselor'
+            })
+          }
+        })
+      }
+      
+      return `
+        <div class="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg p-6 mb-8 border border-teal-200">
+          <h3 class="text-lg font-semibold text-teal-800 mb-4">
+            <i class="fas fa-stethoscope mr-2"></i>
+            Clinical Decision Support & Evidence-Based Protocols
+          </h3>
+          <p class="text-sm text-gray-700 mb-6">
+            Personalized clinical recommendations based on root-cause analysis and current evidence.
+          </p>
+          
+          <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Testing Priorities -->
+            <div>
+              <h4 class="font-semibold text-teal-700 mb-4">
+                <i class="fas fa-flask mr-2"></i>
+                Priority Laboratory Assessment
+              </h4>
+              <div class="space-y-4">
+                ${testingPriorities.map(category => `
+                  <div class="bg-white rounded-lg p-4 border border-teal-200">
+                    <div class="flex justify-between items-center mb-2">
+                      <h5 class="font-semibold text-gray-800 text-sm">${category.category}</h5>
+                      <span class="inline-block px-2 py-1 rounded text-xs font-medium ${
+                        category.urgency === 'High' ? 'bg-red-100 text-red-800' :
+                        category.urgency === 'Medium-High' ? 'bg-orange-100 text-orange-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }">${category.urgency}</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mb-3">${category.rationale}</p>
+                    <ul class="text-xs space-y-1">
+                      ${category.tests.map(test => `<li>• ${test}</li>`).join('')}
+                    </ul>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- Intervention Protocols -->
+            <div>
+              <h4 class="font-semibold text-teal-700 mb-4">
+                <i class="fas fa-prescription mr-2"></i>
+                Evidence-Based Interventions
+              </h4>
+              <div class="space-y-4">
+                ${interventionProtocols.map(protocol => `
+                  <div class="bg-white rounded-lg p-4 border border-teal-200">
+                    <h5 class="font-semibold text-gray-800 text-sm mb-2">${protocol.category}</h5>
+                    <div class="text-xs space-y-2">
+                      <div><strong>Interventions:</strong></div>
+                      <ul class="ml-4 space-y-1">
+                        ${protocol.interventions.map(intervention => `<li>• ${intervention}</li>`).join('')}
+                      </ul>
+                      <div><strong>Evidence Level:</strong> ${protocol.evidence}</div>
+                      <div><strong>Expected Timeline:</strong> ${protocol.timeframe}</div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- Red Flags & Warnings -->
+            <div>
+              <h4 class="font-semibold text-red-700 mb-4">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                Clinical Considerations
+              </h4>
+              ${redFlags.length > 0 ? `
+                <div class="space-y-4">
+                  ${redFlags.map(flag => `
+                    <div class="bg-red-50 rounded-lg p-4 border border-red-200">
+                      <h5 class="font-semibold text-red-800 text-sm mb-2">
+                        <i class="fas fa-warning mr-1"></i>${flag.warning}
+                      </h5>
+                      <p class="text-xs text-red-700 mb-2">${flag.implication}</p>
+                      <p class="text-xs text-red-800 font-medium">${flag.action}</p>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div class="bg-white rounded-lg p-4 border border-teal-200">
+                  <div class="text-center py-4">
+                    <i class="fas fa-check-circle text-green-600 text-2xl mb-2"></i>
+                    <p class="text-sm text-gray-600">No immediate clinical red flags identified.</p>
+                    <p class="text-xs text-gray-500 mt-2">Proceed with standard functional medicine protocols based on ATM analysis.</p>
+                  </div>
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+      `
+    }
+
+    // Advanced Clinical Analysis Hub for Section 5
+    function generateAdvancedClinicalAnalysis() {
+      if (!comprehensiveData) {
+        return ''
+      }
+
+      return `
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 mb-8 border-2 border-indigo-200">
+          <div class="text-center mb-6">
+            <h3 class="text-xl font-bold text-indigo-800 mb-2">
+              <i class="fas fa-microscope mr-2"></i>
+              Advanced Clinical Analysis Hub
+            </h3>
+            <p class="text-sm text-gray-700 max-w-3xl mx-auto">
+              Deep-dive clinical analysis modules for comprehensive root-cause investigation. 
+              Click any module below to access advanced functional medicine insights tailored to this patient's ATM profile.
+            </p>
+          </div>
+
+          <!-- Analysis Modules Grid -->
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            
+            <!-- Module 1: Biochemical Pathway Mapping -->
+            <div class="bg-white border-2 border-blue-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('pathways')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-blue-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-project-diagram text-blue-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-blue-800 text-sm">Pathway Disruption Map</h4>
+                </div>
+                <i class="fas fa-chevron-down text-blue-600 transform transition-transform duration-200" id="chevron-pathways"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Biochemical pathway analysis showing how root causes disrupt cellular function</p>
+              <div class="text-xs text-blue-700 font-medium">• Metabolic cascades • Nutrient depletion • Inflammation pathways</div>
+            </div>
+
+            <!-- Module 2: Feedback Loop Detection -->
+            <div class="bg-white border-2 border-red-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('loops')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-red-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-sync-alt text-red-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-red-800 text-sm">Vicious Cycle Analysis</h4>
+                </div>
+                <i class="fas fa-chevron-down text-red-600 transform transition-transform duration-200" id="chevron-loops"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Self-perpetuating cycles and optimal intervention break points</p>
+              <div class="text-xs text-red-700 font-medium">• Cycle detection • Breaking strategies • Prevention protocols</div>
+            </div>
+
+            <!-- Module 3: Therapeutic Timing -->
+            <div class="bg-white border-2 border-green-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('timing')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-green-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-clock text-green-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-green-800 text-sm">Intervention Sequencing</h4>
+                </div>
+                <i class="fas fa-chevron-down text-green-600 transform transition-transform duration-200" id="chevron-timing"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Optimal intervention timing and therapeutic windows</p>
+              <div class="text-xs text-green-700 font-medium">• Phase sequencing • Therapeutic windows • Contraindications</div>
+            </div>
+
+            <!-- Module 4: Biomarker Prediction -->
+            <div class="bg-white border-2 border-purple-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('biomarkers')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-purple-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-chart-line text-purple-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-purple-800 text-sm">Biomarker Tracking</h4>
+                </div>
+                <i class="fas fa-chevron-down text-purple-600 transform transition-transform duration-200" id="chevron-biomarkers"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Predicted lab changes and monitoring protocols</p>
+              <div class="text-xs text-purple-700 font-medium">• Expected improvements • Retest timing • Warning signs</div>
+            </div>
+
+            <!-- Module 5: Psychoneuroimmunology -->
+            <div class="bg-white border-2 border-orange-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('pni')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-orange-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-brain text-orange-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-orange-800 text-sm">Mind-Body Integration</h4>
+                </div>
+                <i class="fas fa-chevron-down text-orange-600 transform transition-transform duration-200" id="chevron-pni"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Psychoneuroimmunology and emotional-physical connections</p>
+              <div class="text-xs text-orange-700 font-medium">• Trauma pathways • Stress physiology • Mind-body protocols</div>
+            </div>
+
+            <!-- Module 6: Genomic-Environmental -->
+            <div class="bg-white border-2 border-teal-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('genomics')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-teal-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-dna text-teal-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-teal-800 text-sm">Gene-Environment Matrix</h4>
+                </div>
+                <i class="fas fa-chevron-down text-teal-600 transform transition-transform duration-200" id="chevron-genomics"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Genomic predispositions and environmental interactions</p>
+              <div class="text-xs text-teal-700 font-medium">• Epigenetic triggers • Risk modulation • Personalized prevention</div>
+            </div>
+
+          </div>
+
+          <!-- Second Row of Modules -->
+          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+            <!-- Module 7: Environmental Toxins -->
+            <div class="bg-white border-2 border-yellow-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('toxins')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-yellow-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-industry text-yellow-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-yellow-800 text-sm">Toxin Analysis</h4>
+                </div>
+                <i class="fas fa-chevron-down text-yellow-600 transform transition-transform duration-200" id="chevron-toxins"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Environmental toxin exposure and detox capacity</p>
+              <div class="text-xs text-yellow-700 font-medium">• Exposure timeline • Synergistic effects</div>
+            </div>
+
+            <!-- Module 8: Precision Supplementation -->
+            <div class="bg-white border-2 border-pink-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('supplements')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-pink-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-pills text-pink-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-pink-800 text-sm">Precision Protocols</h4>
+                </div>
+                <i class="fas fa-chevron-down text-pink-600 transform transition-transform duration-200" id="chevron-supplements"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Root-cause-specific supplementation algorithms</p>
+              <div class="text-xs text-pink-700 font-medium">• Targeted protocols • Synergy analysis</div>
+            </div>
+
+            <!-- Module 9: Success Prediction -->
+            <div class="bg-white border-2 border-indigo-200 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('prediction')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-indigo-100 p-2 rounded-full mr-3">
+                    <i class="fas fa-target text-indigo-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-indigo-800 text-sm">Success Matrix</h4>
+                </div>
+                <i class="fas fa-chevron-down text-indigo-600 transform transition-transform duration-200" id="chevron-prediction"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Intervention success probability and ROI analysis</p>
+              <div class="text-xs text-indigo-700 font-medium">• Success likelihood • Cost-benefit</div>
+            </div>
+
+            <!-- Module 10: Hidden Root Causes -->
+            <div class="bg-white border-2 border-gray-400 rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer" onclick="toggleAdvancedModule('hidden')">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center">
+                  <div class="bg-gray-200 p-2 rounded-full mr-3">
+                    <i class="fas fa-search-plus text-gray-600"></i>
+                  </div>
+                  <h4 class="font-semibold text-gray-800 text-sm">Hidden Factor Detection</h4>
+                </div>
+                <i class="fas fa-chevron-down text-gray-600 transform transition-transform duration-200" id="chevron-hidden"></i>
+              </div>
+              <p class="text-xs text-gray-600 mb-2">Pattern recognition for concealed root causes</p>
+              <div class="text-xs text-gray-700 font-medium">• Pattern analysis • Additional screening</div>
+            </div>
+
+          </div>
+
+          <!-- Expandable Content Areas -->
+          ${generateBiochemicalPathways()}
+          ${generateFeedbackLoops()}  
+          ${generateTherapeuticTiming()}
+          ${generateBiomarkerPrediction()}
+          ${generatePsychoneuroimmunology()}
+          ${generateGenomicEnvironmental()}
+          ${generateEnvironmentalToxins()}
+          ${generatePrecisionSupplementation()}
+          ${generateSuccessPrediction()}
+          ${generateHiddenFactors()}
+
+        </div>
+      `
+    }
+
+    // Individual Analysis Module Functions for Advanced Clinical Analysis Hub
+
+    function generateBiochemicalPathways() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      const age = calculateAge(atmData.dateOfBirth)
+      
+      // Analyze key pathway disruptions from ATM data
+      const pathwayDisruptions = []
+      const upstreamEffects = []
+      const downstreamEffects = []
+      
+      // Parse antecedents for pathway impacts
+      if (atmData.antecedentsDescription) {
+        atmData.antecedentsDescription.forEach(antecedent => {
+          if (antecedent.toLowerCase().includes('sugar') || antecedent.toLowerCase().includes('processed')) {
+            pathwayDisruptions.push('Glycolysis & insulin signaling pathway compromise')
+            downstreamEffects.push('Advanced glycation end-product (AGE) formation')
+            upstreamEffects.push('Pancreatic beta-cell stress and insulin resistance cascade')
+          }
+          if (antecedent.toLowerCase().includes('stress') || antecedent.toLowerCase().includes('cortisol')) {
+            pathwayDisruptions.push('Hypothalamic-pituitary-adrenal (HPA) axis dysregulation')
+            downstreamEffects.push('Chronic inflammation via NFκB pathway activation')
+            upstreamEffects.push('Disrupted circadian rhythm affecting melatonin production')
+          }
+          if (antecedent.toLowerCase().includes('sleep') || antecedent.toLowerCase().includes('insomnia')) {
+            pathwayDisruptions.push('Circadian clock gene expression disruption (CLOCK, BMAL1)')
+            downstreamEffects.push('Impaired autophagy and cellular repair mechanisms')
+            upstreamEffects.push('Growth hormone secretion abnormalities')
+          }
+        })
+      }
+
+      // Parse triggers for acute pathway effects
+      if (atmData.triggersDescription) {
+        atmData.triggersDescription.forEach(trigger => {
+          if (trigger.toLowerCase().includes('infection') || trigger.toLowerCase().includes('illness')) {
+            pathwayDisruptions.push('Acute phase response activation (IL-1β, IL-6, TNF-α)')
+            downstreamEffects.push('Muscle protein catabolism via ubiquitin-proteasome pathway')
+          }
+          if (trigger.toLowerCase().includes('toxin') || trigger.toLowerCase().includes('exposure')) {
+            pathwayDisruptions.push('Phase I & II detoxification pathway overload')
+            downstreamEffects.push('Glutathione depletion and oxidative stress cascade')
+          }
+        })
+      }
+
+      // Add default pathways if none identified
+      if (pathwayDisruptions.length === 0) {
+        pathwayDisruptions.push('Mitochondrial electron transport chain efficiency decline')
+        pathwayDisruptions.push('Methylation pathway substrate competition')
+        downstreamEffects.push('Cellular ATP production decline affecting all energy-dependent processes')
+        upstreamEffects.push('Folate cycle disruption affecting DNA methylation patterns')
+      }
+
+      return `
+        <div id="pathways-content" class="hidden mt-6 p-6 bg-blue-50 border-2 border-blue-200 rounded-lg">
+          <h4 class="text-lg font-bold text-blue-800 mb-4">
+            <i class="fas fa-project-diagram mr-2"></i>
+            Biochemical Pathway Disruption Analysis
+          </h4>
+          
+          <div class="grid lg:grid-cols-3 gap-6 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-blue-200">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Primary Pathway Disruptions
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${pathwayDisruptions.slice(0, 4).map(disruption => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${disruption}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-blue-200">
+              <h5 class="font-semibold text-orange-700 mb-3">
+                <i class="fas fa-arrow-up mr-1"></i>
+                Upstream Effects
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${upstreamEffects.slice(0, 3).map(effect => 
+                  `<li class="flex items-start">
+                    <span class="text-orange-500 mr-2 mt-0.5">•</span>
+                    <span>${effect}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-blue-200">
+              <h5 class="font-semibold text-purple-700 mb-3">
+                <i class="fas fa-arrow-down mr-1"></i>
+                Downstream Consequences
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${downstreamEffects.slice(0, 3).map(effect => 
+                  `<li class="flex items-start">
+                    <span class="text-purple-500 mr-2 mt-0.5">•</span>
+                    <span>${effect}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-blue-300">
+            <h5 class="font-semibold text-blue-800 mb-3">
+              <i class="fas fa-lightbulb mr-1"></i>
+              Therapeutic Pathway Targets
+            </h5>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong class="text-green-700">Immediate Interventions:</strong>
+                <ul class="mt-2 space-y-1">
+                  <li>• NAD+ precursors for mitochondrial support</li>
+                  <li>• Methylfolate for methylation pathway optimization</li>
+                  <li>• Glutathione precursors for detoxification support</li>
+                </ul>
+              </div>
+              <div>
+                <strong class="text-blue-700">Long-term Support:</strong>
+                <ul class="mt-2 space-y-1">
+                  <li>• Circadian rhythm optimization protocols</li>
+                  <li>• Anti-inflammatory pathway modulation</li>
+                  <li>• Insulin sensitization pathway activation</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-blue-700 italic">
+            Analysis based on ATM framework data and established biochemical pathway interactions. 
+            Recommendations require clinical correlation and may need adjustment based on laboratory findings.
+          </div>
+        </div>
+      `
+    }
+
+    function generateFeedbackLoops() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Identify vicious cycles from ATM data
+      const viciousCycles = []
+      const breakPoints = []
+      const preventionStrategies = []
+      
+      // Analyze for stress-inflammation loops
+      if (atmData.antecedentsDescription?.some(a => a.toLowerCase().includes('stress')) &&
+          atmData.mediatorsDescription?.some(m => m.toLowerCase().includes('inflammation'))) {
+        viciousCycles.push({
+          cycle: 'Stress → HPA Activation → Cortisol → Inflammation → Tissue Damage → More Stress',
+          severity: 'High',
+          breakpoint: 'HPA axis modulation'
+        })
+        breakPoints.push('Adaptogenic herbs to modulate cortisol response')
+        breakPoints.push('Anti-inflammatory interventions to reduce tissue damage')
+        preventionStrategies.push('Stress management techniques and mindfulness practices')
+      }
+
+      // Analyze for sleep-metabolism loops  
+      if (atmData.antecedentsDescription?.some(a => a.toLowerCase().includes('sleep')) &&
+          atmData.mediatorsDescription?.some(m => m.toLowerCase().includes('metabolic'))) {
+        viciousCycles.push({
+          cycle: 'Poor Sleep → Insulin Resistance → Weight Gain → Sleep Apnea → Worse Sleep',
+          severity: 'High',
+          breakpoint: 'Sleep quality improvement'
+        })
+        breakPoints.push('Sleep hygiene protocols and circadian optimization')
+        breakPoints.push('Insulin sensitization interventions')
+        preventionStrategies.push('Weight management and metabolic optimization')
+      }
+
+      // Analyze for gut-brain loops
+      if (atmData.antecedentsDescription?.some(a => a.toLowerCase().includes('gut') || a.toLowerCase().includes('digestive')) &&
+          atmData.mediatorsDescription?.some(m => m.toLowerCase().includes('neurological') || m.toLowerCase().includes('mood'))) {
+        viciousCycles.push({
+          cycle: 'Gut Dysbiosis → Inflammation → Blood-Brain Barrier → Mood Changes → Poor Diet → Worse Dysbiosis',
+          severity: 'Moderate',
+          breakpoint: 'Microbiome restoration'
+        })
+        breakPoints.push('Targeted probiotics and prebiotic support')
+        breakPoints.push('Anti-inflammatory gut healing protocols')
+        preventionStrategies.push('Dietary diversity and fermented food integration')
+      }
+
+      // Default cycles if none identified
+      if (viciousCycles.length === 0) {
+        viciousCycles.push({
+          cycle: 'Oxidative Stress → Mitochondrial Damage → Energy Decline → Reduced Antioxidant Production → More Oxidative Stress',
+          severity: 'Moderate',
+          breakpoint: 'Antioxidant system support'
+        })
+        breakPoints.push('Comprehensive antioxidant supplementation')
+        breakPoints.push('Mitochondrial support protocols')
+        preventionStrategies.push('Regular exercise to boost endogenous antioxidants')
+      }
+
+      const highSeverityCycles = viciousCycles.filter(cycle => cycle.severity === 'High').length
+      const cycleStatus = highSeverityCycles > 1 ? 'Critical' : highSeverityCycles === 1 ? 'Significant' : 'Manageable'
+
+      return `
+        <div id="loops-content" class="hidden mt-6 p-6 bg-red-50 border-2 border-red-200 rounded-lg">
+          <h4 class="text-lg font-bold text-red-800 mb-4">
+            <i class="fas fa-sync-alt mr-2"></i>
+            Vicious Cycle Analysis & Break Points
+          </h4>
+          
+          <div class="mb-6">
+            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+              cycleStatus === 'Critical' ? 'bg-red-100 text-red-800' :
+              cycleStatus === 'Significant' ? 'bg-orange-100 text-orange-800' :
+              'bg-yellow-100 text-yellow-800'
+            }">
+              <i class="fas fa-exclamation-circle mr-2"></i>
+              Cycle Severity: ${cycleStatus}
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            ${viciousCycles.map((cycle, index) => `
+              <div class="bg-white rounded-lg p-4 border-l-4 ${
+                cycle.severity === 'High' ? 'border-red-500' : 'border-orange-400'
+              }">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-800">Cycle ${index + 1}</h5>
+                  <span class="px-2 py-1 rounded text-xs font-medium ${
+                    cycle.severity === 'High' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                  }">
+                    ${cycle.severity} Priority
+                  </span>
+                </div>
+                
+                <div class="bg-gray-50 rounded p-3 mb-3">
+                  <div class="text-sm font-mono text-gray-700 whitespace-pre-line">${cycle.cycle}</div>
+                </div>
+                
+                <div class="text-sm">
+                  <strong class="text-green-700">Optimal Break Point:</strong> 
+                  <span class="text-gray-700">${cycle.breakpoint}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6 mt-6">
+            <div class="bg-white rounded-lg p-4 border border-red-200">
+              <h5 class="font-semibold text-green-700 mb-3">
+                <i class="fas fa-cut mr-1"></i>
+                Cycle Breaking Strategies
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${breakPoints.slice(0, 4).map(breakpoint => 
+                  `<li class="flex items-start">
+                    <span class="text-green-500 mr-2 mt-0.5">•</span>
+                    <span>${breakpoint}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-red-200">
+              <h5 class="font-semibold text-blue-700 mb-3">
+                <i class="fas fa-shield-alt mr-1"></i>
+                Prevention Protocols
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${preventionStrategies.slice(0, 4).map(strategy => 
+                  `<li class="flex items-start">
+                    <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                    <span>${strategy}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-red-700 italic">
+            Cycle analysis based on ATM framework patterns. Breaking one cycle often has positive cascade effects on others.
+          </div>
+        </div>
+      `
+    }
+
+    function generateTherapeuticTiming() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      const age = calculateAge(atmData.dateOfBirth)
+      
+      // Generate intervention phases based on ATM complexity
+      const phases = []
+      const therapeuticWindows = []
+      const contraindications = []
+      
+      // Immediate Phase (0-4 weeks)
+      phases.push({
+        phase: 'Phase 1: Foundation & Stabilization',
+        duration: '0-4 weeks',
+        priority: 'Critical',
+        focus: 'Address acute triggers and establish foundational support',
+        interventions: [
+          'Eliminate identified triggers from ATM analysis',
+          'Basic nutritional support and hydration optimization',
+          'Sleep hygiene implementation',
+          'Stress management techniques introduction'
+        ]
+      })
+      
+      // Short-term Phase (1-3 months)  
+      phases.push({
+        phase: 'Phase 2: System Restoration',
+        duration: '1-3 months',
+        priority: 'High',
+        focus: 'Address perpetuating mediators and restore function',
+        interventions: [
+          'Targeted supplementation based on functional medicine assessment',
+          'Gut microbiome restoration if indicated',
+          'Detoxification support protocols',
+          'Hormonal optimization strategies'
+        ]
+      })
+      
+      // Long-term Phase (3-12 months)
+      phases.push({
+        phase: 'Phase 3: Optimization & Prevention',
+        duration: '3-12 months',
+        priority: 'Maintenance',
+        focus: 'Long-term optimization and recurrence prevention',
+        interventions: [
+          'Advanced biomarker monitoring and fine-tuning',
+          'Lifestyle optimization and habit consolidation', 
+          'Preventive strategies for identified antecedents',
+          'Periodic reassessment and protocol adjustment'
+        ]
+      })
+
+      // Therapeutic windows based on circadian biology
+      therapeuticWindows.push('Morning (6-10 AM): Cortisol-modulating interventions most effective')
+      therapeuticWindows.push('Pre-meal (30-60 min): Blood sugar stabilization protocols optimal')
+      therapeuticWindows.push('Evening (7-9 PM): Sleep-promoting interventions for circadian rhythm')
+      therapeuticWindows.push('Fasting state: Detoxification and autophagy-promoting protocols')
+
+      // Age-based contraindications
+      if (age > 65) {
+        contraindications.push('Gradual intervention introduction - elderly may be more sensitive')
+        contraindications.push('Monitor for medication interactions more carefully')
+      }
+      if (age < 30) {
+        contraindications.push('Consider reproductive health impacts of interventions')
+      }
+
+      // General contraindications
+      contraindications.push('Avoid simultaneous introduction of multiple new interventions')
+      contraindications.push('Monitor for healing crises and adjust intensity accordingly')
+      contraindications.push('Ensure adequate elimination pathways before detoxification')
+
+      return `
+        <div id="timing-content" class="hidden mt-6 p-6 bg-green-50 border-2 border-green-200 rounded-lg">
+          <h4 class="text-lg font-bold text-green-800 mb-4">
+            <i class="fas fa-clock mr-2"></i>
+            Therapeutic Timing & Intervention Sequencing
+          </h4>
+          
+          <div class="space-y-6 mb-6">
+            ${phases.map((phase, index) => `
+              <div class="bg-white rounded-lg p-4 border-l-4 ${
+                phase.priority === 'Critical' ? 'border-red-500' :
+                phase.priority === 'High' ? 'border-orange-400' : 'border-green-500'
+              }">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-800">${phase.phase}</h5>
+                  <div class="flex items-center gap-3">
+                    <span class="px-2 py-1 rounded text-xs font-medium ${
+                      phase.priority === 'Critical' ? 'bg-red-100 text-red-700' :
+                      phase.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                    }">
+                      ${phase.priority}
+                    </span>
+                    <span class="text-xs text-gray-600">${phase.duration}</span>
+                  </div>
+                </div>
+                
+                <p class="text-sm text-gray-700 mb-3 italic">${phase.focus}</p>
+                
+                <ul class="space-y-1 text-sm">
+                  ${phase.interventions.map(intervention => 
+                    `<li class="flex items-start">
+                      <span class="text-green-500 mr-2 mt-0.5">•</span>
+                      <span>${intervention}</span>
+                     </li>`
+                  ).join('')}
+                </ul>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg p-4 border border-green-200">
+              <h5 class="font-semibold text-blue-700 mb-3">
+                <i class="fas fa-clock mr-1"></i>
+                Optimal Therapeutic Windows
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${therapeuticWindows.map(window => 
+                  `<li class="flex items-start">
+                    <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                    <span>${window}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-green-200">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Timing Contraindications
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${contraindications.map(contra => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${contra}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-green-700 italic">
+            Timing recommendations based on chronobiology research and ATM framework complexity analysis.
+          </div>
+        </div>
+      `
+    }
+
+    function generateBiomarkerPrediction() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Predict biomarker changes based on interventions
+      const predictions = []
+      const monitoringProtocol = []
+      const warningSigns = []
+      
+      // Analyze current biomarkers for prediction baseline
+      const currentMarkers = {
+        crp: parseFloat(atmData.cReactiveProtein || 0),
+        hba1c: parseFloat(atmData.hba1c || 0),
+        vitaminD: parseFloat(atmData.vitaminD || 0),
+        ldl: parseFloat(atmData.ldlCholesterol || 0),
+        hdl: parseFloat(atmData.hdlCholesterol || 0)
+      }
+
+      // Predict improvements based on interventions
+      if (currentMarkers.crp > 3.0) {
+        predictions.push({
+          biomarker: 'C-Reactive Protein (CRP)',
+          current: `${currentMarkers.crp} mg/L`,
+          predicted: `${Math.max(currentMarkers.crp * 0.6, 1.0).toFixed(1)} mg/L`,
+          timeframe: '8-12 weeks',
+          intervention: 'Anti-inflammatory protocol'
+        })
+      }
+
+      if (currentMarkers.hba1c > 5.7) {
+        predictions.push({
+          biomarker: 'Hemoglobin A1C',
+          current: `${currentMarkers.hba1c}%`,
+          predicted: `${Math.max(currentMarkers.hba1c - 0.3, 5.0).toFixed(1)}%`,
+          timeframe: '12-16 weeks',
+          intervention: 'Metabolic optimization'
+        })
+      }
+
+      if (currentMarkers.vitaminD < 30) {
+        predictions.push({
+          biomarker: 'Vitamin D (25-OH)',
+          current: `${currentMarkers.vitaminD} ng/mL`,
+          predicted: `${Math.min(currentMarkers.vitaminD + 20, 60)} ng/mL`,
+          timeframe: '6-8 weeks',
+          intervention: 'Vitamin D supplementation'
+        })
+      }
+
+      // Default predictions if none identified
+      if (predictions.length === 0) {
+        predictions.push({
+          biomarker: 'Inflammatory Markers',
+          current: 'Baseline levels',
+          predicted: '10-30% improvement',
+          timeframe: '8-12 weeks',
+          intervention: 'Comprehensive functional medicine approach'
+        })
+      }
+
+      // Monitoring protocols
+      monitoringProtocol.push('Baseline: Complete metabolic panel, lipids, inflammatory markers')
+      monitoringProtocol.push('4-6 weeks: Mid-intervention assessment of key markers')
+      monitoringProtocol.push('12 weeks: Comprehensive follow-up panel')
+      monitoringProtocol.push('6 months: Long-term optimization assessment')
+
+      // Warning signs to watch for
+      warningSigns.push('Unexpected worsening of any biomarker (may indicate intervention intolerance)')
+      warningSigns.push('Rapid changes beyond predicted ranges (may need intervention adjustment)')
+      warningSigns.push('New symptoms accompanying biomarker changes')
+      warningSigns.push('Lack of improvement after 8-12 weeks (may need protocol revision)')
+
+      return `
+        <div id="biomarkers-content" class="hidden mt-6 p-6 bg-purple-50 border-2 border-purple-200 rounded-lg">
+          <h4 class="text-lg font-bold text-purple-800 mb-4">
+            <i class="fas fa-chart-line mr-2"></i>
+            Biomarker Tracking & Predictions
+          </h4>
+          
+          <div class="space-y-4 mb-6">
+            ${predictions.map((prediction, index) => `
+              <div class="bg-white rounded-lg p-4 border border-purple-200">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-800">${prediction.biomarker}</h5>
+                  <span class="text-xs text-gray-600">${prediction.timeframe}</span>
+                </div>
+                
+                <div class="grid md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span class="text-gray-600">Current:</span>
+                    <div class="font-semibold text-red-600">${prediction.current}</div>
+                  </div>
+                  <div>
+                    <span class="text-gray-600">Predicted:</span>
+                    <div class="font-semibold text-green-600">${prediction.predicted}</div>
+                  </div>
+                  <div>
+                    <span class="text-gray-600">Key Intervention:</span>
+                    <div class="font-medium text-purple-700">${prediction.intervention}</div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg p-4 border border-purple-200">
+              <h5 class="font-semibold text-blue-700 mb-3">
+                <i class="fas fa-calendar-check mr-1"></i>
+                Monitoring Protocol
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${monitoringProtocol.map(protocol => 
+                  `<li class="flex items-start">
+                    <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                    <span>${protocol}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-purple-200">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Warning Signs
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${warningSigns.slice(0, 4).map(warning => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${warning}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-purple-700 italic">
+            Predictions based on published intervention outcomes and individual baseline values. Actual results may vary.
+          </div>
+        </div>
+      `
+    }
+
+    function generatePsychoneuroimmunology() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Analyze mind-body connections from ATM data
+      const mindBodyConnections = []
+      const traumaPathways = []
+      const interventionProtocols = []
+      
+      // Check for psychological factors in ATM data
+      const hasStressFactors = atmData.antecedentsDescription?.some(a => 
+        a.toLowerCase().includes('stress') || a.toLowerCase().includes('anxiety') || 
+        a.toLowerCase().includes('depression') || a.toLowerCase().includes('trauma')
+      )
+
+      if (hasStressFactors) {
+        mindBodyConnections.push('Chronic stress → HPA axis dysregulation → systemic inflammation')
+        mindBodyConnections.push('Emotional trauma → vagal tone disruption → immune dysfunction') 
+        traumaPathways.push('Adverse childhood experiences creating persistent inflammatory patterns')
+        traumaPathways.push('Chronic stress leading to telomere shortening and accelerated aging')
+      }
+
+      // Check for sleep/mood connections
+      const hasSleepMoodIssues = atmData.antecedentsDescription?.some(a => 
+        a.toLowerCase().includes('sleep') || a.toLowerCase().includes('insomnia')
+      )
+
+      if (hasSleepMoodIssues) {
+        mindBodyConnections.push('Sleep disruption → microglial activation → neuroinflammation')
+        mindBodyConnections.push('Circadian misalignment → mood disorders → immune suppression')
+        traumaPathways.push('Sleep fragmentation creating chronic low-grade inflammation')
+      }
+
+      // Default connections if none identified
+      if (mindBodyConnections.length === 0) {
+        mindBodyConnections.push('Autonomic nervous system imbalance affecting immune regulation')
+        mindBodyConnections.push('Chronic low-grade stress impacting cellular repair mechanisms')
+        traumaPathways.push('Modern lifestyle stressors creating subclinical inflammation')
+      }
+
+      // Evidence-based interventions
+      interventionProtocols.push('Heart Rate Variability (HRV) training for autonomic balance')
+      interventionProtocols.push('Mindfulness-Based Stress Reduction (MBSR) for inflammation reduction')
+      interventionProtocols.push('Somatic experiencing for trauma-stored inflammation')
+      interventionProtocols.push('Breathwork protocols for vagal tone optimization')
+      interventionProtocols.push('Cold exposure therapy for stress resilience building')
+
+      const stressLevel = parseFloat(atmData.stressLevel || 3)
+      const stressImpact = stressLevel >= 7 ? 'High' : stressLevel >= 4 ? 'Moderate' : 'Low'
+
+      return `
+        <div id="pni-content" class="hidden mt-6 p-6 bg-orange-50 border-2 border-orange-200 rounded-lg">
+          <h4 class="text-lg font-bold text-orange-800 mb-4">
+            <i class="fas fa-brain mr-2"></i>
+            Psychoneuroimmunology Analysis
+          </h4>
+          
+          <div class="mb-6">
+            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+              stressImpact === 'High' ? 'bg-red-100 text-red-800' :
+              stressImpact === 'Moderate' ? 'bg-orange-100 text-orange-800' :
+              'bg-green-100 text-green-800'
+            }">
+              <i class="fas fa-thermometer-half mr-2"></i>
+              Mind-Body Stress Impact: ${stressImpact}
+            </div>
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-orange-200">
+              <h5 class="font-semibold text-blue-700 mb-3">
+                <i class="fas fa-link mr-1"></i>
+                Mind-Body Connections Identified
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${mindBodyConnections.map(connection => 
+                  `<li class="flex items-start">
+                    <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                    <span>${connection}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-orange-200">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Trauma & Stress Pathways
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${traumaPathways.map(pathway => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${pathway}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-orange-300">
+            <h5 class="font-semibold text-green-700 mb-3">
+              <i class="fas fa-heart mr-1"></i>
+              Evidence-Based Mind-Body Interventions
+            </h5>
+            <div class="grid md:grid-cols-2 gap-4">
+              ${interventionProtocols.map(protocol => 
+                `<div class="flex items-start text-sm">
+                  <span class="text-green-500 mr-2 mt-0.5">•</span>
+                  <span>${protocol}</span>
+                 </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-gradient-to-r from-orange-100 to-yellow-100 rounded-lg border border-orange-200">
+            <h6 class="font-semibold text-orange-800 mb-2">
+              <i class="fas fa-lightbulb mr-1"></i>
+              Clinical Pearl: The Inflammation-Mood Connection
+            </h6>
+            <p class="text-sm text-gray-700">
+              Chronic inflammation can cross the blood-brain barrier and activate microglia, leading to mood disorders. 
+              Addressing systemic inflammation through mind-body interventions often improves both physical and mental health outcomes simultaneously.
+            </p>
+          </div>
+
+          <div class="mt-4 text-xs text-orange-700 italic">
+            Analysis integrates stress assessment with ATM framework data. Mind-body interventions require gradual implementation and monitoring.
+          </div>
+        </div>
+      `
+    }
+
+    function generateGenomicEnvironmental() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      const age = calculateAge(atmData.dateOfBirth)
+      
+      // Analyze genetic-environmental interactions
+      const genomicFactors = []
+      const environmentalTriggers = []
+      const epigeneticModulators = []
+      const personalizedStrategies = []
+      
+      // Common genomic predispositions based on population data
+      genomicFactors.push('MTHFR polymorphisms (up to 40% population) - methylation pathway impact')
+      genomicFactors.push('APOE4 variant (25% population) - cardiovascular & neurological risk')
+      genomicFactors.push('COMT polymorphisms - dopamine metabolism variations')
+      genomicFactors.push('CYP450 variants - drug & toxin metabolism differences')
+
+      // Environmental triggers from ATM data
+      if (atmData.triggersDescription) {
+        atmData.triggersDescription.forEach(trigger => {
+          if (trigger.toLowerCase().includes('toxin') || trigger.toLowerCase().includes('chemical')) {
+            environmentalTriggers.push('Chemical exposure overwhelming detoxification capacity')
+            epigeneticModulators.push('Toxin-induced epigenetic modifications affecting gene expression')
+          }
+          if (trigger.toLowerCase().includes('infection') || trigger.toLowerCase().includes('pathogen')) {
+            environmentalTriggers.push('Pathogenic triggers activating inflammatory gene clusters')
+            epigeneticModulators.push('Immune activation creating lasting epigenetic changes')
+          }
+        })
+      }
+
+      // Lifestyle-based environmental factors
+      if (atmData.antecedentsDescription) {
+        atmData.antecedentsDescription.forEach(antecedent => {
+          if (antecedent.toLowerCase().includes('diet') || antecedent.toLowerCase().includes('nutrition')) {
+            environmentalTriggers.push('Dietary factors influencing nutrigenomic pathways')
+            epigeneticModulators.push('Nutritional compounds affecting DNA methylation patterns')
+          }
+          if (antecedent.toLowerCase().includes('stress')) {
+            environmentalTriggers.push('Chronic stress altering stress-response gene expression')
+            epigeneticModulators.push('Cortisol-mediated epigenetic modifications to immune genes')
+          }
+        })
+      }
+
+      // Default environmental factors
+      if (environmentalTriggers.length === 0) {
+        environmentalTriggers.push('Modern dietary patterns affecting metabolic gene expression')
+        environmentalTriggers.push('Sedentary lifestyle impacting mitochondrial gene function')
+        epigeneticModulators.push('Circadian disruption affecting clock gene expression')
+        epigeneticModulators.push('Aging-associated methylation changes (epigenetic drift)')
+      }
+
+      // Personalized strategies based on common variants
+      personalizedStrategies.push('Methylfolate supplementation for potential MTHFR variants')
+      personalizedStrategies.push('Enhanced antioxidant support for oxidative stress gene variants')
+      personalizedStrategies.push('Targeted detoxification support for CYP450 variations')
+      personalizedStrategies.push('Omega-3 optimization for APOE4 cardiovascular protection')
+
+      return `
+        <div id="genomics-content" class="hidden mt-6 p-6 bg-teal-50 border-2 border-teal-200 rounded-lg">
+          <h4 class="text-lg font-bold text-teal-800 mb-4">
+            <i class="fas fa-dna mr-2"></i>
+            Gene-Environment Interaction Matrix
+          </h4>
+          
+          <div class="grid lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-teal-200">
+              <h5 class="font-semibold text-purple-700 mb-3">
+                <i class="fas fa-code mr-1"></i>
+                Genomic Considerations
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${genomicFactors.map(factor => 
+                  `<li class="flex items-start">
+                    <span class="text-purple-500 mr-2 mt-0.5">•</span>
+                    <span>${factor}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-teal-200">
+              <h5 class="font-semibold text-orange-700 mb-3">
+                <i class="fas fa-globe mr-1"></i>
+                Environmental Triggers
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${environmentalTriggers.map(trigger => 
+                  `<li class="flex items-start">
+                    <span class="text-orange-500 mr-2 mt-0.5">•</span>
+                    <span>${trigger}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-teal-300 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3">
+              <i class="fas fa-exchange-alt mr-1"></i>
+              Epigenetic Modulation Patterns
+            </h5>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              ${epigeneticModulators.map(modulator => 
+                `<div class="flex items-start">
+                  <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                  <span>${modulator}</span>
+                 </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-teal-300">
+            <h5 class="font-semibold text-green-700 mb-3">
+              <i class="fas fa-user-cog mr-1"></i>
+              Personalized Risk Modulation Strategies
+            </h5>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              ${personalizedStrategies.map(strategy => 
+                `<div class="flex items-start">
+                  <span class="text-green-500 mr-2 mt-0.5">•</span>
+                  <span>${strategy}</span>
+                 </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-gradient-to-r from-teal-100 to-cyan-100 rounded-lg border border-teal-200">
+            <h6 class="font-semibold text-teal-800 mb-2">
+              <i class="fas fa-lightbulb mr-1"></i>
+              Clinical Pearl: Epigenetic Reversibility
+            </h6>
+            <p class="text-sm text-gray-700">
+              Unlike genetic mutations, epigenetic modifications are potentially reversible through targeted interventions. 
+              Lifestyle modifications can literally "turn on" beneficial genes and "turn off" harmful gene expression patterns.
+            </p>
+          </div>
+
+          <div class="mt-4 text-xs text-teal-700 italic">
+            Analysis based on population genomics and environmental interaction research. Genetic testing recommended for precision optimization.
+          </div>
+        </div>
+      `
+    }
+
+    function generateEnvironmentalToxins() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Analyze toxin exposure patterns
+      const toxinExposures = []
+      const synergeticEffects = []
+      const detoxCapacity = []
+      const eliminationStrategies = []
+      
+      // Parse ATM data for toxin exposures
+      if (atmData.antecedentsDescription) {
+        atmData.antecedentsDescription.forEach(antecedent => {
+          if (antecedent.toLowerCase().includes('mold') || antecedent.toLowerCase().includes('fungal')) {
+            toxinExposures.push('Mycotoxin exposure from mold contamination')
+            synergeticEffects.push('Mycotoxins + heavy metals = enhanced neurotoxicity')
+          }
+          if (antecedent.toLowerCase().includes('heavy metal') || antecedent.toLowerCase().includes('mercury')) {
+            toxinExposures.push('Heavy metal accumulation (mercury, lead, cadmium)')
+            synergeticEffects.push('Heavy metals + oxidative stress = accelerated aging')
+          }
+          if (antecedent.toLowerCase().includes('chemical') || antecedent.toLowerCase().includes('pesticide')) {
+            toxinExposures.push('Persistent organic pollutants (POPs) and pesticides')
+            synergeticEffects.push('Chemical cocktail effects overwhelming detox pathways')
+          }
+        })
+      }
+
+      if (atmData.triggersDescription) {
+        atmData.triggersDescription.forEach(trigger => {
+          if (trigger.toLowerCase().includes('exposure') || trigger.toLowerCase().includes('toxin')) {
+            toxinExposures.push('Acute toxin exposure event')
+            synergeticEffects.push('Acute exposure + chronic load = system breakdown')
+          }
+        })
+      }
+
+      // Default exposures if none identified
+      if (toxinExposures.length === 0) {
+        toxinExposures.push('Background environmental toxin load (modern unavoidable exposures)')
+        toxinExposures.push('Indoor air pollution and VOCs from building materials')
+        toxinExposures.push('Food-based toxins (pesticide residues, packaging chemicals)')
+        synergeticEffects.push('Multiple low-level exposures creating cumulative burden')
+      }
+
+      // Assess detox capacity from functional medicine data
+      if (comprehensiveData.functionalMedicineAssessment?.biotransformation) {
+        const biotransformResponses = comprehensiveData.functionalMedicineAssessment.biotransformation.responses
+        const poorResponses = Object.values(biotransformResponses).filter(response => 
+          String(response).toLowerCase().includes('poor') || 
+          String(response).toLowerCase().includes('never') ||
+          String(response).toLowerCase().includes('rarely')
+        ).length
+
+        if (poorResponses > 2) {
+          detoxCapacity.push('Impaired Phase I detoxification (cytochrome P450 system)')
+          detoxCapacity.push('Reduced Phase II conjugation capacity')
+          detoxCapacity.push('Compromised elimination pathway function')
+        } else {
+          detoxCapacity.push('Adequate baseline detoxification capacity')
+          detoxCapacity.push('Functional elimination pathways with room for optimization')
+        }
+      } else {
+        detoxCapacity.push('Detoxification capacity assessment needed')
+      }
+
+      // Elimination strategies
+      eliminationStrategies.push('Glutathione system optimization (liposomal glutathione, NAC)')
+      eliminationStrategies.push('Bile flow enhancement (phosphatidylcholine, bile salts)')
+      eliminationStrategies.push('Lymphatic drainage support (dry brushing, movement)')
+      eliminationStrategies.push('Chelation therapy for heavy metals (if indicated)')
+      eliminationStrategies.push('Sauna therapy for lipophilic toxin elimination')
+      eliminationStrategies.push('Binding agents during active detox phases')
+
+      return `
+        <div id="toxins-content" class="hidden mt-6 p-6 bg-yellow-50 border-2 border-yellow-200 rounded-lg">
+          <h4 class="text-lg font-bold text-yellow-800 mb-4">
+            <i class="fas fa-industry mr-2"></i>
+            Environmental Toxin Analysis
+          </h4>
+          
+          <div class="grid lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-yellow-200">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-skull-crossbones mr-1"></i>
+                Identified Toxin Exposures
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${toxinExposures.map(exposure => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${exposure}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-yellow-200">
+              <h5 class="font-semibold text-orange-700 mb-3">
+                <i class="fas fa-link mr-1"></i>
+                Synergistic Effects
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${synergeticEffects.map(effect => 
+                  `<li class="flex items-start">
+                    <span class="text-orange-500 mr-2 mt-0.5">•</span>
+                    <span>${effect}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-yellow-300 mb-6">
+            <h5 class="font-semibold text-blue-700 mb-3">
+              <i class="fas fa-filter mr-1"></i>
+              Detoxification Capacity Assessment
+            </h5>
+            <ul class="space-y-2 text-sm">
+              ${detoxCapacity.map(capacity => 
+                `<li class="flex items-start">
+                  <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                  <span>${capacity}</span>
+                 </li>`
+              ).join('')}
+            </ul>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-yellow-300">
+            <h5 class="font-semibold text-green-700 mb-3">
+              <i class="fas fa-broom mr-1"></i>
+              Toxin Elimination Strategies
+            </h5>
+            <div class="grid md:grid-cols-2 gap-2 text-sm">
+              ${eliminationStrategies.map(strategy => 
+                `<div class="flex items-start">
+                  <span class="text-green-500 mr-2 mt-0.5">•</span>
+                  <span>${strategy}</span>
+                 </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-lg border border-yellow-300">
+            <h6 class="font-semibold text-yellow-800 mb-2">
+              <i class="fas fa-exclamation-triangle mr-1"></i>
+              Detox Safety Protocol
+            </h6>
+            <p class="text-sm text-gray-700">
+              Always ensure elimination pathways (liver, kidneys, colon, lymph) are functioning before mobilizing stored toxins. 
+              Gradual mobilization prevents redistribution and reabsorption. Monitor symptoms and adjust intensity accordingly.
+            </p>
+          </div>
+
+          <div class="mt-4 text-xs text-yellow-700 italic">
+            Toxin analysis based on ATM framework and biotransformation assessment. Laboratory testing recommended for precision protocols.
+          </div>
+        </div>
+      `
+    }
+
+    function generatePrecisionSupplementation() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Analyze supplementation needs from ATM and functional medicine data
+      const targetedProtocols = []
+      const synergyAnalysis = []
+      const timingOptimization = []
+      const contraindications = []
+      
+      // Root cause specific supplementation
+      if (atmData.antecedentsDescription) {
+        atmData.antecedentsDescription.forEach(antecedent => {
+          if (antecedent.toLowerCase().includes('stress')) {
+            targetedProtocols.push({
+              rootCause: 'Chronic Stress',
+              protocol: 'Adaptogenic Complex',
+              supplements: ['Rhodiola 300mg AM', 'Ashwagandha 500mg PM', 'Phosphatidylserine 200mg'],
+              rationale: 'HPA axis modulation and cortisol regulation'
+            })
+          }
+          if (antecedent.toLowerCase().includes('inflammation')) {
+            targetedProtocols.push({
+              rootCause: 'Chronic Inflammation', 
+              protocol: 'Anti-inflammatory Stack',
+              supplements: ['Curcumin 1000mg + piperine', 'EPA 2g', 'Resveratrol 500mg'],
+              rationale: 'NF-κB pathway inhibition and inflammatory mediator reduction'
+            })
+          }
+          if (antecedent.toLowerCase().includes('gut') || antecedent.toLowerCase().includes('digestive')) {
+            targetedProtocols.push({
+              rootCause: 'Gut Dysfunction',
+              protocol: 'Gut Restoration Protocol',
+              supplements: ['Multi-strain probiotic 50B CFU', 'L-glutamine 5g', 'Zinc carnosine 75mg'],
+              rationale: 'Intestinal barrier repair and microbiome optimization'
+            })
+          }
+        })
+      }
+
+      // Biomarker-driven supplementation
+      const vitaminD = parseFloat(atmData.vitaminD || 30)
+      if (vitaminD < 30) {
+        targetedProtocols.push({
+          rootCause: 'Vitamin D Deficiency',
+          protocol: 'Vitamin D Optimization',
+          supplements: ['Vitamin D3 5000 IU + K2 MK7 200mcg', 'Magnesium bisglycinate 400mg'],
+          rationale: 'Immune function, bone health, and hormonal regulation'
+        })
+      }
+
+      // Default protocols if none identified
+      if (targetedProtocols.length === 0) {
+        targetedProtocols.push({
+          rootCause: 'Foundational Support',
+          protocol: 'Basic Optimization Stack',
+          supplements: ['High-potency B-complex', 'Omega-3 EPA/DHA 2:1 ratio', 'Magnesium glycinate 400mg'],
+          rationale: 'Essential cofactor support and baseline nutritional optimization'
+        })
+      }
+
+      // Synergy analysis
+      synergyAnalysis.push('Vitamin D + K2: Enhanced calcium regulation and cardiovascular protection')
+      synergyAnalysis.push('Curcumin + Piperine: 2000% increased bioavailability and absorption')
+      synergyAnalysis.push('Magnesium + B6: Optimal cofactor relationships for enzyme function')
+      synergyAnalysis.push('Probiotics + Prebiotics: Synbiotic effect for microbiome establishment')
+
+      // Timing optimization
+      timingOptimization.push('Fat-soluble vitamins (A, D, E, K): With meals containing healthy fats')
+      timingOptimization.push('Magnesium: Evening for sleep support and muscle relaxation')
+      timingOptimization.push('Adaptogens: Morning for cortisol rhythm support')
+      timingOptimization.push('Probiotics: Away from meals for optimal survival and colonization')
+
+      // Contraindications
+      contraindications.push('Avoid simultaneous introduction of >3 new supplements')
+      contraindications.push('Monitor for interactions with existing medications')
+      contraindications.push('Start with lower doses and gradually titrate up')
+      contraindications.push('Consider individual genetic variations (e.g., MTHFR status)')
+
+      return `
+        <div id="supplements-content" class="hidden mt-6 p-6 bg-pink-50 border-2 border-pink-200 rounded-lg">
+          <h4 class="text-lg font-bold text-pink-800 mb-4">
+            <i class="fas fa-pills mr-2"></i>
+            Precision Supplementation Protocols
+          </h4>
+          
+          <div class="space-y-6 mb-6">
+            ${targetedProtocols.map((protocol, index) => `
+              <div class="bg-white rounded-lg p-4 border border-pink-200">
+                <div class="flex items-center justify-between mb-3">
+                  <h5 class="font-semibold text-gray-800">${protocol.protocol}</h5>
+                  <span class="px-2 py-1 rounded text-xs font-medium bg-pink-100 text-pink-700">
+                    ${protocol.rootCause}
+                  </span>
+                </div>
+                
+                <div class="mb-3">
+                  <strong class="text-sm text-gray-700">Rationale:</strong>
+                  <span class="text-sm text-gray-600 italic"> ${protocol.rationale}</span>
+                </div>
+                
+                <div class="bg-gray-50 rounded p-3">
+                  <strong class="text-sm text-green-700">Supplement Stack:</strong>
+                  <ul class="mt-2 space-y-1">
+                    ${protocol.supplements.map(supplement => 
+                      `<li class="text-sm flex items-start">
+                        <span class="text-green-500 mr-2 mt-0.5">•</span>
+                        <span class="font-medium">${supplement}</span>
+                       </li>`
+                    ).join('')}
+                  </ul>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-6">
+            <div class="space-y-4">
+              <div class="bg-white rounded-lg p-4 border border-pink-200">
+                <h5 class="font-semibold text-blue-700 mb-3">
+                  <i class="fas fa-link mr-1"></i>
+                  Synergy Analysis
+                </h5>
+                <ul class="space-y-2 text-sm">
+                  ${synergyAnalysis.map(synergy => 
+                    `<li class="flex items-start">
+                      <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                      <span>${synergy}</span>
+                     </li>`
+                  ).join('')}
+                </ul>
+              </div>
+
+              <div class="bg-white rounded-lg p-4 border border-pink-200">
+                <h5 class="font-semibold text-purple-700 mb-3">
+                  <i class="fas fa-clock mr-1"></i>
+                  Timing Optimization
+                </h5>
+                <ul class="space-y-2 text-sm">
+                  ${timingOptimization.map(timing => 
+                    `<li class="flex items-start">
+                      <span class="text-purple-500 mr-2 mt-0.5">•</span>
+                      <span>${timing}</span>
+                     </li>`
+                  ).join('')}
+                </ul>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-pink-300">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Implementation Guidelines
+              </h5>
+              <ul class="space-y-2 text-sm mb-4">
+                ${contraindications.map(guideline => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${guideline}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+              
+              <div class="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <div class="text-xs font-semibold text-yellow-800 mb-1">Quality Considerations:</div>
+                <div class="text-xs text-yellow-700">
+                  Choose third-party tested supplements with pharmaceutical-grade ingredients. 
+                  Avoid proprietary blends where individual compound doses are not disclosed.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 text-xs text-pink-700 italic">
+            Protocols based on root-cause analysis and evidence-based therapeutic dosing. Adjust based on response and laboratory monitoring.
+          </div>
+        </div>
+      `
+    }
+
+    function generateSuccessPrediction() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Calculate intervention success probability
+      const successFactors = []
+      const challengeFactors = []
+      const costBenefitAnalysis = []
+      const roiMetrics = []
+      
+      // Positive prognostic factors
+      const age = calculateAge(atmData.dateOfBirth)
+      if (age < 65) {
+        successFactors.push('Age under 65: Higher cellular regeneration capacity')
+      }
+      
+      if (atmData.smokingStatus === 'never') {
+        successFactors.push('Non-smoker: Reduced oxidative stress burden')
+      }
+      
+      const stressLevel = parseFloat(atmData.stressLevel || 5)
+      if (stressLevel <= 6) {
+        successFactors.push('Manageable stress levels: Better intervention compliance')
+      }
+      
+      const sleepQuality = parseFloat(atmData.sleepQuality || 3)
+      if (sleepQuality >= 3) {
+        successFactors.push('Adequate sleep foundation: Enhanced recovery capacity')
+      }
+      
+      // Check for multiple root causes (complexity factor)
+      const antecedentCount = atmData.antecedentsDescription?.length || 1
+      const triggerCount = atmData.triggersDescription?.length || 1
+      const mediatorCount = atmData.mediatorsDescription?.length || 1
+      const totalComplexity = antecedentCount + triggerCount + mediatorCount
+      
+      if (totalComplexity <= 6) {
+        successFactors.push('Lower complexity ATM profile: Clearer intervention targets')
+      } else {
+        challengeFactors.push('Complex multi-factor ATM profile: Requires phased approach')
+      }
+      
+      // Challenge factors
+      if (age > 65) {
+        challengeFactors.push('Advanced age: Slower cellular repair mechanisms')
+      }
+      
+      if (stressLevel > 7) {
+        challengeFactors.push('High chronic stress: May impede intervention effectiveness')
+      }
+      
+      if (sleepQuality < 3) {
+        challengeFactors.push('Poor sleep quality: Limits recovery and adaptation')
+      }
+      
+      // Calculate success probability
+      const positiveFactors = successFactors.length
+      const negativeFactors = challengeFactors.length
+      const successProbability = Math.min(95, Math.max(45, 70 + (positiveFactors * 8) - (negativeFactors * 12)))
+      
+      // Cost-benefit analysis
+      costBenefitAnalysis.push('Short-term investment (3-6 months): $2000-5000 in targeted interventions')
+      costBenefitAnalysis.push('Medium-term savings: 30-50% reduction in healthcare utilization')
+      costBenefitAnalysis.push('Long-term benefits: 10-15 years of healthy life extension potential')
+      costBenefitAnalysis.push('Quality of life: Significant improvement in energy and cognitive function')
+      
+      // ROI metrics
+      roiMetrics.push(`${successProbability}% probability of achieving 70%+ symptom improvement`)
+      roiMetrics.push('3-5x return on investment through reduced medical costs')
+      roiMetrics.push('15-20% improvement in biological age markers within 6 months')
+      roiMetrics.push('2-3 point improvement in subjective wellness scores')
+      
+      const successLevel = successProbability >= 80 ? 'High' : successProbability >= 65 ? 'Good' : 'Moderate'
+      const successColor = successLevel === 'High' ? 'green' : successLevel === 'Good' ? 'blue' : 'orange'
+
+      return `
+        <div id="prediction-content" class="hidden mt-6 p-6 bg-indigo-50 border-2 border-indigo-200 rounded-lg">
+          <h4 class="text-lg font-bold text-indigo-800 mb-4">
+            <i class="fas fa-target mr-2"></i>
+            Intervention Success Prediction & ROI Analysis
+          </h4>
+          
+          <div class="mb-6">
+            <div class="text-center p-6 bg-white rounded-lg border-2 border-${successColor}-300">
+              <div class="text-4xl font-bold text-${successColor}-600 mb-2">${successProbability}%</div>
+              <div class="text-lg font-semibold text-gray-700">Success Probability</div>
+              <div class="text-sm text-gray-600 mt-1">Based on ATM complexity and prognostic factors</div>
+              <div class="inline-block px-3 py-1 rounded-full text-sm font-medium bg-${successColor}-100 text-${successColor}-800 mt-3">
+                ${successLevel} Likelihood of Success
+              </div>
+            </div>
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-indigo-200">
+              <h5 class="font-semibold text-green-700 mb-3">
+                <i class="fas fa-thumbs-up mr-1"></i>
+                Positive Prognostic Factors
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${successFactors.map(factor => 
+                  `<li class="flex items-start">
+                    <span class="text-green-500 mr-2 mt-0.5">•</span>
+                    <span>${factor}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-indigo-200">
+              <h5 class="font-semibold text-orange-700 mb-3">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Challenge Factors
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${challengeFactors.length > 0 ? challengeFactors.map(factor => 
+                  `<li class="flex items-start">
+                    <span class="text-orange-500 mr-2 mt-0.5">•</span>
+                    <span>${factor}</span>
+                   </li>`
+                ).join('') : '<li class="text-gray-600 italic">No significant challenge factors identified</li>'}
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg p-4 border border-indigo-200">
+              <h5 class="font-semibold text-blue-700 mb-3">
+                <i class="fas fa-chart-line mr-1"></i>
+                ROI Metrics
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${roiMetrics.map(metric => 
+                  `<li class="flex items-start">
+                    <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                    <span>${metric}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-indigo-200">
+              <h5 class="font-semibold text-purple-700 mb-3">
+                <i class="fas fa-dollar-sign mr-1"></i>
+                Cost-Benefit Analysis
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${costBenefitAnalysis.map(analysis => 
+                  `<li class="flex items-start">
+                    <span class="text-purple-500 mr-2 mt-0.5">•</span>
+                    <span>${analysis}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg border border-indigo-200">
+            <h6 class="font-semibold text-indigo-800 mb-2">
+              <i class="fas fa-lightbulb mr-1"></i>
+              Success Optimization Strategy
+            </h6>
+            <p class="text-sm text-gray-700">
+              To maximize success probability, focus first on eliminating ATM triggers, then address perpetuating mediators, 
+              and finally work on historical antecedents. This sequential approach typically yields the highest ROI and fastest results.
+            </p>
+          </div>
+
+          <div class="mt-4 text-xs text-indigo-700 italic">
+            Success prediction based on validated prognostic factors and ATM framework complexity analysis.
+          </div>
+        </div>
+      `
+    }
+
+    function generateHiddenFactors() {
+      if (!comprehensiveData) return ''
+
+      const atmData = comprehensiveData
+      
+      // Pattern recognition for concealed root causes
+      const hiddenPatterns = []
+      const additionalScreening = []
+      const investigativeTests = []
+      const clinicalPearls = []
+      
+      // Analyze data gaps and inconsistencies
+      const hasCardiovascularRisk = parseFloat(atmData.ldlCholesterol || 0) > 130 || parseFloat(atmData.systolicBP || 0) > 140
+      const hasMetabolicIssues = parseFloat(atmData.hba1c || 0) > 5.7 || parseFloat(atmData.triglycerides || 0) > 150
+      const hasInflammation = parseFloat(atmData.cReactiveProtein || 0) > 3.0
+      const hasLowVitaminD = parseFloat(atmData.vitaminD || 30) < 30
+      
+      // Look for hidden infection patterns
+      if (hasInflammation && !atmData.antecedentsDescription?.some(a => a.toLowerCase().includes('infection'))) {
+        hiddenPatterns.push('Chronic inflammation without obvious cause suggests hidden infection')
+        additionalScreening.push('Chronic pathogen panel (EBV, CMV, Chlamydia pneumoniae, H. pylori)')
+        investigativeTests.push('Comprehensive stool analysis for dysbiosis and parasites')
+      }
+      
+      // Look for hidden hormonal issues
+      const age = calculateAge(atmData.dateOfBirth)
+      const gender = atmData.gender
+      if ((gender === 'male' && age > 40) || (gender === 'female' && age > 35)) {
+        if (!atmData.antecedentsDescription?.some(a => a.toLowerCase().includes('hormone'))) {
+          hiddenPatterns.push('Age-related symptoms may indicate hormonal decline not yet addressed')
+          additionalScreening.push('Comprehensive hormone panel (testosterone, estrogen, progesterone, thyroid)')
+          investigativeTests.push('DUTCH test for comprehensive hormone metabolite analysis')
+        }
+      }
+      
+      // Look for hidden toxic burden
+      if (hasMetabolicIssues && !atmData.antecedentsDescription?.some(a => a.toLowerCase().includes('toxin'))) {
+        hiddenPatterns.push('Metabolic dysfunction may indicate hidden toxic burden')
+        additionalScreening.push('Heavy metals testing (hair, urine, blood)')
+        investigativeTests.push('Organic acids test for metabolic dysfunction patterns')
+      }
+      
+      // Look for hidden genetic factors
+      if (hasCardiovascularRisk && atmData.familyHistory?.includes('family_heart_disease')) {
+        hiddenPatterns.push('Family history with early onset suggests genetic susceptibility factors')
+        additionalScreening.push('Genetic polymorphism testing (APOE, MTHFR, COMT)')
+        investigativeTests.push('Lipoprotein(a) and advanced lipid subfractionation')
+      }
+      
+      // Look for hidden autoimmune patterns
+      if (hasInflammation && atmData.functionalMedicineAssessment?.defense) {
+        const defenseResponses = Object.values(atmData.functionalMedicineAssessment.defense.responses || {})
+        const poorImmuneResponses = defenseResponses.filter(response => 
+          String(response).toLowerCase().includes('poor') || 
+          String(response).toLowerCase().includes('frequently')
+        ).length
+        
+        if (poorImmuneResponses > 2) {
+          hiddenPatterns.push('Immune dysfunction pattern suggests possible autoimmune component')
+          additionalScreening.push('Autoimmune antibody panel (ANA, anti-TPO, anti-gliadin)')
+          investigativeTests.push('Intestinal permeability assessment')
+        }
+      }
+      
+      // Default patterns if none identified
+      if (hiddenPatterns.length === 0) {
+        hiddenPatterns.push('Subtle metabolic inefficiencies may indicate mitochondrial dysfunction')
+        hiddenPatterns.push('Multi-system symptoms often point to systemic inflammation or toxicity')
+        additionalScreening.push('Comprehensive nutrient status assessment')
+        investigativeTests.push('Functional medicine comprehensive metabolic analysis')
+      }
+      
+      // Clinical pearls for pattern recognition
+      clinicalPearls.push('Morning fatigue despite adequate sleep often indicates adrenal dysfunction or hidden infection')
+      clinicalPearls.push('Digestive issues + mood symptoms frequently indicate gut-brain axis disruption')
+      clinicalPearls.push('Recurrent infections suggest immune system compromise or nutrient deficiencies')
+      clinicalPearls.push('Multiple chemical sensitivities often indicate detoxification pathway dysfunction')
+      clinicalPearls.push('Unexplained weight gain may indicate thyroid dysfunction or insulin resistance')
+
+      return `
+        <div id="hidden-content" class="hidden mt-6 p-6 bg-gray-50 border-2 border-gray-300 rounded-lg">
+          <h4 class="text-lg font-bold text-gray-800 mb-4">
+            <i class="fas fa-search-plus mr-2"></i>
+            Hidden Factor Detection & Pattern Analysis
+          </h4>
+          
+          <div class="grid lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg p-4 border border-gray-300">
+              <h5 class="font-semibold text-red-700 mb-3">
+                <i class="fas fa-eye mr-1"></i>
+                Concealed Patterns Detected
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${hiddenPatterns.map(pattern => 
+                  `<li class="flex items-start">
+                    <span class="text-red-500 mr-2 mt-0.5">•</span>
+                    <span>${pattern}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <div class="bg-white rounded-lg p-4 border border-gray-300">
+              <h5 class="font-semibold text-blue-700 mb-3">
+                <i class="fas fa-clipboard-list mr-1"></i>
+                Additional Screening Recommended
+              </h5>
+              <ul class="space-y-2 text-sm">
+                ${additionalScreening.map(screening => 
+                  `<li class="flex items-start">
+                    <span class="text-blue-500 mr-2 mt-0.5">•</span>
+                    <span>${screening}</span>
+                   </li>`
+                ).join('')}
+              </ul>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-gray-400 mb-6">
+            <h5 class="font-semibold text-purple-700 mb-3">
+              <i class="fas fa-flask mr-1"></i>
+              Advanced Investigative Testing
+            </h5>
+            <div class="grid md:grid-cols-2 gap-4 text-sm">
+              ${investigativeTests.map(test => 
+                `<div class="flex items-start">
+                  <span class="text-purple-500 mr-2 mt-0.5">•</span>
+                  <span>${test}</span>
+                 </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-lg p-4 border border-gray-400">
+            <h5 class="font-semibold text-green-700 mb-3">
+              <i class="fas fa-gem mr-1"></i>
+              Clinical Pattern Recognition Pearls
+            </h5>
+            <div class="space-y-3">
+              ${clinicalPearls.map(pearl => 
+                `<div class="p-3 bg-green-50 border-l-4 border-green-400 rounded">
+                  <div class="text-sm text-green-800">${pearl}</div>
+                 </div>`
+              ).join('')}
+            </div>
+          </div>
+
+          <div class="mt-6 p-4 bg-gradient-to-r from-gray-100 to-blue-100 rounded-lg border border-gray-300">
+            <h6 class="font-semibold text-gray-800 mb-2">
+              <i class="fas fa-lightbulb mr-1"></i>
+              Investigative Strategy
+            </h6>
+            <p class="text-sm text-gray-700">
+              When patterns don't fully explain symptoms, think "iceberg principle" - visible symptoms are often just the tip. 
+              Look for systemic root causes: chronic infections, toxic burden, autoimmunity, or genetic susceptibilities that create multiple downstream effects.
+            </p>
+          </div>
+
+          <div class="mt-4 text-xs text-gray-600 italic">
+            Pattern analysis based on clinical experience and functional medicine investigative protocols. Further testing guided by clinical suspicion.
+          </div>
+        </div>
+      `
+    }
 
     function generateLifestyleSection() {
       if (!comprehensiveData) {
@@ -4465,11 +6585,20 @@ app.get('/report', async (c) => {
                       
                       ${generateATMSection()}
 
+                      <!-- Root-Cause Prioritization Analysis -->
+                      ${generateRootCausePrioritization()}
+
                       <!-- Dynamic ATM Timeline -->
                       ${generateATMTimelineHTML(comprehensiveData, session.full_name)}
 
                       <!-- Dynamic Timeline Insights -->
                       ${generateATMTimelineInsights(comprehensiveData)}
+
+                      <!-- Clinical Decision Support -->
+                      ${generateClinicalDecisionSupport()}
+
+                      <!-- Advanced Clinical Analysis Hub -->
+                      ${generateAdvancedClinicalAnalysis()}
                   </div>
               </div>
 
@@ -5453,6 +7582,35 @@ app.get('/report', async (c) => {
                               <i class="fas fa-chevron-down ml-3"></i>
                           </div>
                       \`;
+                  }
+              }
+
+              // Advanced Clinical Analysis module toggle function
+              function toggleAdvancedModule(moduleId) {
+                  const content = document.getElementById(moduleId + '-content');
+                  const chevron = document.getElementById('chevron-' + moduleId);
+                  const moduleCard = event.target.closest('div');
+                  
+                  if (content.classList.contains('hidden')) {
+                      // Hide all other modules first
+                      const allContents = document.querySelectorAll('[id$="-content"]');
+                      const allChevrons = document.querySelectorAll('[id^="chevron-"]');
+                      
+                      allContents.forEach(el => el.classList.add('hidden'));
+                      allChevrons.forEach(el => el.classList.remove('rotate-180'));
+                      
+                      // Show this module
+                      content.classList.remove('hidden');
+                      chevron.classList.add('rotate-180');
+                      
+                      // Scroll to the content
+                      setTimeout(() => {
+                          content.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 100);
+                  } else {
+                      // Hide this module
+                      content.classList.add('hidden');
+                      chevron.classList.remove('rotate-180');
                   }
               }
 
