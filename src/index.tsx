@@ -4433,6 +4433,12 @@ app.get('/report', async (c) => {
   }
 })
 
+// Parameterized report route (compatibility for /report/:sessionId format)
+app.get('/report/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId')
+  return c.redirect(`/report?session=${sessionId}`)
+})
+
 // Favicon route
 app.get('/favicon.ico', (c) => {
   return c.text('', 204) // No content
@@ -8042,36 +8048,41 @@ app.post('/api/assessment/comprehensive-v3', async (c) => {
       diabetesRisk = null
     }
 
-    // Store results with error handling
+    // Store results with error handling - FIXED SCHEMA MISMATCH
     if (biologicalAge) {
       try {
         await env.DB.prepare(`
-          INSERT INTO biological_age (session_id, chronological_age, biological_age, age_acceleration, overall_health_score)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO biological_age (session_id, chronological_age, phenotypic_age, klemera_doubal_age, metabolic_age, telomere_age, average_biological_age, age_advantage, calculation_method)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           sessionId,
           age,
-          biologicalAge.biologicalAge || age,
-          biologicalAge.ageAcceleration || 0,
-          biologicalAge.overallHealthScore || 50
+          biologicalAge.phenotypic_age || biologicalAge.phenotypicAge || null,
+          biologicalAge.klemera_doubal_age || biologicalAge.klemeraDoubalAge || null, 
+          biologicalAge.metabolic_age || biologicalAge.metabolicAge || null,
+          biologicalAge.telomere_age || biologicalAge.telomereAge || null,
+          biologicalAge.average_biological_age || biologicalAge.biologicalAge || age,
+          biologicalAge.age_advantage || (age - (biologicalAge.average_biological_age || biologicalAge.biologicalAge || age)),
+          'KLEMERA_DOUBAL'
         ).run()
       } catch (error) {
         console.error('Error storing biological age:', error)
       }
     }
 
-    // Store risk calculations with error handling
+    // Store risk calculations with error handling - FIXED SCHEMA MISMATCH
     if (ascvdRisk) {
       try {
         await env.DB.prepare(`
-          INSERT INTO risk_calculations (session_id, risk_type, risk_percentage, risk_category, details)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, ten_year_risk, algorithm_used)
+          VALUES (?, ?, ?, ?, ?, ?)
         `).bind(
           sessionId,
           'ASCVD_10_YEAR',
-          ascvdRisk.tenYearRisk || 0,
-          ascvdRisk.riskCategory || 'low',
-          JSON.stringify(ascvdRisk)
+          ascvdRisk.risk_score || ascvdRisk.tenYearRisk || 0,
+          ascvdRisk.risk_level || ascvdRisk.riskCategory || 'low',
+          ascvdRisk.ten_year_risk || ascvdRisk.tenYearRisk || 0,
+          'POOLED_COHORT_EQUATIONS'
         ).run()
       } catch (error) {
         console.error('Error storing ASCVD risk:', error)
@@ -8081,14 +8092,15 @@ app.post('/api/assessment/comprehensive-v3', async (c) => {
     if (diabetesRisk) {
       try {
         await env.DB.prepare(`
-          INSERT INTO risk_calculations (session_id, risk_type, risk_percentage, risk_category, details)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO risk_calculations (session_id, risk_category, risk_score, risk_level, ten_year_risk, algorithm_used)
+          VALUES (?, ?, ?, ?, ?, ?)
         `).bind(
           sessionId,
           'DIABETES_TYPE2',
-          diabetesRisk.riskPercentage || 0,
-          diabetesRisk.riskLevel || 'low',
-          JSON.stringify(diabetesRisk)
+          diabetesRisk.risk_score || diabetesRisk.riskPercentage || 0,
+          diabetesRisk.risk_level || diabetesRisk.riskLevel || 'low',
+          diabetesRisk.ten_year_risk || diabetesRisk.riskPercentage || 0,
+          'FRAMINGHAM_DIABETES'
         ).run()
       } catch (error) {
         console.error('Error storing diabetes risk:', error)
