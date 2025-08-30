@@ -1868,6 +1868,802 @@ app.get('/report', async (c) => {
       `
     }
 
+    // ==============================================================
+    // FUNCTIONAL MEDICINE RECOMMENDATIONS & OPTIMIZATION FUNCTIONS
+    // Evidence-based analysis for practitioner decision support
+    // ==============================================================
+
+    /**
+     * Generates functional medicine recommendations based on biomarker patterns
+     * Methodology: IFM (Institute for Functional Medicine) root-cause analysis
+     * References: Functional Medicine Clinical Research, ACLM protocols
+     */
+    function generateFunctionalMedicineRecommendations() {
+      if (!comprehensiveData) {
+        return `
+          <div class="mb-6">
+            <p class="text-gray-700 mb-4">
+              Evidence-based functional medicine recommendations require comprehensive assessment data. 
+              Based on <strong>Institute for Functional Medicine (IFM)</strong> protocols and <strong>Integrative Medicine Research</strong> literature.
+            </p>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4">
+              <i class="fas fa-info-circle mr-2"></i>Assessment Required
+            </h3>
+            <p class="text-gray-700">Complete comprehensive assessment to generate personalized functional medicine recommendations.</p>
+          </div>
+        `
+      }
+
+      // Extract biomarker data with functional ranges
+      const biomarkers = comprehensiveData.biomarkers || comprehensiveData
+      const lifestyle = {
+        stress: comprehensiveData.stressLevel || null,
+        sleep: comprehensiveData.sleepQuality || null,
+        exercise: comprehensiveData.exerciseFrequency || null
+      }
+
+      // Functional Medicine Biomarker Analysis
+      const functionalAnalysis = []
+      
+      // Cardiovascular Risk Assessment (Functional Ranges)
+      if (biomarkers.ldlCholesterol) {
+        const ldl = parseFloat(biomarkers.ldlCholesterol)
+        if (ldl > 100) {
+          functionalAnalysis.push({
+            priority: 'high',
+            category: 'Cardiovascular',
+            marker: 'LDL Cholesterol',
+            current: ldl,
+            target: '<100 mg/dL (optimal <80 mg/dL for CVD risk)',
+            deviation: ldl - 100,
+            pathways: ['Lipid metabolism', 'Inflammatory response', 'Oxidative stress'],
+            rootCauses: ['Insulin resistance', 'Chronic inflammation', 'Genetic polymorphisms', 'Dietary patterns'],
+            interventions: {
+              nutrition: [
+                'Mediterranean diet pattern (PREDIMED study evidence)',
+                'Soluble fiber 10-25g daily (oats, psyllium, legumes)',
+                'Plant sterols/stanols 2g daily (AHA Class IIa recommendation)',
+                'Omega-3 fatty acids: EPA 2-3g daily (anti-inflammatory)'
+              ],
+              lifestyle: [
+                'Aerobic exercise 150+ min/week moderate intensity',
+                'Resistance training 2-3x/week (muscle insulin sensitivity)',
+                'Stress reduction (cortisol-lipid connection)',
+                'Sleep optimization 7-9 hours (metabolic regulation)'
+              ],
+              supplements: [
+                'Bergamot extract 500-1000mg daily (HMG-CoA reductase modulation)',
+                'Red yeast rice (natural statin precursor - monitor with practitioner)',
+                'Psyllium husk 5-10g daily (bile acid sequestration)',
+                'Coenzyme Q10 100-200mg (if considering statin therapy)'
+              ],
+              monitoring: 'Recheck lipid panel in 12-16 weeks, consider advanced lipid testing (ApoB, LDL-P)'
+            }
+          })
+        }
+      }
+
+      // Vitamin D Assessment (Functional Medicine ranges)
+      if (biomarkers.vitaminD) {
+        const vitD = parseFloat(biomarkers.vitaminD)
+        if (vitD < 50) {
+          const priority = vitD < 30 ? 'high' : 'medium'
+          functionalAnalysis.push({
+            priority,
+            category: 'Hormonal/Immune',
+            marker: 'Vitamin D (25-OH)',
+            current: vitD,
+            target: '50-80 ng/mL (Vitamin D Council, Endocrine Society functional range)',
+            deviation: 50 - vitD,
+            pathways: ['Immune modulation', 'Calcium homeostasis', 'Gene expression', 'Mitochondrial function'],
+            rootCauses: ['Insufficient sun exposure', 'Malabsorption', 'Genetic VDR polymorphisms', 'Increased metabolic demand'],
+            interventions: {
+              nutrition: [
+                'Vitamin D3 (cholecalciferol) preferred over D2',
+                'Take with fat-containing meal (lipophilic vitamin)',
+                'Consider magnesium status (D3 conversion cofactor)',
+                'Assess K2 status (calcium trafficking)'
+              ],
+              lifestyle: [
+                'Moderate sun exposure 10-30 min daily (UVB dependent on latitude)',
+                'Address gut health if malabsorption suspected',
+                'Weight optimization (adipose tissue D3 sequestration)',
+                'Reduce inflammatory lifestyle factors'
+              ],
+              supplements: [
+                'Vitamin D3 dosing: 1000 IU per 25 lb body weight for deficiency',
+                'Maintenance: 2000-4000 IU daily (individual variation)',
+                'Vitamin K2 (MK-7) 100-200mcg daily (synergistic effects)',
+                'Magnesium glycinate 200-400mg daily (conversion cofactor)'
+              ],
+              monitoring: 'Recheck 25(OH)D in 8-12 weeks, target maintenance once optimal achieved'
+            }
+          })
+        }
+      }
+
+      // Inflammatory Markers Assessment
+      if (biomarkers.crp) {
+        const crp = parseFloat(biomarkers.crp)
+        if (crp > 1.0) {
+          functionalAnalysis.push({
+            priority: crp > 3.0 ? 'high' : 'medium',
+            category: 'Inflammatory',
+            marker: 'hs-CRP',
+            current: crp,
+            target: '<1.0 mg/L (optimal <0.5 mg/L for longevity)',
+            deviation: crp - 1.0,
+            pathways: ['Systemic inflammation', 'Immune dysregulation', 'Cardiovascular risk', 'Insulin signaling'],
+            rootCauses: ['Gut dysbiosis', 'Food sensitivities', 'Chronic stress', 'Sleep disruption', 'Oxidative stress'],
+            interventions: {
+              nutrition: [
+                'Anti-inflammatory diet: eliminate refined sugars, trans fats',
+                'Omega-3:Omega-6 ratio optimization (target 1:4 or better)',
+                'Polyphenol-rich foods: berries, green tea, turmeric',
+                'Consider elimination diet to identify food triggers'
+              ],
+              lifestyle: [
+                'Stress management: meditation, HRV training, adaptogenic support',
+                'Sleep hygiene: 7-9 hours, consistent schedule, sleep environment',
+                'Exercise modulation: avoid excessive intensity if inflamed',
+                'Environmental toxin reduction (air, water, personal care products)'
+              ],
+              supplements: [
+                'Curcumin (bioavailable form) 500-1000mg daily',
+                'EPA-rich fish oil 2-3g daily (anti-inflammatory)',
+                'Probiotics: multi-strain, 25-50 billion CFU (gut-inflammation axis)',
+                'Quercetin 500mg daily (mast cell stabilization, antioxidant)'
+              ],
+              monitoring: 'Recheck hs-CRP in 12-16 weeks, consider comprehensive stool analysis if gut-related'
+            }
+          })
+        }
+      }
+
+      // Metabolic Assessment (Glucose/Insulin)
+      if (biomarkers.glucose || biomarkers.hba1c || biomarkers.insulin) {
+        const glucose = biomarkers.glucose ? parseFloat(biomarkers.glucose) : null
+        const hba1c = biomarkers.hba1c ? parseFloat(biomarkers.hba1c) : null
+        const insulin = biomarkers.insulin ? parseFloat(biomarkers.insulin) : null
+
+        let metabolicConcerns = []
+        if (glucose && glucose > 90) metabolicConcerns.push(`Fasting glucose: ${glucose} mg/dL`)
+        if (hba1c && hba1c > 5.3) metabolicConcerns.push(`HbA1c: ${hba1c}%`)
+        if (insulin && insulin > 8) metabolicConcerns.push(`Fasting insulin: ${insulin} μU/mL`)
+
+        if (metabolicConcerns.length > 0) {
+          functionalAnalysis.push({
+            priority: 'high',
+            category: 'Metabolic',
+            marker: 'Glucose/Insulin Metabolism',
+            current: metabolicConcerns.join(', '),
+            target: 'Glucose <90 mg/dL, HbA1c <5.3%, Insulin <8 μU/mL (functional ranges)',
+            pathways: ['Insulin signaling', 'Glucose metabolism', 'Mitochondrial function', 'Inflammatory cascades'],
+            rootCauses: ['Insulin resistance', 'Visceral adiposity', 'Sedentary lifestyle', 'Refined carbohydrate intake', 'Chronic stress'],
+            interventions: {
+              nutrition: [
+                'Low glycemic index diet, emphasize fiber and protein',
+                'Time-restricted eating: 12-16 hour fasting windows',
+                'Chromium-rich foods: broccoli, whole grains, lean meats',
+                'Cinnamon, berberine-containing foods for glucose metabolism'
+              ],
+              lifestyle: [
+                'Post-meal walking: 10-15 minutes to improve glucose clearance',
+                'Resistance training: muscle glucose uptake enhancement',
+                'Sleep optimization: insulin sensitivity restoration',
+                'Stress management: cortisol-glucose connection'
+              ],
+              supplements: [
+                'Chromium picolinate 200-400mcg daily (glucose tolerance factor)',
+                'Berberine 500mg 2-3x daily (AMPK activation, glucose uptake)',
+                'Alpha-lipoic acid 300-600mg daily (glucose metabolism, antioxidant)',
+                'Magnesium 200-400mg daily (insulin sensitivity cofactor)'
+              ],
+              monitoring: 'Consider OGTT, fasting insulin, HOMA-IR calculation for insulin resistance assessment'
+            }
+          })
+        }
+      }
+
+      // Stress Assessment Integration
+      if (lifestyle.stress && parseFloat(lifestyle.stress) >= 4) {
+        functionalAnalysis.push({
+          priority: 'high',
+          category: 'Neuroendocrine',
+          marker: 'Stress Response',
+          current: `Self-reported stress level: ${lifestyle.stress}/5`,
+          target: 'Optimized stress resilience and HPA axis function',
+          pathways: ['HPA axis', 'Neurotransmitter balance', 'Inflammatory response', 'Sleep-wake cycle'],
+          rootCauses: ['Chronic stressors', 'Poor stress coping mechanisms', 'Adrenal dysfunction', 'Nutrient depletion'],
+          interventions: {
+            nutrition: [
+              'Adaptogenic herbs: ashwagandha, rhodiola, holy basil',
+              'Magnesium-rich foods: nervous system support',
+              'B-complex vitamins: neurotransmitter synthesis',
+              'Avoid excessive caffeine: adrenal stress reduction'
+            ],
+            lifestyle: [
+              'Mindfulness meditation: 10-20 minutes daily (evidence-based stress reduction)',
+              'Heart Rate Variability (HRV) training: autonomic balance',
+              'Nature exposure: cortisol reduction, parasympathetic activation',
+              'Social connection: oxytocin release, stress buffering'
+            ],
+            supplements: [
+              'Ashwagandha (KSM-66) 300-600mg daily (cortisol modulation)',
+              'Magnesium glycinate 200-400mg evening (calming, sleep support)',
+              'Phosphatidylserine 100-200mg daily (HPA axis modulation)',
+              'L-theanine 200mg daily (GABA promotion, calm alertness)'
+            ],
+            monitoring: 'Consider salivary cortisol pattern testing (4-point), DHEA-S levels'
+          }
+        })
+      }
+
+      // Generate HTML output
+      if (functionalAnalysis.length === 0) {
+        return `
+          <div class="mb-6">
+            <p class="text-gray-700 mb-4">
+              <strong>Functional Medicine Assessment:</strong> Based on current biomarker and lifestyle data, 
+              no significant optimization priorities identified. Continue monitoring and preventive strategies.
+            </p>
+            <p class="text-sm text-gray-600">
+              <em>Methodology: Institute for Functional Medicine (IFM) protocols, Integrative Medicine Research literature</em>
+            </p>
+          </div>
+          
+          <div class="bg-green-50 border-l-4 border-green-500 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-green-800 mb-4">
+              <i class="fas fa-check-circle mr-2"></i>Maintenance Phase Recommendations
+            </h3>
+            <p class="text-gray-700">Focus on maintaining current positive health markers through continued lifestyle optimization and periodic monitoring.</p>
+          </div>
+        `
+      }
+
+      // Sort by priority
+      const highPriority = functionalAnalysis.filter(item => item.priority === 'high')
+      const mediumPriority = functionalAnalysis.filter(item => item.priority === 'medium')
+
+      let html = `
+        <div class="mb-6">
+          <p class="text-gray-700 mb-4">
+            <strong>Evidence-based functional medicine recommendations</strong> using biomarker pattern analysis and systems biology approach. 
+            Prioritized by physiological impact and root-cause addressing potential.
+          </p>
+          <p class="text-sm text-gray-600 mb-4">
+            <em><strong>Methodology:</strong> Institute for Functional Medicine (IFM) Matrix Model, Integrative Medicine Research protocols, 
+            American College of Lifestyle Medicine (ACLM) evidence-based interventions</em>
+          </p>
+        </div>
+      `
+
+      // High Priority Section
+      if (highPriority.length > 0) {
+        html += `
+          <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold text-red-800 mb-4">
+              <i class="fas fa-exclamation-triangle mr-2"></i>High Priority Interventions
+            </h3>
+            <div class="space-y-6">
+        `
+
+        highPriority.forEach(item => {
+          const categoryIcons = {
+            'Cardiovascular': 'fas fa-heartbeat',
+            'Metabolic': 'fas fa-chart-line',
+            'Inflammatory': 'fas fa-fire',
+            'Hormonal/Immune': 'fas fa-shield-virus',
+            'Neuroendocrine': 'fas fa-brain'
+          }
+
+          html += `
+            <div class="bg-white rounded-lg p-4 border border-red-200">
+              <div class="flex items-start">
+                <div class="bg-red-100 p-2 rounded-full mr-4 mt-1">
+                  <i class="${categoryIcons[item.category] || 'fas fa-flask'} text-red-600"></i>
+                </div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800 mb-2">${item.category}: ${item.marker}</h4>
+                  <p class="text-sm text-gray-600 mb-3"><strong>Current:</strong> ${item.current} | <strong>Target:</strong> ${item.target}</p>
+                  
+                  ${item.pathways ? `
+                    <div class="mb-3">
+                      <p class="text-xs font-medium text-gray-700 mb-1">Affected Pathways:</p>
+                      <p class="text-xs text-blue-600">${item.pathways.join(', ')}</p>
+                    </div>
+                  ` : ''}
+                  
+                  <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p class="text-sm font-medium text-gray-700 mb-2">Nutritional Interventions:</p>
+                      <ul class="text-xs text-gray-600 space-y-1">
+                        ${item.interventions.nutrition.map(intervention => `<li>• ${intervention}</li>`).join('')}
+                      </ul>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-700 mb-2">Therapeutic Supplements:</p>
+                      <ul class="text-xs text-gray-600 space-y-1">
+                        ${item.interventions.supplements.map(supplement => `<li>• ${supplement}</li>`).join('')}
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-3 grid md:grid-cols-2 gap-4">
+                    <div>
+                      <p class="text-sm font-medium text-gray-700 mb-2">Lifestyle Modifications:</p>
+                      <ul class="text-xs text-gray-600 space-y-1">
+                        ${item.interventions.lifestyle.map(lifestyle => `<li>• ${lifestyle}</li>`).join('')}
+                      </ul>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-gray-700 mb-2">Monitoring Protocol:</p>
+                      <p class="text-xs text-gray-600">${item.interventions.monitoring}</p>
+                    </div>
+                  </div>
+                  
+                  ${item.rootCauses ? `
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                      <p class="text-xs font-medium text-gray-700 mb-1">Root Cause Considerations:</p>
+                      <p class="text-xs text-gray-500">${item.rootCauses.join(', ')}</p>
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `
+        })
+
+        html += `
+            </div>
+          </div>
+        `
+      }
+
+      // Medium Priority Section
+      if (mediumPriority.length > 0) {
+        html += `
+          <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold text-yellow-800 mb-4">
+              <i class="fas fa-balance-scale mr-2"></i>Medium Priority Optimizations
+            </h3>
+            <div class="grid md:grid-cols-1 gap-6">
+        `
+
+        mediumPriority.forEach(item => {
+          html += `
+            <div class="bg-white rounded-lg p-4 border border-yellow-200">
+              <h4 class="font-semibold text-gray-800 mb-3">
+                <i class="fas fa-chart-bar text-yellow-600 mr-2"></i>${item.category}: ${item.marker}
+              </h4>
+              <div class="grid md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <p class="font-medium text-gray-700 mb-2">Current Status:</p>
+                  <p class="text-gray-600">${item.current}</p>
+                  <p class="text-yellow-600 font-medium">Target: ${item.target}</p>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-700 mb-2">Key Interventions:</p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    ${item.interventions.supplements.slice(0, 3).map(supplement => `<li>• ${supplement}</li>`).join('')}
+                  </ul>
+                </div>
+                <div>
+                  <p class="font-medium text-gray-700 mb-2">Monitoring:</p>
+                  <p class="text-xs text-gray-600">${item.interventions.monitoring}</p>
+                </div>
+              </div>
+            </div>
+          `
+        })
+
+        html += `
+            </div>
+          </div>
+        `
+      }
+
+      // Evidence Base Footer
+      html += `
+        <div class="bg-blue-50 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-blue-800 mb-4">
+            <i class="fas fa-book-medical mr-2"></i>Evidence Base & References
+          </h3>
+          <div class="grid md:grid-cols-2 gap-6 text-sm">
+            <div>
+              <p class="font-medium text-gray-700 mb-2">Functional Medicine Framework:</p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>• Institute for Functional Medicine (IFM) Matrix Model</li>
+                <li>• Systems Biology approach to root-cause analysis</li>
+                <li>• Personalized, evidence-based intervention protocols</li>
+                <li>• Integrative Medicine Research (Cochrane, PubMed)</li>
+              </ul>
+            </div>
+            <div>
+              <p class="font-medium text-gray-700 mb-2">Clinical Guidelines:</p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>• American College of Lifestyle Medicine (ACLM)</li>
+                <li>• Functional Medicine Certified Practitioner protocols</li>
+                <li>• Integrative and Functional Nutrition standards</li>
+                <li>• Evidence-based nutraceutical research</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      `
+
+      return html
+    }
+
+    /**
+     * Generates functional medicine optimization strategies and action plans
+     * Methodology: Precision medicine approach with systems biology integration
+     * References: Institute for Functional Medicine, Integrative Medicine Research
+     */
+    function generateFunctionalMedicineOptimization() {
+      if (!comprehensiveData) {
+        return `
+          <div class="mb-6">
+            <p class="text-gray-700 mb-4">
+              Comprehensive optimization strategies require detailed assessment data. 
+              Based on <strong>precision medicine principles</strong> and <strong>systems biology approaches</strong>.
+            </p>
+          </div>
+          
+          <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-blue-800 mb-4">
+              <i class="fas fa-info-circle mr-2"></i>Assessment Required
+            </h3>
+            <p class="text-gray-700">Complete comprehensive assessment to generate personalized optimization strategies.</p>
+          </div>
+        `
+      }
+
+      // Extract biomarker and lifestyle data
+      const biomarkers = comprehensiveData.biomarkers || comprehensiveData
+      const lifestyle = {
+        stress: comprehensiveData.stressLevel || null,
+        sleep: comprehensiveData.sleepQuality || null,
+        exercise: comprehensiveData.exerciseFrequency || null
+      }
+
+      // Generate optimization categories based on functional medicine principles
+      let html = `
+        <div class="mb-6">
+          <p class="text-gray-700 mb-4">
+            Specific areas identified for improvement based on your current health status and biomarkers. 
+            These represent the greatest opportunities for enhancing your health span and longevity using 
+            <strong>functional medicine optimization strategies</strong>.
+          </p>
+          <p class="text-sm text-gray-600 mb-4">
+            <em><strong>Methodology:</strong> Systems Biology approach, Precision Medicine protocols, 
+            Institute for Functional Medicine Matrix Model for root-cause optimization</em>
+          </p>
+        </div>
+        
+        <!-- Optimization Categories -->
+        <div class="space-y-8">
+      `
+
+      // Biomarker Optimization Section
+      html += `
+        <div class="bg-red-50 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-red-800 mb-4">
+            <i class="fas fa-flask mr-2"></i>Biomarker Optimization (Evidence-Based Targets)
+          </h3>
+          <div class="grid md:grid-cols-2 gap-6">
+      `
+
+      // LDL Cholesterol Optimization
+      if (biomarkers.ldlCholesterol && parseFloat(biomarkers.ldlCholesterol) > 100) {
+        const ldl = parseFloat(biomarkers.ldlCholesterol)
+        html += `
+          <div class="bg-white rounded-lg p-4 border border-red-200">
+            <h4 class="font-semibold text-red-700 mb-3">
+              <i class="fas fa-heartbeat text-red-600 mr-2"></i>LDL Cholesterol Optimization
+            </h4>
+            <div class="space-y-3">
+              <div class="bg-red-50 p-3 rounded">
+                <p class="text-sm"><strong>Current:</strong> ${ldl} mg/dL</p>
+                <p class="text-sm"><strong>Functional Target:</strong> &lt;100 mg/dL (optimal &lt;70 mg/dL)</p>
+                <p class="text-xs text-red-600 font-medium">Priority: High (cardiovascular risk factor)</p>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-gray-700">Advanced Interventions:</p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li>• Bergamot extract (natural HMG-CoA reductase modulation)</li>
+                  <li>• Plant sterols 2g daily (cholesterol absorption inhibition)</li>
+                  <li>• Psyllium husk 10g daily (bile acid sequestration)</li>
+                  <li>• Advanced lipid testing: ApoB, LDL particle size</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      // Vitamin D Optimization
+      if (biomarkers.vitaminD && parseFloat(biomarkers.vitaminD) < 50) {
+        const vitD = parseFloat(biomarkers.vitaminD)
+        html += `
+          <div class="bg-white rounded-lg p-4 border border-red-200">
+            <h4 class="font-semibold text-red-700 mb-3">
+              <i class="fas fa-sun text-yellow-500 mr-2"></i>Vitamin D Optimization
+            </h4>
+            <div class="space-y-3">
+              <div class="bg-yellow-50 p-3 rounded">
+                <p class="text-sm"><strong>Current:</strong> ${vitD} ng/mL</p>
+                <p class="text-sm"><strong>Functional Target:</strong> 50-80 ng/mL (optimal range)</p>
+                <p class="text-xs text-yellow-600 font-medium">Priority: ${vitD < 30 ? 'High' : 'Medium'} (immune/hormonal function)</p>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-gray-700">Precision Dosing Protocol:</p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li>• D3 dosing: ${vitD < 30 ? '5000-8000 IU daily' : '3000-5000 IU daily'} (correction phase)</li>
+                  <li>• Cofactors: Magnesium 400mg, Vitamin K2 200mcg</li>
+                  <li>• Genetic testing: VDR polymorphisms consideration</li>
+                  <li>• Recheck in 8-12 weeks, adjust to maintain 60-70 ng/mL</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      html += `
+          </div>
+        </div>
+      `
+
+      // Lifestyle Optimization Section
+      html += `
+        <div class="bg-blue-50 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-blue-800 mb-4">
+            <i class="fas fa-running mr-2"></i>Lifestyle Optimization (Systems Approach)
+          </h3>
+          <div class="grid md:grid-cols-2 gap-6">
+      `
+
+      // Sleep Optimization
+      if (lifestyle.sleep && parseFloat(lifestyle.sleep) < 4) {
+        html += `
+          <div class="bg-white rounded-lg p-4 border border-blue-200">
+            <h4 class="font-semibold text-blue-700 mb-3">Sleep Architecture Optimization</h4>
+            <div class="space-y-3">
+              <div class="bg-blue-50 p-3 rounded">
+                <p class="text-sm"><strong>Current Quality:</strong> ${lifestyle.sleep}/5</p>
+                <p class="text-sm"><strong>Target:</strong> Deep sleep optimization, circadian rhythm alignment</p>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-gray-700">Advanced Sleep Protocol:</p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li>• Sleep tracking: Oura ring, WHOOP for REM/deep sleep phases</li>
+                  <li>• Magnesium glycinate 400mg + L-theanine 200mg evening</li>
+                  <li>• Blue light blocking glasses 2 hours before bed</li>
+                  <li>• Cold exposure therapy: 18-19°C bedroom temperature</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      // Stress Resilience Optimization
+      if (lifestyle.stress && parseFloat(lifestyle.stress) >= 4) {
+        html += `
+          <div class="bg-white rounded-lg p-4 border border-blue-200">
+            <h4 class="font-semibold text-blue-700 mb-3">HPA Axis & Stress Resilience</h4>
+            <div class="space-y-3">
+              <div class="bg-orange-50 p-3 rounded">
+                <p class="text-sm"><strong>Current Stress:</strong> ${lifestyle.stress}/5</p>
+                <p class="text-sm"><strong>Target:</strong> Optimized cortisol patterns, enhanced stress resilience</p>
+              </div>
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-gray-700">Neuroendocrine Optimization:</p>
+                <ul class="text-xs text-gray-600 space-y-1">
+                  <li>• HRV training: 10-15 minutes daily (coherence breathing)</li>
+                  <li>• Adaptogenic stack: Ashwagandha KSM-66 600mg + Rhodiola 400mg</li>
+                  <li>• Salivary cortisol testing: 4-point diurnal pattern</li>
+                  <li>• Cold thermogenesis: 2-3 minutes cold exposure daily</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        `
+      }
+
+      html += `
+          </div>
+        </div>
+      `
+
+      // Metabolic Optimization Section
+      html += `
+        <div class="bg-purple-50 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-purple-800 mb-4">
+            <i class="fas fa-dna mr-2"></i>Metabolic & Mitochondrial Optimization
+          </h3>
+          <div class="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 class="font-semibold text-purple-700 mb-3">Mitochondrial Biogenesis Protocol</h4>
+              <div class="space-y-3">
+                <div class="bg-white rounded-lg p-3 border border-purple-200">
+                  <p class="font-medium text-gray-800 mb-2">Advanced Mitochondrial Support</p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li>• CoQ10 (Ubiquinol form) 200-400mg daily</li>
+                    <li>• PQQ (Pyrroloquinoline quinone) 20-40mg daily</li>
+                    <li>• NAD+ precursors: NR or NMN 250-500mg</li>
+                    <li>• Time-restricted eating: 16:8 or 18:6 protocols</li>
+                  </ul>
+                </div>
+                <div class="bg-white rounded-lg p-3 border border-purple-200">
+                  <p class="font-medium text-gray-800 mb-2">Exercise Prescription</p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li>• Zone 2 cardio: 45-60 minutes, 3-4x/week</li>
+                    <li>• HIIT protocols: 4-7 minutes, 2x/week maximum</li>
+                    <li>• Resistance training: compound movements, progressive overload</li>
+                    <li>• VO2 max testing: baseline and progress monitoring</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-semibold text-purple-700 mb-3">Metabolic Flexibility Enhancement</h4>
+              <div class="space-y-3">
+                <div class="bg-white rounded-lg p-3 border border-purple-200">
+                  <p class="font-medium text-gray-800 mb-2">Glucose Optimization</p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li>• Continuous glucose monitoring (CGM) for 2-4 weeks</li>
+                    <li>• Postprandial glucose targeting &lt;140 mg/dL peaks</li>
+                    <li>• Berberine 500mg 2-3x daily (AMPK activation)</li>
+                    <li>• Alpha-lipoic acid 300-600mg daily</li>
+                  </ul>
+                </div>
+                <div class="bg-white rounded-lg p-3 border border-purple-200">
+                  <p class="font-medium text-gray-800 mb-2">Ketone Optimization</p>
+                  <ul class="text-xs text-gray-600 space-y-1">
+                    <li>• Ketone testing: blood beta-hydroxybutyrate</li>
+                    <li>• MCT oil gradual introduction: 15-30ml daily</li>
+                    <li>• Periodic ketosis: 3-5 day cycles monthly</li>
+                    <li>• Exogenous ketones for cognitive enhancement</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+
+      // Priority Action Plan
+      html += `
+        <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-orange-800 mb-4">
+            <i class="fas fa-rocket mr-2"></i>90-Day Functional Medicine Action Plan
+          </h3>
+          <div class="grid md:grid-cols-3 gap-6">
+            <div>
+              <h4 class="font-semibold text-orange-700 mb-3">Phase 1: Foundation (Days 1-30)</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+      `
+
+      // Phase 1 recommendations based on data
+      if (biomarkers.vitaminD && parseFloat(biomarkers.vitaminD) < 50) {
+        html += `
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Begin Vitamin D3 optimization protocol (5000 IU + cofactors)</span>
+                </li>
+        `
+      }
+      if (lifestyle.stress && parseFloat(lifestyle.stress) >= 4) {
+        html += `
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Initiate HRV training and stress resilience protocols</span>
+                </li>
+        `
+      }
+      if (biomarkers.ldlCholesterol && parseFloat(biomarkers.ldlCholesterol) > 100) {
+        html += `
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Start bergamot extract and plant sterol supplementation</span>
+                </li>
+        `
+      }
+
+      html += `
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Establish baseline biomarker testing and wearable device setup</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-orange-700 mb-3">Phase 2: Optimization (Days 31-60)</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Implement advanced mitochondrial support protocols</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Begin metabolic flexibility training (Zone 2 + intermittent fasting)</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Continuous glucose monitoring implementation</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Advanced sleep optimization with tracking devices</span>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-orange-700 mb-3">Phase 3: Integration (Days 61-90)</h4>
+              <ul class="text-sm text-gray-700 space-y-2">
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Comprehensive biomarker reassessment and protocol adjustment</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Genetic testing integration (if indicated)</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Advanced functional medicine testing (organic acids, etc.)</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
+                  <span>Long-term optimization strategy development</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      `
+
+      // Evidence Base Section
+      html += `
+        <div class="bg-green-50 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-green-800 mb-4">
+            <i class="fas fa-book-medical mr-2"></i>Scientific Evidence & Methodology
+          </h3>
+          <div class="grid md:grid-cols-2 gap-6 text-sm">
+            <div>
+              <p class="font-medium text-gray-700 mb-3">Functional Medicine Protocols:</p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>• <strong>IFM Matrix Model:</strong> Systems biology approach to optimization</li>
+                <li>• <strong>Precision Medicine:</strong> Individual genetic and phenotypic considerations</li>
+                <li>• <strong>Biomarker Targeting:</strong> Evidence-based functional ranges vs. reference ranges</li>
+                <li>• <strong>Root-Cause Analysis:</strong> Addressing upstream factors vs. symptom management</li>
+              </ul>
+            </div>
+            <div>
+              <p class="font-medium text-gray-700 mb-3">Research Foundations:</p>
+              <ul class="text-xs text-gray-600 space-y-1">
+                <li>• <strong>Mitochondrial Medicine:</strong> Research on cellular energy optimization</li>
+                <li>• <strong>Chronobiology:</strong> Circadian rhythm optimization protocols</li>
+                <li>• <strong>Nutrigenomics:</strong> Gene-nutrient interaction research</li>
+                <li>• <strong>Metabolomics:</strong> Systems approach to metabolic optimization</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      `
+
+      html += `
+        </div>
+      `
+
+      return html
+    }
+
     function generateMedicalHistorySection() {
       if (!comprehensiveData) {
         return `<p class="text-gray-600 italic">Complete the comprehensive assessment to see medical history analysis.</p>`
@@ -3336,464 +4132,25 @@ app.get('/report', async (c) => {
                   </div>
               </div>
 
-              <!-- Section 13: Personalized Recommendations -->
+              <!-- Section 13: Personalized Recommendations (Functional Medicine) -->
               <div class="report-section">
                   <div class="report-header">
                       <i class="fas fa-prescription-bottle-alt"></i>
                       <h2>13. Personalized Recommendations</h2>
                   </div>
                   <div class="report-content">
-                      <div class="mb-6">
-                          <p class="text-gray-700 mb-4">
-                              Evidence-based recommendations tailored to your specific health profile, biomarkers, and risk factors. 
-                              Prioritized by impact potential and ease of implementation.
-                          </p>
-                      </div>
-                      
-                      <!-- High Priority Recommendations -->
-                      <div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 mb-8">
-                          <h3 class="text-lg font-semibold text-red-800 mb-4">
-                              <i class="fas fa-exclamation-circle mr-2"></i>High Priority Interventions
-                          </h3>
-                          <div class="space-y-6">
-                              <div class="bg-white rounded-lg p-4 border border-red-200">
-                                  <div class="flex items-start">
-                                      <div class="bg-red-100 p-2 rounded-full mr-4 mt-1">
-                                          <i class="fas fa-heartbeat text-red-600"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <h4 class="font-semibold text-gray-800 mb-2">LDL Cholesterol Optimization</h4>
-                                          <p class="text-sm text-gray-600 mb-3">Current: 115 mg/dL | Target: &lt;100 mg/dL</p>
-                                          <div class="grid md:grid-cols-2 gap-4">
-                                              <div>
-                                                  <p class="text-sm font-medium text-gray-700 mb-2">Nutritional Interventions:</p>
-                                                  <ul class="text-xs text-gray-600 space-y-1">
-                                                      <li>• Increase soluble fiber intake (oats, beans, apples)</li>
-                                                      <li>• Add plant sterols/stanols (2g daily)</li>
-                                                      <li>• Replace saturated fats with monounsaturated fats</li>
-                                                      <li>• Include fatty fish 2-3 times per week</li>
-                                                  </ul>
-                                              </div>
-                                              <div>
-                                                  <p class="text-sm font-medium text-gray-700 mb-2">Supplements to Consider:</p>
-                                                  <ul class="text-xs text-gray-600 space-y-1">
-                                                      <li>• Red yeast rice (consult physician)</li>
-                                                      <li>• Bergamot extract (500-1000mg daily)</li>
-                                                      <li>• Psyllium husk (5-10g daily)</li>
-                                                      <li>• Omega-3 EPA/DHA (2-3g daily)</li>
-                                                  </ul>
-                                              </div>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-
-                              <div class="bg-white rounded-lg p-4 border border-red-200">
-                                  <div class="flex items-start">
-                                      <div class="bg-red-100 p-2 rounded-full mr-4 mt-1">
-                                          <i class="fas fa-brain text-red-600"></i>
-                                      </div>
-                                      <div class="flex-1">
-                                          <h4 class="font-semibold text-gray-800 mb-2">Stress Management Protocol</h4>
-                                          <p class="text-sm text-gray-600 mb-3">Current stress score: 65/100 | Target: &gt;80/100</p>
-                                          <div class="grid md:grid-cols-2 gap-4">
-                                              <div>
-                                                  <p class="text-sm font-medium text-gray-700 mb-2">Daily Practices:</p>
-                                                  <ul class="text-xs text-gray-600 space-y-1">
-                                                      <li>• Mindfulness meditation (10-20 minutes)</li>
-                                                      <li>• Deep breathing exercises (4-7-8 technique)</li>
-                                                      <li>• Progressive muscle relaxation</li>
-                                                      <li>• Gratitude journaling (3 items daily)</li>
-                                                  </ul>
-                                              </div>
-                                              <div>
-                                                  <p class="text-sm font-medium text-gray-700 mb-2">Lifestyle Adjustments:</p>
-                                                  <ul class="text-xs text-gray-600 space-y-1">
-                                                      <li>• Establish work-life boundaries</li>
-                                                      <li>• Schedule regular downtime</li>
-                                                      <li>• Limit news/social media exposure</li>
-                                                      <li>• Prioritize time in nature</li>
-                                                  </ul>
-                                              </div>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      <!-- Medium Priority Recommendations -->
-                      <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-6 mb-8">
-                          <h3 class="text-lg font-semibold text-yellow-800 mb-4">
-                              <i class="fas fa-balance-scale mr-2"></i>Medium Priority Optimizations
-                          </h3>
-                          <div class="grid md:grid-cols-2 gap-6">
-                              <div class="bg-white rounded-lg p-4 border border-yellow-200">
-                                  <h4 class="font-semibold text-gray-800 mb-3">
-                                      <i class="fas fa-pills text-yellow-600 mr-2"></i>Nutritional Supplements
-                                  </h4>
-                                  <div class="space-y-3 text-sm">
-                                      <div>
-                                          <p class="font-medium text-gray-700">Vitamin D3</p>
-                                          <p class="text-gray-600">2000-4000 IU daily (current: 32 ng/mL, target: 50-80 ng/mL)</p>
-                                      </div>
-                                      <div>
-                                          <p class="font-medium text-gray-700">Magnesium Glycinate</p>
-                                          <p class="text-gray-600">400-600mg before bed (supports sleep and muscle recovery)</p>
-                                      </div>
-                                      <div>
-                                          <p class="font-medium text-gray-700">Vitamin B Complex</p>
-                                          <p class="text-gray-600">High-potency formula (supports energy and neurological function)</p>
-                                      </div>
-                                      <div>
-                                          <p class="font-medium text-gray-700">Probiotics</p>
-                                          <p class="text-gray-600">Multi-strain formula, 50+ billion CFU (gut health optimization)</p>
-                                      </div>
-                                  </div>
-                              </div>
-
-                              <div class="bg-white rounded-lg p-4 border border-yellow-200">
-                                  <h4 class="font-semibold text-gray-800 mb-3">
-                                      <i class="fas fa-dumbbell text-yellow-600 mr-2"></i>Exercise Optimization
-                                  </h4>
-                                  <div class="space-y-3 text-sm">
-                                      <div>
-                                          <p class="font-medium text-gray-700">High-Intensity Interval Training</p>
-                                          <p class="text-gray-600">2x per week, 20-30 minutes (metabolic flexibility)</p>
-                                      </div>
-                                      <div>
-                                          <p class="font-medium text-gray-700">Zone 2 Cardio</p>
-                                          <p class="text-gray-600">2-3x per week, 45-60 minutes (mitochondrial health)</p>
-                                      </div>
-                                      <div>
-                                          <p class="font-medium text-gray-700">Resistance Training</p>
-                                          <p class="text-gray-600">Continue 3x per week (maintain muscle mass and bone density)</p>
-                                      </div>
-                                      <div>
-                                          <p class="font-medium text-gray-700">Flexibility & Mobility</p>
-                                          <p class="text-gray-600">Daily 10-15 minutes (joint health and injury prevention)</p>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
-
-                      <!-- Long-term Recommendations -->
-                      <div class="bg-green-50 border-l-4 border-green-500 rounded-lg p-6 mb-8">
-                          <h3 class="text-lg font-semibold text-green-800 mb-4">
-                              <i class="fas fa-seedling mr-2"></i>Long-term Health Strategies
-                          </h3>
-                          <div class="grid md:grid-cols-3 gap-6">
-                              <div class="bg-white rounded-lg p-4 border border-green-200">
-                                  <h4 class="font-semibold text-gray-800 mb-3">
-                                      <i class="fas fa-calendar-alt text-green-600 mr-2"></i>6-Month Goals
-                                  </h4>
-                                  <ul class="text-sm text-gray-600 space-y-2">
-                                      <li>• LDL cholesterol &lt;100 mg/dL</li>
-                                      <li>• Stress management score &gt;80</li>
-                                      <li>• Vitamin D levels 50-80 ng/mL</li>
-                                      <li>• Establish consistent meditation practice</li>
-                                      <li>• Complete advanced lipid panel</li>
-                                  </ul>
-                              </div>
-
-                              <div class="bg-white rounded-lg p-4 border border-green-200">
-                                  <h4 class="font-semibold text-gray-800 mb-3">
-                                      <i class="fas fa-chart-line text-green-600 mr-2"></i>1-Year Targets
-                                  </h4>
-                                  <ul class="text-sm text-gray-600 space-y-2">
-                                      <li>• Maintain biological age advantage</li>
-                                      <li>• Optimize hormone levels</li>
-                                      <li>• Complete telomere length testing</li>
-                                      <li>• Achieve optimal body composition</li>
-                                      <li>• Implement intermittent fasting protocol</li>
-                                  </ul>
-                              </div>
-
-                              <div class="bg-white rounded-lg p-4 border border-green-200">
-                                  <h4 class="font-semibold text-gray-800 mb-3">
-                                      <i class="fas fa-mountain text-green-600 mr-2"></i>5-Year Vision
-                                  </h4>
-                                  <ul class="text-sm text-gray-600 space-y-2">
-                                      <li>• Maintain disease-free status</li>
-                                      <li>• Achieve longevity biomarker targets</li>
-                                      <li>• Optimize cellular aging markers</li>
-                                      <li>• Build resilience against age-related decline</li>
-                                      <li>• Maintain high quality of life</li>
-                                  </ul>
-                              </div>
-                          </div>
-                      </div>
-
-                      <!-- Medical Follow-up -->
-                      <div class="bg-blue-50 rounded-lg p-6">
-                          <h3 class="text-lg font-semibold text-blue-800 mb-4">
-                              <i class="fas fa-stethoscope mr-2"></i>Recommended Medical Follow-up
-                          </h3>
-                          <div class="grid md:grid-cols-2 gap-6">
-                              <div>
-                                  <h4 class="font-semibold text-blue-700 mb-3">Immediate Consultations</h4>
-                                  <ul class="text-sm text-gray-700 space-y-2">
-                                      <li>• Discuss LDL optimization with primary care physician</li>
-                                      <li>• Consider cardiology consultation for advanced lipid testing</li>
-                                      <li>• Nutritionist consultation for personalized meal planning</li>
-                                      <li>• Stress management counselor or therapist</li>
-                                  </ul>
-                              </div>
-                              <div>
-                                  <h4 class="font-semibold text-blue-700 mb-3">Additional Testing to Consider</h4>
-                                  <ul class="text-sm text-gray-700 space-y-2">
-                                      <li>• Advanced lipid particle analysis (NMR or Ion Mobility)</li>
-                                      <li>• Comprehensive hormone panel</li>
-                                      <li>• Omega-3 fatty acid levels</li>
-                                      <li>• Methylation pathway analysis</li>
-                                      <li>• Comprehensive micronutrient panel</li>
-                                  </ul>
-                              </div>
-                          </div>
-                      </div>
+                      ${generateFunctionalMedicineRecommendations()}
                   </div>
               </div>
 
-              <!-- Section 14: Areas for Optimization -->
+              <!-- Section 14: Areas for Optimization (Functional Medicine) -->
               <div class="report-section">
                   <div class="report-header">
                       <i class="fas fa-chart-line"></i>
                       <h2>14. Areas for Optimization</h2>
                   </div>
                   <div class="report-content">
-                      <div class="mb-6">
-                          <p class="text-gray-700 mb-4">
-                              Specific areas identified for improvement based on your current health status and biomarkers. 
-                              These represent the greatest opportunities for enhancing your health span and longevity.
-                          </p>
-                      </div>
-                      
-                      <!-- Optimization Categories -->
-                      <div class="space-y-8">
-                          <!-- Biomarker Optimization -->
-                          <div class="bg-red-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-red-800 mb-4">
-                                  <i class="fas fa-flask mr-2"></i>Biomarker Optimization
-                              </h3>
-                              <div class="grid md:grid-cols-2 gap-6">
-                                  <div>
-                                      <h4 class="font-semibold text-red-700 mb-3">Current Suboptimal Levels</h4>
-                                      <div class="space-y-3">
-                                          <div class="bg-white rounded-lg p-3 border border-red-200">
-                                              <div class="flex justify-between items-center mb-2">
-                                                  <span class="font-medium text-gray-800">LDL Cholesterol</span>
-                                                  <span class="text-red-600 font-semibold">115 mg/dL</span>
-                                              </div>
-                                              <div class="flex justify-between items-center text-sm">
-                                                  <span class="text-gray-600">Target: &lt;100 mg/dL</span>
-                                                  <span class="text-red-600">↓ 15 mg/dL needed</span>
-                                              </div>
-                                          </div>
-                                          
-                                          <div class="bg-white rounded-lg p-3 border border-yellow-200">
-                                              <div class="flex justify-between items-center mb-2">
-                                                  <span class="font-medium text-gray-800">Vitamin D</span>
-                                                  <span class="text-yellow-600 font-semibold">32 ng/mL</span>
-                                              </div>
-                                              <div class="flex justify-between items-center text-sm">
-                                                  <span class="text-gray-600">Target: 50-80 ng/mL</span>
-                                                  <span class="text-yellow-600">↑ 18+ ng/mL needed</span>
-                                              </div>
-                                          </div>
-                                      </div>
-                                  </div>
-                                  <div>
-                                      <h4 class="font-semibold text-green-700 mb-3">Optimization Strategies</h4>
-                                      <div class="space-y-3 text-sm text-gray-700">
-                                          <div>
-                                              <p class="font-medium">LDL Cholesterol Reduction:</p>
-                                              <ul class="ml-4 mt-1 text-xs space-y-1">
-                                                  <li>• Plant sterol supplementation</li>
-                                                  <li>• Increase soluble fiber intake</li>
-                                                  <li>• Mediterranean diet pattern</li>
-                                                  <li>• Regular aerobic exercise</li>
-                                              </ul>
-                                          </div>
-                                          <div>
-                                              <p class="font-medium">Vitamin D Optimization:</p>
-                                              <ul class="ml-4 mt-1 text-xs space-y-1">
-                                                  <li>• D3 supplementation 4000 IU daily</li>
-                                                  <li>• Take with fat-containing meal</li>
-                                                  <li>• Retest in 8-12 weeks</li>
-                                                  <li>• Consider K2 co-supplementation</li>
-                                              </ul>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Lifestyle Optimization -->
-                          <div class="bg-blue-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-blue-800 mb-4">
-                                  <i class="fas fa-leaf mr-2"></i>Lifestyle Optimization
-                              </h3>
-                              <div class="grid md:grid-cols-3 gap-6">
-                                  <div class="bg-white rounded-lg p-4 border border-blue-200">
-                                      <h4 class="font-semibold text-blue-700 mb-3">Stress Management</h4>
-                                      <div class="space-y-2 text-sm">
-                                          <div class="flex justify-between">
-                                              <span>Current Score:</span>
-                                              <span class="text-yellow-600 font-medium">65/100</span>
-                                          </div>
-                                          <div class="flex justify-between">
-                                              <span>Target Score:</span>
-                                              <span class="text-green-600 font-medium">85/100</span>
-                                          </div>
-                                          <p class="text-xs text-gray-600 mt-2">
-                                              Implementation of daily mindfulness practices and stress reduction techniques needed.
-                                          </p>
-                                      </div>
-                                  </div>
-
-                                  <div class="bg-white rounded-lg p-4 border border-blue-200">
-                                      <h4 class="font-semibold text-blue-700 mb-3">Social Connection</h4>
-                                      <div class="space-y-2 text-sm">
-                                          <div class="flex justify-between">
-                                              <span>Current Score:</span>
-                                              <span class="text-yellow-600 font-medium">Moderate</span>
-                                          </div>
-                                          <div class="flex justify-between">
-                                              <span>Target Score:</span>
-                                              <span class="text-green-600 font-medium">Strong</span>
-                                          </div>
-                                          <p class="text-xs text-gray-600 mt-2">
-                                              Strengthen social networks and community engagement for longevity benefits.
-                                          </p>
-                                      </div>
-                                  </div>
-
-                                  <div class="bg-white rounded-lg p-4 border border-blue-200">
-                                      <h4 class="font-semibold text-blue-700 mb-3">Environmental</h4>
-                                      <div class="space-y-2 text-sm">
-                                          <div class="flex justify-between">
-                                              <span>EMF Exposure:</span>
-                                              <span class="text-yellow-600 font-medium">Moderate</span>
-                                          </div>
-                                          <div class="flex justify-between">
-                                              <span>Air Quality:</span>
-                                              <span class="text-green-600 font-medium">Good</span>
-                                          </div>
-                                          <p class="text-xs text-gray-600 mt-2">
-                                              Consider EMF reduction strategies and air purification systems.
-                                          </p>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Longevity Optimization -->
-                          <div class="bg-purple-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-purple-800 mb-4">
-                                  <i class="fas fa-hourglass-half mr-2"></i>Longevity Optimization
-                              </h3>
-                              <div class="grid md:grid-cols-2 gap-6">
-                                  <div>
-                                      <h4 class="font-semibold text-purple-700 mb-3">Cellular Health</h4>
-                                      <div class="space-y-3">
-                                          <div class="bg-white rounded-lg p-3 border border-purple-200">
-                                              <p class="font-medium text-gray-800 mb-2">Autophagy Enhancement</p>
-                                              <ul class="text-xs text-gray-600 space-y-1">
-                                                  <li>• Consider intermittent fasting protocols</li>
-                                                  <li>• Optimize sleep quality for cellular repair</li>
-                                                  <li>• Include spermidine-rich foods</li>
-                                                  <li>• Regular exercise for autophagy stimulation</li>
-                                              </ul>
-                                          </div>
-                                          <div class="bg-white rounded-lg p-3 border border-purple-200">
-                                              <p class="font-medium text-gray-800 mb-2">Telomere Health</p>
-                                              <ul class="text-xs text-gray-600 space-y-1">
-                                                  <li>• Stress reduction (cortisol management)</li>
-                                                  <li>• Omega-3 fatty acid optimization</li>
-                                                  <li>• Consider telomerase-supporting nutrients</li>
-                                                  <li>• Maintain optimal vitamin D levels</li>
-                                              </ul>
-                                          </div>
-                                      </div>
-                                  </div>
-                                  <div>
-                                      <h4 class="font-semibold text-purple-700 mb-3">Metabolic Optimization</h4>
-                                      <div class="space-y-3">
-                                          <div class="bg-white rounded-lg p-3 border border-purple-200">
-                                              <p class="font-medium text-gray-800 mb-2">Mitochondrial Support</p>
-                                              <ul class="text-xs text-gray-600 space-y-1">
-                                                  <li>• CoQ10 supplementation consideration</li>
-                                                  <li>• PQQ for mitochondrial biogenesis</li>
-                                                  <li>• Cold exposure therapy</li>
-                                                  <li>• Zone 2 cardio training</li>
-                                              </ul>
-                                          </div>
-                                          <div class="bg-white rounded-lg p-3 border border-purple-200">
-                                              <p class="font-medium text-gray-800 mb-2">Metabolic Flexibility</p>
-                                              <ul class="text-xs text-gray-600 space-y-1">
-                                                  <li>• Time-restricted eating windows</li>
-                                                  <li>• Ketone body optimization</li>
-                                                  <li>• Glucose variability monitoring</li>
-                                                  <li>• Fat oxidation capacity training</li>
-                                              </ul>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-
-                          <!-- Priority Action Plan -->
-                          <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-6">
-                              <h3 class="text-lg font-semibold text-orange-800 mb-4">
-                                  <i class="fas fa-rocket mr-2"></i>30-Day Priority Action Plan
-                              </h3>
-                              <div class="grid md:grid-cols-2 gap-6">
-                                  <div>
-                                      <h4 class="font-semibold text-orange-700 mb-3">Week 1-2: Foundation</h4>
-                                      <ul class="text-sm text-gray-700 space-y-2">
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Start Vitamin D3 supplementation (4000 IU daily)</span>
-                                          </li>
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Begin daily 10-minute meditation practice</span>
-                                          </li>
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Increase soluble fiber intake (add oats, beans)</span>
-                                          </li>
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Schedule physician consultation for LDL optimization</span>
-                                          </li>
-                                      </ul>
-                                  </div>
-                                  <div>
-                                      <h4 class="font-semibold text-orange-700 mb-3">Week 3-4: Integration</h4>
-                                      <ul class="text-sm text-gray-700 space-y-2">
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Add omega-3 supplementation (2-3g EPA/DHA daily)</span>
-                                          </li>
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Implement stress reduction techniques</span>
-                                          </li>
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Order advanced lipid panel testing</span>
-                                          </li>
-                                          <li class="flex items-start">
-                                              <i class="fas fa-check-square text-orange-600 mr-2 mt-1"></i>
-                                              <span>Establish consistent sleep optimization routine</span>
-                                          </li>
-                                      </ul>
-                                  </div>
-                              </div>
-                          </div>
-                      </div>
+                      ${generateFunctionalMedicineOptimization()}
                   </div>
               </div>
 
