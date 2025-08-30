@@ -1878,7 +1878,7 @@ app.get('/report', async (c) => {
      * Methodology: IFM (Institute for Functional Medicine) root-cause analysis
      * References: Functional Medicine Clinical Research, ACLM protocols
      */
-    function generateFunctionalMedicineRecommendations() {
+    function generateFunctionalMedicineRecommendations(comprehensiveData) {
       if (!comprehensiveData) {
         return `
           <div class="mb-6">
@@ -2303,7 +2303,7 @@ app.get('/report', async (c) => {
      * Methodology: Precision medicine approach with systems biology integration
      * References: Institute for Functional Medicine, Integrative Medicine Research
      */
-    function generateFunctionalMedicineOptimization() {
+    function generateFunctionalMedicineOptimization(comprehensiveData) {
       if (!comprehensiveData) {
         return `
           <div class="mb-6">
@@ -4139,7 +4139,7 @@ app.get('/report', async (c) => {
                       <h2>13. Personalized Recommendations</h2>
                   </div>
                   <div class="report-content">
-                      ${generateFunctionalMedicineRecommendations()}
+                      ${generateFunctionalMedicineRecommendations(comprehensiveData)}
                   </div>
               </div>
 
@@ -4150,7 +4150,7 @@ app.get('/report', async (c) => {
                       <h2>14. Areas for Optimization</h2>
                   </div>
                   <div class="report-content">
-                      ${generateFunctionalMedicineOptimization()}
+                      ${generateFunctionalMedicineOptimization(comprehensiveData)}
                   </div>
               </div>
 
