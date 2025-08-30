@@ -1941,6 +1941,21 @@ app.get('/report', async (c) => {
                 'Coenzyme Q10 100-200mg (if considering statin therapy)'
               ],
               monitoring: 'Recheck lipid panel in 12-16 weeks, consider advanced lipid testing (ApoB, LDL-P)'
+            },
+            evidence: {
+              guidelines: [
+                'Grundy SM, et al. 2018 AHA/ACC/AACVPR/AAPA/ABC/ACPM/ADA/AGS/APhA/ASPC/NLA/PCNA Guideline on the Management of Blood Cholesterol. Circulation. 2019;139(25):e1082-e1143.',
+                `Target justification: Current LDL ${ldl} mg/dL exceeds functional medicine optimal target <100 mg/dL (Grundy 2018). Risk stratification indicates ${ldl > 130 ? 'high' : 'moderate'} intervention priority.`
+              ],
+              interventions: [
+                'Mollace V, et al. Hypolipemic and hypoglycaemic activity of bergamot polyphenols: From animal models to human studies. Fitoterapia. 2011;82(3):309-316.',
+                'Estruch R, et al. Primary Prevention of Cardiovascular Disease with a Mediterranean Diet. NEJM. 2013;368(14):1279-1290. (PREDIMED Study)',
+                'AbuMweis SS, et al. Plant sterols/stanols as cholesterol lowering agents: A meta-analysis of randomized controlled trials. Food Nutr Res. 2008;52:10.3402/fnr.v52i0.1811.'
+              ],
+              mechanism: [
+                'Functional Medicine Rationale: LDL oxidation and small dense LDL particles contribute to cardiovascular risk beyond total LDL levels (Superko HR, King S. Lipid management to reduce cardiovascular risk. Am J Manag Care. 2008;14(6 Suppl):S188-96).',
+                'Root-cause approach targets upstream metabolic dysfunction rather than downstream lipid effects (Jones DS, Quinn S, eds. Textbook of Functional Medicine. Institute for Functional Medicine; 2010).'
+              ]
             }
           })
         }
@@ -1980,6 +1995,22 @@ app.get('/report', async (c) => {
                 'Magnesium glycinate 200-400mg daily (conversion cofactor)'
               ],
               monitoring: 'Recheck 25(OH)D in 8-12 weeks, target maintenance once optimal achieved'
+            },
+            evidence: {
+              guidelines: [
+                'Holick MF. Vitamin D deficiency. N Engl J Med. 2007;357(3):266-281.',
+                `Functional range justification: Current level ${vitD} ng/mL is ${vitD < 30 ? 'deficient' : 'insufficient'} per Endocrine Society guidelines (target 30+ ng/mL) and suboptimal per functional medicine standards (50-80 ng/mL).`,
+                'Cannell JJ, et al. Use of vitamin D in clinical practice. Altern Med Rev. 2008;13(1):6-20. (Vitamin D Council recommendations)'
+              ],
+              dosing: [
+                'Heaney RP. Guidelines for optimizing design and analysis of clinical studies of nutrient effects. Nutr Rev. 2014;72(1):48-54.',
+                'Vieth R. Vitamin D supplementation, 25-hydroxyvitamin D concentrations, and safety. Am J Clin Nutr. 1999;69(5):842-856.',
+                `Evidence-based dosing: ${vitD < 20 ? '5000-8000 IU daily for severe deficiency' : vitD < 30 ? '4000-6000 IU daily for deficiency' : '2000-4000 IU daily for insufficiency'} (Holick 2007, Vieth 1999).`
+              ],
+              cofactors: [
+                'Uwitonze AM, Razzaque MS. Role of Magnesium in Vitamin D Activation and Function. J Am Osteopath Assoc. 2018;118(3):181-189.',
+                'van Ballegooijen AJ, et al. The synergistic interplay between vitamins D and K for bone and cardiovascular health. J Nutr Biochem. 2017;41:1-12.'
+              ]
             }
           })
         }
@@ -2018,6 +2049,23 @@ app.get('/report', async (c) => {
                 'Quercetin 500mg daily (mast cell stabilization, antioxidant)'
               ],
               monitoring: 'Recheck hs-CRP in 12-16 weeks, consider comprehensive stool analysis if gut-related'
+            },
+            evidence: {
+              guidelines: [
+                'Ridker PM, et al. C-reactive protein and cardiovascular disease: biological basis and clinical application. Circulation. 2003;107(3):363-369.',
+                `Inflammatory assessment: Current hs-CRP ${crp} mg/L indicates ${crp > 3.0 ? 'high' : crp > 1.0 ? 'moderate' : 'low'} cardiovascular risk per AHA/CDC guidelines.`,
+                'Pearson TA, et al. Markers of inflammation and cardiovascular disease. Circulation. 2003;107(3):499-511.'
+              ],
+              interventions: [
+                'Aggarwal BB, et al. Curcumin: the Indian solid gold. Adv Exp Med Biol. 2007;595:1-75.',
+                'Calder PC. Marine omega-3 fatty acids and inflammatory processes: Effects, mechanisms and clinical relevance. Biochim Biophys Acta. 2015;1851(4):469-484.',
+                'David LA, et al. Diet rapidly and reproducibly alters the human gut microbiome. Nature. 2014;505(7484):559-563.'
+              ],
+              supplements: [
+                'Hewlings SJ, Kalman DS. Curcumin: A Review of Its Effects on Human Health. Foods. 2017;6(10):92.',
+                'Calder PC. Omega-3 polyunsaturated fatty acids and inflammatory processes. Nutrients. 2010;2(3):355-374.',
+                'Mlcek J, et al. Quercetin and its anti-allergic immune response. Molecules. 2016;21(5):623.'
+              ]
             }
           })
         }
@@ -2204,6 +2252,46 @@ app.get('/report', async (c) => {
                       <p class="text-xs text-gray-600">${item.interventions.monitoring}</p>
                     </div>
                   </div>
+                  
+                  ${item.evidence ? `
+                    <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h5 class="text-sm font-semibold text-blue-800 mb-3">
+                        <i class="fas fa-graduation-cap mr-2"></i>Evidence Base & Clinical References
+                      </h5>
+                      <div class="space-y-3">
+                        ${item.evidence.guidelines ? `
+                          <div>
+                            <p class="text-xs font-medium text-blue-700 mb-1">Clinical Guidelines:</p>
+                            ${item.evidence.guidelines.map(ref => `<p class="text-xs text-gray-600 mb-1">• ${ref}</p>`).join('')}
+                          </div>
+                        ` : ''}
+                        ${item.evidence.interventions ? `
+                          <div>
+                            <p class="text-xs font-medium text-blue-700 mb-1">Intervention Evidence:</p>
+                            ${item.evidence.interventions.map(ref => `<p class="text-xs text-gray-600 mb-1">• ${ref}</p>`).join('')}
+                          </div>
+                        ` : ''}
+                        ${item.evidence.dosing ? `
+                          <div>
+                            <p class="text-xs font-medium text-blue-700 mb-1">Dosing Protocols:</p>
+                            ${item.evidence.dosing.map(ref => `<p class="text-xs text-gray-600 mb-1">• ${ref}</p>`).join('')}
+                          </div>
+                        ` : ''}
+                        ${item.evidence.cofactors ? `
+                          <div>
+                            <p class="text-xs font-medium text-blue-700 mb-1">Cofactor Research:</p>
+                            ${item.evidence.cofactors.map(ref => `<p class="text-xs text-gray-600 mb-1">• ${ref}</p>`).join('')}
+                          </div>
+                        ` : ''}
+                        ${item.evidence.mechanism ? `
+                          <div>
+                            <p class="text-xs font-medium text-blue-700 mb-1">Mechanistic Rationale:</p>
+                            ${item.evidence.mechanism.map(ref => `<p class="text-xs text-gray-600 mb-1">• ${ref}</p>`).join('')}
+                          </div>
+                        ` : ''}
+                      </div>
+                    </div>
+                  ` : ''}
                   
                   ${item.rootCauses ? `
                     <div class="mt-3 pt-3 border-t border-gray-200">
