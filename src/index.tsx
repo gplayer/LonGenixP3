@@ -3086,19 +3086,69 @@ app.get('/report', async (c) => {
                           <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 text-center">
                               <i class="fas fa-dna text-3xl text-blue-600 mb-3"></i>
                               <h3 class="font-semibold text-gray-800 mb-2">Biological Age</h3>
-                              <p class="text-3xl font-bold text-blue-600">${bioAge ? bioAge.average_biological_age.toFixed(1) : 'N/A'}</p>
+                              <p class="text-3xl font-bold text-blue-600">${bioAge && bioAge.average_biological_age && bioAge.average_biological_age !== 'null' ? parseFloat(bioAge.average_biological_age).toFixed(1) : 'N/A'}</p>
                               <p class="text-sm text-gray-600">vs ${age} chronological</p>
-                              <p class="text-xs ${bioAge && bioAge.age_advantage > 0 ? 'text-green-600' : 'text-red-600'} mt-1">
-                                  ${bioAge ? (bioAge.age_advantage > 0 ? `${bioAge.age_advantage.toFixed(1)} years younger` : `${Math.abs(bioAge.age_advantage).toFixed(1)} years older`) : 'Data pending'}
+                              <p class="text-xs ${bioAge && bioAge.age_advantage && parseFloat(bioAge.age_advantage) > 0 ? 'text-green-600' : 'text-red-600'} mt-1">
+                                  ${bioAge && bioAge.age_advantage && bioAge.age_advantage !== 'null' ? (parseFloat(bioAge.age_advantage) > 0 ? `${parseFloat(bioAge.age_advantage).toFixed(1)} years younger` : `${Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1)} years older`) : 'Data pending'}
                               </p>
                           </div>
 
-                          <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 text-center">
-                              <i class="fas fa-shield-alt text-3xl text-green-600 mb-3"></i>
-                              <h3 class="font-semibold text-gray-800 mb-2">Overall Risk</h3>
-                              <p class="text-2xl font-bold text-green-600">${risks.results && risks.results.length > 0 ? risks.results[0].risk_level.charAt(0).toUpperCase() + risks.results[0].risk_level.slice(1) : 'Calculating'}</p>
-                              <p class="text-sm text-gray-600">${risks.results ? risks.results.length : 0} categories assessed</p>
-                          </div>
+                          ${(() => {
+                            if (!risks.results || risks.results.length === 0) {
+                              return `
+                                <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 text-center">
+                                    <i class="fas fa-shield-alt text-3xl text-gray-600 mb-3"></i>
+                                    <h3 class="font-semibold text-gray-800 mb-2">Overall Risk</h3>
+                                    <p class="text-2xl font-bold text-gray-600">Calculating</p>
+                                    <p class="text-sm text-gray-600">0 categories assessed</p>
+                                </div>`
+                            }
+
+                            // Calculate overall risk based on all risk categories
+                            const riskScores = {
+                              'low': 1,
+                              'moderate': 2, 
+                              'high': 3,
+                              'very_high': 4
+                            }
+                            
+                            let totalScore = 0
+                            let maxPossibleScore = risks.results.length * 4 // max is very_high (4) for each category
+                            
+                            risks.results.forEach(risk => {
+                              totalScore += riskScores[risk.risk_level] || 1
+                            })
+                            
+                            const overallRiskPercentage = (totalScore / maxPossibleScore) * 100
+                            let overallRiskLevel, riskColor, bgColor
+                            
+                            if (overallRiskPercentage <= 25) {
+                              overallRiskLevel = 'Low Risk'
+                              riskColor = 'text-green-600'
+                              bgColor = 'from-green-50 to-green-100'
+                            } else if (overallRiskPercentage <= 50) {
+                              overallRiskLevel = 'Moderate Risk'
+                              riskColor = 'text-yellow-600'
+                              bgColor = 'from-yellow-50 to-yellow-100'
+                            } else if (overallRiskPercentage <= 75) {
+                              overallRiskLevel = 'High Risk'
+                              riskColor = 'text-orange-600'
+                              bgColor = 'from-orange-50 to-orange-100'
+                            } else {
+                              overallRiskLevel = 'Very High Risk'
+                              riskColor = 'text-red-600'
+                              bgColor = 'from-red-50 to-red-100'
+                            }
+
+                            return `
+                              <div class="bg-gradient-to-br ${bgColor} rounded-lg p-6 text-center">
+                                  <i class="fas fa-shield-alt text-3xl ${riskColor} mb-3"></i>
+                                  <h3 class="font-semibold text-gray-800 mb-2">Overall Risk</h3>
+                                  <p class="text-2xl font-bold ${riskColor}">${overallRiskLevel}</p>
+                                  <p class="text-sm text-gray-600">${risks.results.length} categories assessed</p>
+                                  <p class="text-xs text-gray-500 mt-1">${Math.round(overallRiskPercentage)}% composite score</p>
+                              </div>`
+                          })()}
 
                           <div class="bg-gradient-to-br ${isDemo ? 'from-orange-50 to-orange-100 border-2 border-orange-300' : 'from-purple-50 to-purple-100'} rounded-lg p-6 text-center">
                               ${isDemo ? '<div class="bg-orange-200 text-orange-800 text-xs font-bold px-3 py-1 rounded-full mb-3 inline-block"><i class="fas fa-eye mr-1"></i>DEMONSTRATION MODE</div>' : ''}
@@ -3123,13 +3173,13 @@ app.get('/report', async (c) => {
                       <div class="bg-gray-50 rounded-lg p-6">
                           <h3 class="text-lg font-semibold mb-4">Clinical Summary</h3>
                           <div class="prose prose-sm max-w-none text-gray-700">
-                              <p>This comprehensive health assessment for <strong>${session.full_name}</strong> reveals a biological age of <strong>${bioAge ? bioAge.average_biological_age.toFixed(1) : 'calculating'} years</strong>, ${bioAge && bioAge.age_advantage > 0 ? `representing a favorable ${bioAge.age_advantage.toFixed(1)}-year advantage` : bioAge && bioAge.age_advantage < 0 ? `indicating ${Math.abs(bioAge.age_advantage).toFixed(1)} years of accelerated aging` : 'with results being calculated'} compared to the chronological age of ${age} years.</p>
+                              <p>This comprehensive health assessment for <strong>${session.full_name}</strong> reveals a biological age of <strong>${bioAge && bioAge.average_biological_age && bioAge.average_biological_age !== 'null' ? parseFloat(bioAge.average_biological_age).toFixed(1) : 'calculating'} years</strong>, ${bioAge && bioAge.age_advantage && bioAge.age_advantage !== 'null' && parseFloat(bioAge.age_advantage) > 0 ? `representing a favorable ${parseFloat(bioAge.age_advantage).toFixed(1)}-year advantage` : bioAge && bioAge.age_advantage && bioAge.age_advantage !== 'null' && parseFloat(bioAge.age_advantage) < 0 ? `indicating ${Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1)} years of accelerated aging` : 'with results being calculated'} compared to the chronological age of ${age} years.</p>
                               
                               <p><strong>Key Findings:</strong></p>
                               <ul class="ml-6 space-y-1">
-                                  ${bioAge ? `<li>Phenotypic Age: ${bioAge.phenotypic_age.toFixed(1)} years</li>` : ''}
-                                  ${bioAge ? `<li>Klemera-Doubal Age: ${bioAge.klemera_doubal_age.toFixed(1)} years</li>` : ''}
-                                  ${bioAge ? `<li>Metabolic Age: ${bioAge.metabolic_age.toFixed(1)} years</li>` : ''}
+                                  ${bioAge && bioAge.phenotypic_age && bioAge.phenotypic_age !== 'null' && bioAge.phenotypic_age !== null ? `<li>Phenotypic Age: ${parseFloat(bioAge.phenotypic_age).toFixed(1)} years</li>` : ''}
+                                  ${bioAge && bioAge.klemera_doubal_age && bioAge.klemera_doubal_age !== 'null' && bioAge.klemera_doubal_age !== null ? `<li>Klemera-Doubal Age: ${parseFloat(bioAge.klemera_doubal_age).toFixed(1)} years</li>` : ''}
+                                  ${bioAge && bioAge.metabolic_age && bioAge.metabolic_age !== 'null' && bioAge.metabolic_age !== null ? `<li>Metabolic Age: ${parseFloat(bioAge.metabolic_age).toFixed(1)} years</li>` : ''}
                                   ${risks.results && risks.results.length > 0 ? `<li>Risk assessments completed for ${risks.results.length} categories</li>` : ''}
                                   <li>Assessment method: ${isDemo ? 'Demonstration with realistic sample data' : 'Personal data entry with real-time processing'}</li>
                               </ul>
@@ -3188,7 +3238,7 @@ app.get('/report', async (c) => {
                                   </div>
                                   
                                   <div class="text-center mb-4">
-                                      <div class="text-4xl font-bold text-${display.color}-600 mb-2">${risk.ten_year_risk.toFixed(1)}%</div>
+                                      <div class="text-4xl font-bold text-${display.color}-600 mb-2">${risk.ten_year_risk ? parseFloat(risk.ten_year_risk).toFixed(1) : '0.0'}%</div>
                                       <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold
                                           ${risk.risk_level === 'low' ? 'bg-green-100 text-green-800' : ''}
                                           ${risk.risk_level === 'moderate' ? 'bg-yellow-100 text-yellow-800' : ''}
@@ -3200,7 +3250,7 @@ app.get('/report', async (c) => {
                                   
                                   <div class="border-t border-gray-200 pt-4">
                                       <p class="text-xs text-gray-600 mb-1"><strong>Algorithm:</strong> ${risk.algorithm_used}</p>
-                                      <p class="text-xs text-gray-600"><strong>Risk Score:</strong> ${risk.risk_score.toFixed(1)}</p>
+                                      <p class="text-xs text-gray-600"><strong>Risk Score:</strong> ${risk.risk_score ? parseFloat(risk.risk_score).toFixed(1) : '0.0'}</p>
                                   </div>
                               </div>
                             `
@@ -3260,12 +3310,12 @@ app.get('/report', async (c) => {
                               </div>
                               <div class="text-center">
                                   <div class="relative">
-                                      <div class="text-6xl font-bold ${bioAge.age_advantage > 0 ? 'text-green-600' : 'text-red-600'} mb-2">
-                                          ${bioAge.average_biological_age.toFixed(1)}
+                                      <div class="text-6xl font-bold ${bioAge.age_advantage && parseFloat(bioAge.age_advantage) > 0 ? 'text-green-600' : 'text-red-600'} mb-2">
+                                          ${bioAge.average_biological_age && bioAge.average_biological_age !== 'null' ? parseFloat(bioAge.average_biological_age).toFixed(1) : 'N/A'}
                                       </div>
                                       <p class="text-lg text-gray-600">Biological Age</p>
-                                      <p class="text-sm ${bioAge.age_advantage > 0 ? 'text-green-600' : 'text-red-600'}">
-                                          ${bioAge.age_advantage > 0 ? `${bioAge.age_advantage.toFixed(1)} years younger` : `${Math.abs(bioAge.age_advantage).toFixed(1)} years older`}
+                                      <p class="text-sm ${bioAge.age_advantage && parseFloat(bioAge.age_advantage) > 0 ? 'text-green-600' : 'text-red-600'}">
+                                          ${bioAge.age_advantage && bioAge.age_advantage !== 'null' ? (parseFloat(bioAge.age_advantage) > 0 ? `${parseFloat(bioAge.age_advantage).toFixed(1)} years younger` : `${Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1)} years older`) : 'Calculating...'}
                                       </p>
                                   </div>
                               </div>
@@ -3278,7 +3328,7 @@ app.get('/report', async (c) => {
                               <div class="text-center mb-3">
                                   <i class="fas fa-microscope text-2xl text-blue-600 mb-2"></i>
                                   <h3 class="text-md font-semibold">Phenotypic Age</h3>
-                                  <p class="text-2xl font-bold text-blue-600">${bioAge.phenotypic_age.toFixed(1)}</p>
+                                  <p class="text-2xl font-bold text-blue-600">${bioAge.phenotypic_age && bioAge.phenotypic_age !== 'null' ? parseFloat(bioAge.phenotypic_age).toFixed(1) : 'N/A'}</p>
                               </div>
                               <div class="text-xs text-gray-600">
                                   <p class="mb-1"><strong>Method:</strong> Levine et al. (2018)</p>
@@ -3291,7 +3341,7 @@ app.get('/report', async (c) => {
                               <div class="text-center mb-3">
                                   <i class="fas fa-chart-line text-2xl text-green-600 mb-2"></i>
                                   <h3 class="text-md font-semibold">Klemera-Doubal Age</h3>
-                                  <p class="text-2xl font-bold text-green-600">${bioAge.klemera_doubal_age.toFixed(1)}</p>
+                                  <p class="text-2xl font-bold text-green-600">${bioAge.klemera_doubal_age && bioAge.klemera_doubal_age !== 'null' ? parseFloat(bioAge.klemera_doubal_age).toFixed(1) : 'N/A'}</p>
                               </div>
                               <div class="text-xs text-gray-600">
                                   <p class="mb-1"><strong>Method:</strong> Klemera & Doubal (2006)</p>
@@ -3304,7 +3354,7 @@ app.get('/report', async (c) => {
                               <div class="text-center mb-3">
                                   <i class="fas fa-fire text-2xl text-orange-600 mb-2"></i>
                                   <h3 class="text-md font-semibold">Metabolic Age</h3>
-                                  <p class="text-2xl font-bold text-orange-600">${bioAge.metabolic_age.toFixed(1)}</p>
+                                  <p class="text-2xl font-bold text-orange-600">${bioAge.metabolic_age && bioAge.metabolic_age !== 'null' ? parseFloat(bioAge.metabolic_age).toFixed(1) : 'N/A'}</p>
                               </div>
                               <div class="text-xs text-gray-600">
                                   <p class="mb-1"><strong>Method:</strong> Metabolic panel analysis</p>
@@ -3317,7 +3367,7 @@ app.get('/report', async (c) => {
                               <div class="text-center mb-3">
                                   <i class="fas fa-dna text-2xl text-purple-600 mb-2"></i>
                                   <h3 class="text-md font-semibold">Telomere Age</h3>
-                                  <p class="text-2xl font-bold text-purple-600">${bioAge.telomere_age ? bioAge.telomere_age.toFixed(1) : 'N/A'}</p>
+                                  <p class="text-2xl font-bold text-purple-600">${bioAge.telomere_age && bioAge.telomere_age !== 'null' ? parseFloat(bioAge.telomere_age).toFixed(1) : 'N/A'}</p>
                               </div>
                               <div class="text-xs text-gray-600">
                                   <p class="mb-1"><strong>Method:</strong> Telomere length analysis</p>
@@ -3337,7 +3387,7 @@ app.get('/report', async (c) => {
                           <h3 class="text-lg font-semibold mb-4">Clinical Interpretation</h3>
                           <div class="prose prose-sm max-w-none text-gray-700">
                               ${bioAge.age_advantage > 0 ? `
-                                  <p class="text-green-700 font-medium">🎉 <strong>Favorable Age Advantage:</strong> Your biological age indicates you are aging ${bioAge.age_advantage.toFixed(1)} years slower than your chronological age suggests.</p>
+                                  <p class="text-green-700 font-medium">🎉 <strong>Favorable Age Advantage:</strong> Your biological age indicates you are aging ${bioAge.age_advantage && bioAge.age_advantage !== 'null' ? parseFloat(bioAge.age_advantage).toFixed(1) : 'N/A'} years slower than your chronological age suggests.</p>
                                   <p>This positive age advantage suggests:</p>
                                   <ul class="ml-6 space-y-1">
                                       <li>Superior cellular health and function</li>
@@ -3346,7 +3396,7 @@ app.get('/report', async (c) => {
                                       <li>Potential for extended healthspan</li>
                                   </ul>
                               ` : `
-                                  <p class="text-orange-700 font-medium">⚠️ <strong>Accelerated Aging:</strong> Your biological age indicates you are aging ${Math.abs(bioAge.age_advantage).toFixed(1)} years faster than your chronological age.</p>
+                                  <p class="text-orange-700 font-medium">⚠️ <strong>Accelerated Aging:</strong> Your biological age indicates you are aging ${bioAge.age_advantage && bioAge.age_advantage !== 'null' ? Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1) : 'N/A'} years faster than your chronological age.</p>
                                   <p>This suggests opportunities for intervention:</p>
                                   <ul class="ml-6 space-y-1">
                                       <li>Optimization of metabolic health</li>
@@ -4015,7 +4065,7 @@ app.get('/report', async (c) => {
                                       </div>
                                       <div class="flex justify-between items-center">
                                           <span class="text-sm">Health Span Projection</span>
-                                          <span class="text-green-600 font-semibold">${healthOptimizationAssessment.health_span_projection.toFixed(1)} years</span>
+                                          <span class="text-green-600 font-semibold">${healthOptimizationAssessment.health_span_projection ? parseFloat(healthOptimizationAssessment.health_span_projection).toFixed(1) : 'N/A'} years</span>
                                       </div>
                                       <div class="flex justify-between items-center">
                                           <span class="text-sm">Assessment Confidence</span>
@@ -4099,7 +4149,7 @@ app.get('/report', async (c) => {
                                   <ul class="space-y-2 text-sm text-gray-700">
                                       <li class="flex items-start">
                                           <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
-                                          <span><strong>Biological Age Advantage:</strong> ${bioAge && bioAge.age_advantage > 0 ? `${bioAge.age_advantage.toFixed(1)} years younger` : bioAge && bioAge.age_advantage < 0 ? `${Math.abs(bioAge.age_advantage).toFixed(1)} years older` : 'calculating'} than chronological age</span>
+                                          <span><strong>Biological Age Advantage:</strong> ${bioAge && bioAge.age_advantage && bioAge.age_advantage !== 'null' && parseFloat(bioAge.age_advantage) > 0 ? `${parseFloat(bioAge.age_advantage).toFixed(1)} years younger` : bioAge && bioAge.age_advantage && bioAge.age_advantage !== 'null' && parseFloat(bioAge.age_advantage) < 0 ? `${Math.abs(parseFloat(bioAge.age_advantage)).toFixed(1)} years older` : 'calculating'} than chronological age</span>
                                       </li>
                                       <li class="flex items-start">
                                           <i class="fas fa-check-circle text-green-600 mr-2 mt-0.5"></i>
